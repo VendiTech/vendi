@@ -17,3 +17,8 @@ up:
 
 build:
 	docker compose -f ${DOCKER_PATH} build
+
+deploy_heroku:
+	heroku container:login
+	docker build -t registry.heroku.com/${SERVICE_NAME}-stg/web -f vendi-docker/Dockerfile --target prod .
+	docker push registry.heroku.com/${SERVICE_NAME}-stg/web

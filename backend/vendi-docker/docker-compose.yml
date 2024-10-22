@@ -4,6 +4,8 @@ services:
       context: ../
       dockerfile: vendi-docker/Dockerfile
       target: dev
+    command:
+      - ""
     container_name: vendi-service
     ports:
       - "8040:8080"
