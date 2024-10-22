@@ -40,9 +40,10 @@ RUN python -m pip install --no-cache-dir "poetry==${POETRY_VERSION}" \
 
 COPY ./poetry.lock ./pyproject.toml ./
 
+COPY . ${PREFIX_APP}
+
 # Install production dependencies
 RUN poetry install --without dev --no-root
-
 
 RUN python manage.py collectstatic --noinput --clear
 
