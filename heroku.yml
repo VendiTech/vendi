@@ -5,5 +5,6 @@ build:
       target: prod
 run:
   web:
-    command: "run_gunicorn"
+    command:
+      - run_gunicorn
     image: django
