@@ -28,7 +28,7 @@ WORKDIR ${PREFIX_APP}
 FROM base AS deps
 
 RUN apt-get update \
-    && apt-get install g++ wget -y \
+    && apt-get install g++ wget curl -y \
     && apt-get install --no-install-recommends -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -44,15 +44,6 @@ COPY ./poetry.lock ./pyproject.toml ./
 RUN poetry install --without dev --no-root
 
 
-# Development stage
-FROM deps AS dev
+RUN python manage.py collectstatic --noinput --clear
 
-# Install development dependencies
-RUN poetry install --with dev --no-root
-
-COPY . ${PREFIX_APP}
-
-# Prod step
-FROM deps AS prod
-
-COPY . ${PREFIX_APP}
+CMD python manage.py runserver 0.0.0.0:${DJANGO_PORT}

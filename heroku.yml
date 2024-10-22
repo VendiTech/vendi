@@ -1,10 +1,8 @@
 build:
   docker:
-    release:
-      dockerfile: backend/Dockerfile.heroku
-      target: prod
-run:
-  web:
-    command:
-      - python manage.py migrate
-    image: release
+    web: backend/Dockerfile.heroku
+release:
+  image: web
+  command:
+    - python manage.py migrate --noinput
+
