@@ -1,10 +1,10 @@
 build:
   docker:
-    django:
+    release:
       dockerfile: backend/Dockerfile.heroku
       target: prod
 run:
   web:
     command:
-      - run_gunicorn
-    image: django
+      - backend/deployment-tasks.sh
+    image: release
