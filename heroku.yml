@@ -4,3 +4,4 @@ build:
     target: prod
 run:
   web:
+    command: "run_gunicorn"
