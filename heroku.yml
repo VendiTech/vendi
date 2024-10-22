@@ -4,5 +4,5 @@ build:
 release:
   image: web
   command:
-    - python manage.py migrate --noinput
+    - django-admin migrate --noinput
 
