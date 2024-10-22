@@ -17,6 +17,12 @@ ENV HOME=${PREFIX}
 
 ENV DJANGO_PORT 8080
 
+COPY vendi-docker/docker-entrypoint.sh /docker-entrypoint.sh
+
+RUN chmod u+x docker-entrypoint.sh
+
+ENTRYPOINT [ "/docker-entrypoint.sh" ]
+
 WORKDIR ${PREFIX_APP}
 
 FROM base AS deps
@@ -43,12 +49,6 @@ FROM deps AS dev
 
 # Install development dependencies
 RUN poetry install --with dev --no-root
-
-COPY vendi-docker/docker-entrypoint.sh /docker-entrypoint.sh
-
-RUN chmod u+x docker-entrypoint.sh
-
-ENTRYPOINT [ "/docker-entrypoint.sh" ]
 
 COPY . ${PREFIX_APP}
 

@@ -6,5 +6,5 @@ build:
 run:
   web:
     command:
-      - backend/deployment-tasks.sh
+      - python manage.py migrate
     image: release
