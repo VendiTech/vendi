@@ -17,14 +17,6 @@ ENV HOME=${PREFIX}
 
 ENV DJANGO_PORT 8080
 
-COPY vendi-docker/docker-entrypoint.sh /docker-entrypoint.sh
-
-RUN chmod u+x docker-entrypoint.sh
-
-ENTRYPOINT [ "/docker-entrypoint.sh" ]
-
-WORKDIR ${PREFIX_APP}
-
 FROM base AS deps
 
 RUN apt-get update \
@@ -50,9 +42,23 @@ FROM deps AS dev
 # Install development dependencies
 RUN poetry install --with dev --no-root
 
+COPY vendi-docker/docker-entrypoint.sh /docker-entrypoint.sh
+
+RUN chmod u+x docker-entrypoint.sh
+
+ENTRYPOINT [ "/docker-entrypoint.sh" ]
+
+WORKDIR ${PREFIX_APP}
+
 COPY . ${PREFIX_APP}
 
 # Prod step
 FROM deps AS prod
 
+WORKDIR ${PREFIX_APP}
+
 COPY . ${PREFIX_APP}
+
+RUN python manage.py collectstatic --noinput
+
+CMD gunicorn app.wsgi:application --bind 0.0.0.0:$DJANGO_PORT

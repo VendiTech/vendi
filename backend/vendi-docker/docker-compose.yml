@@ -3,7 +3,7 @@ services:
     build:
       context: ../
       dockerfile: vendi-docker/Dockerfile
-      target: dev
+      target: prod
     container_name: vendi-service
     ports:
       - "8040:8080"
@@ -20,7 +20,7 @@ services:
       DJANGO_SUPERUSER_EMAIL: admin@gmail.com
       DJANGO_SUPERUSER_PASSWORD: pass
 
-      ENVIRONMENT: local
+      ENVIRONMENT: prd
     env_file:
       - ../.env
     depends_on:

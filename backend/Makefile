@@ -20,5 +20,6 @@ build:
 
 deploy_heroku:
 	heroku container:login
-	docker build -t registry.heroku.com/${SERVICE_NAME}-stg/web -f vendi-docker/Dockerfile --target prod .
-	docker push registry.heroku.com/${SERVICE_NAME}-stg/web
+	docker build -t registry.heroku.com/vendi-backend-stg/web1 -f vendi-docker/Dockerfile --target prod .
+	docker push registry.heroku.com/vendi-backend-stg/web1 || true
+	heroku container:release -a vendi-backend-stg web1

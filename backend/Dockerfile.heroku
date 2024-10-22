@@ -46,5 +46,3 @@ COPY . ${PREFIX_APP}
 RUN poetry install --without dev --no-root
 
 RUN python manage.py collectstatic --noinput --clear
-
-CMD python manage.py runserver 0.0.0.0:${DJANGO_PORT}
