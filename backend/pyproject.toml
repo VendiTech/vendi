@@ -49,7 +49,7 @@ quote-style = "double"
 
 [tool.mypy]
 python_version = 3.12
-files = ["vendi"]
+files = ["backend"]
 disable_error_code = [
     "no-redef", "return", "return-value", "var-annotated", "import", "assignment", "call-arg", "arg-type"
 ]
