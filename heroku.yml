@@ -1,7 +1,7 @@
 build:
   docker:
     django:
-      dockerfile: backend/vendi-docker/Dockerfile
+      dockerfile: backend/Dockerfile.heroku
       target: prod
 run:
   web:
