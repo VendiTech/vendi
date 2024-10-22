@@ -1,7 +1,9 @@
 build:
   docker:
-    web: backend/vendi-docker/Dockerfile
-    target: prod
+    django:
+      dockerfile: backend/vendi-docker/Dockerfile
+      target: prod
 run:
   web:
     command: "run_gunicorn"
+    image: django
