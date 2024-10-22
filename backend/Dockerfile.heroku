@@ -46,3 +46,4 @@ COPY . ${PREFIX_APP}
 RUN poetry install --without dev --no-root
 
 RUN python manage.py collectstatic --noinput --clear
+CMD gunicorn vendi.app.wsgi:application --bind 0.0.0.0:$PORT
