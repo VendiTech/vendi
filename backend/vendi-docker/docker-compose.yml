@@ -1,0 +1,51 @@
+services:
+  vendi-service:
+    build:
+      context: ../
+      dockerfile: vendi-docker/Dockerfile
+      target: dev
+    container_name: vendi-service
+    ports:
+      - "8040:8080"
+    volumes:
+      - ../:/backend/vendi
+    environment:
+      DATABASE_HOST: vendi-db
+      DATABASE_PORT: 5432
+      DATABASE_USER: vendi-user
+      DATABASE_PASSWORD: vendi-password
+      DATABASE_DB: vendi-db
+
+      DJANGO_SUPERUSER_USERNAME: admin
+      DJANGO_SUPERUSER_EMAIL: admin@gmail.com
+      DJANGO_SUPERUSER_PASSWORD: pass
+
+      ENVIRONMENT: local
+    env_file:
+      - ../.env
+    depends_on:
+      vendi-db:
+        condition: service_healthy
+
+  vendi-db:
+    image: postgres:16-alpine
+    container_name: vendi-db
+    shm_size: 1G
+    volumes:
+      - ./volumes/db/data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: vendi-user
+      POSTGRES_PASSWORD: vendi-password
+      POSTGRES_DB: vendi-db
+    expose:
+      - 5432
+    ports:
+      - "5464:5432"
+    env_file:
+      - ../.env
+    healthcheck:
+      test: [ "CMD-SHELL", "sh -c 'pg_isready -U vendi-user -d vendi-db'" ]
+      start_period: 5s
+      interval: 5s
+      timeout: 5s
+      retries: 50
