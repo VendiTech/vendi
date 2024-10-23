@@ -31,7 +31,11 @@ ENVIRONMENT = AppEnvEnum.from_env()
 DEBUG = ENVIRONMENT in [AppEnvEnum.LOCAL, AppEnvEnum.TEST]
 
 ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "*").split()
-SWAGGER_HOSTS = ["http"] if DEBUG else ["http", "https"]
+SWAGGER_HOSTS = ["http"] if DEBUG else ["https"]
+
+# CSRF Config
+CSRF_COOKIE_SECURE = not DEBUG
+CSRF_TRUSTED_ORIGINS = os.getenv("DJANGO_ALLOWED_CSRF_HOSTS", "*").split()
 
 # Application definition
 
@@ -64,9 +68,6 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
-
-# CSRF Config
-CSRF_COOKIE_SECURE = not DEBUG
 
 ROOT_URLCONF = "app.urls"
 
