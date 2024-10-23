@@ -65,6 +65,9 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+# CSRF Config
+CSRF_COOKIE_SECURE = not DEBUG
+
 ROOT_URLCONF = "app.urls"
 
 TEMPLATES = [
