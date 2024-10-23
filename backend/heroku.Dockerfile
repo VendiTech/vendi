@@ -38,5 +38,7 @@ COPY . ${PREFIX_APP}
 RUN poetry install --without dev --no-root
 
 RUN python manage.py collectstatic --noinput --clear
+ENV PORT=8080
+RUN chmod u+x ${PREFIX_APP}/heroku-entrypoint.sh
 
-CMD gunicorn app.wsgi:application --bind 0.0.0.0:$PORT
+CMD ["/backend/vendi/heroku-entrypoint.sh"]
