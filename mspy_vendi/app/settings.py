@@ -36,7 +36,7 @@ SWAGGER_HOSTS = ["http"] if DEBUG else ["https"]
 
 # CSRF Config
 CSRF_COOKIE_SECURE = not DEBUG
-CSRF_TRUSTED_ORIGINS = os.getenv("DJANGO_ALLOWED_CSRF_HOSTS", "http://*").split()
+CSRF_TRUSTED_ORIGINS = os.getenv("DJANGO_ALLOWED_CSRF_HOSTS", "http://localhost").split()
 
 # Application definition
 
