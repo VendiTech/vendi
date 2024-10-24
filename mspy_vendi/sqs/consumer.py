@@ -1,9 +1,25 @@
+# mypy: ignore-errors
+# ruff: noqa
+import os
 import time
 
-import structlog
+import django
 
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "mspy_vendi.app.settings")
+# Set up Django. We need to do this before importing any DB models.
+django.setup()
+
+from mspy_vendi.core.constants import DEFAULT_SOURCE_SYSTEM
+from mspy_vendi.core.logger import LOG
 from mspy_vendi.core.schemas.nayax import NayaxTransactionSchema
+from mspy_vendi.geographies.models import Geography
+from mspy_vendi.machines.models import Machine
+from mspy_vendi.products.models import Product, ProductCategory
+from mspy_vendi.sales.models import Sale
 from mspy_vendi.sqs.manager import SQSManager
+
+# Disable logging propagation to prevent Django initial logging setup from interfering with structlog.
+LOG.propagate = False
 
 
 class SQSConsumer:
@@ -29,7 +45,6 @@ class SQSConsumer:
         sqs_dlq_enabled: bool = False,
         sqs_auto_ack: bool = False,
         is_enabled: bool = True,
-        logger: structlog.BoundLogger,
     ):
         """
         Initializes the SQSConsumer instance.
@@ -51,9 +66,8 @@ class SQSConsumer:
         self.sqs_dlq_enabled = sqs_dlq_enabled
         self.sqs_auto_ack = sqs_auto_ack
         self.is_enabled = is_enabled
-        self.logger = logger
 
-        self.consumer = SQSManager(sqs_queue_name, logger=logger)
+        self.consumer = SQSManager(sqs_queue_name, logger=LOG)
 
     def consume(self):
         """
@@ -66,18 +80,14 @@ class SQSConsumer:
         """
         if not self.is_enabled:
             while True:
-                self.logger.info(
+                LOG.info(
                     "SQS Consumer is disabled. To enable it set 'NAYAX_CONSUMER_ENABLED' to True. "
                     "Will sleep for 1 hour."
                 )
 
                 time.sleep(60 * 60)
 
-        self.logger.info(f"Checking SQS '{self.sqs_queue_name}' for messages ...")
-
-        total_count: int = 0
-        success_count: int = 0
-        error_count: int = 0
+        LOG.info(f"Checking SQS '{self.sqs_queue_name}' for messages ...")
 
         try:
             for message in self.consumer.receive_messages(
@@ -86,26 +96,96 @@ class SQSConsumer:
                 visibility_timeout=self.sqs_visibility_timeout,
                 auto_ack=self.sqs_auto_ack,  # Enable for PRD environment
             ):
-                total_count += 1
-
                 try:
-                    NayaxTransactionSchema.model_validate_json(message["Body"])
-                    success_count += 1
+                    LOG.info(f"Handling message '{message['MessageId']}'.")
 
-                    self.logger.info(f"Handling message '{message['MessageId']}'.")
+                    nayax_item = NayaxTransactionSchema.model_validate_json(message["Body"])
+
+                    geography, is_created = Geography.objects.get_or_create(
+                        name=nayax_item.data.area_description or nayax_item.data.actor_description,
+                        defaults={"postcode": nayax_item.data.location_code or nayax_item.data.actor_code},
+                    )
+
+                    LOG.info("Geography object", geography_name=geography.name, is_created=is_created)
+
+                    machine, is_created = Machine.objects.get_or_create(
+                        id=nayax_item.machine_id,
+                        defaults={"name": nayax_item.data.machine_name, "geography": geography},
+                    )
+
+                    LOG.info("Machine object", machine_id=machine.id, is_created=is_created)
+
+                    for product_item in nayax_item.data.products:
+                        LOG.info("Start working with the following product", product_id=product_item.product_id)
+
+                        product_category, is_created = ProductCategory.objects.get_or_create(
+                            name=product_item.product_group
+                        )
+
+                        LOG.info(
+                            "Product category object",
+                            product_category_name=product_category.name,
+                            is_created=is_created,
+                        )
+
+                        LOG.info(
+                            "Provided Product object",
+                            product_id=product_item.product_id,
+                            price=product_item.product_bruto,
+                        )
+
+                        product, is_created = Product.objects.get_or_create(
+                            id=product_item.product_id,
+                            defaults={
+                                "name": product_item.product_name,
+                                "price": product_item.product_bruto,
+                                "category": product_category,
+                            },
+                        )
+
+                        LOG.info(
+                            "Product object",
+                            product_id=product.id,
+                            is_created=is_created,
+                        )
+
+                        LOG.info(
+                            "Provided Sale object",
+                            sale_id=nayax_item.transaction_id,
+                            quantity=product_item.product_quantity,
+                            source_system_id=nayax_item.transaction_id,
+                        )
+                        sale_datetime = nayax_item.machine_time or nayax_item.data.machine_au_time
+                        sale, is_created = Sale.objects.get_or_create(
+                            id=nayax_item.transaction_id,
+                            defaults={
+                                "product": product,
+                                "machine": machine,
+                                "sale_date": sale_datetime.date(),
+                                "sale_time": sale_datetime.time(),
+                                "quantity": product_item.product_quantity,
+                                "source_system": DEFAULT_SOURCE_SYSTEM,
+                                "source_system_id": nayax_item.transaction_id,
+                            },
+                        )
+
+                        LOG.info(
+                            "Sale object",
+                            sale_id=sale.id,
+                            is_created=is_created,
+                        )
+
+                    LOG.info(
+                        "Message processed successfully.",
+                        message_id=message["MessageId"],
+                    )
 
                 except Exception as e:
-                    self.logger.error(f"Error processing message {message['MessageId']}: {e}")
-
-                    error_count += 1
+                    LOG.error(f"Error processing message {message['MessageId']}: {e}")
 
                     if self.sqs_dlq_enabled:
                         # Place the message in the Dead Letter Queue for further analysis
                         continue
 
-                self.logger.info(
-                    "Current message processing statistics "
-                    f"total_count={total_count}, success_count={success_count}, error_count={error_count}"
-                )
         except Exception as e:
-            self.logger.error(f"Error receiving messages from SQS: {e}", exc_info=True)
+            LOG.error(f"Error receiving messages from SQS: {e}", exc_info=True)
