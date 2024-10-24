@@ -1,0 +1,29 @@
+x-common-consumers: &common-consumers
+  build:
+    context: ../
+    dockerfile: vendi-docker/Dockerfile
+    target: prod
+  restart: on-failure
+  volumes:
+    - ../:/backend/vendi
+  env_file:
+    - ../.env
+  environment:
+    DATABASE_HOST: vendi-db
+    DATABASE_PORT: 5432
+    DATABASE_USER: vendi-user
+    DATABASE_PASSWORD: vendi-password
+    DATABASE_DB: vendi-db
+
+    DJANGO_SETTINGS_MODULE: mspy_vendi.app.settings
+
+  depends_on:
+    vendi-db:
+      condition: service_healthy
+
+services:
+  nayax-consumer:
+    <<: *common-consumers
+    container_name: nayax-consumer
+    command:
+      - nayax_consumer

@@ -1,3 +1,4 @@
 build:
   docker:
-    web: backend/heroku.Dockerfile
+    web: Dockerfile
+    nayax-consumer: nayax.Dockerfile
