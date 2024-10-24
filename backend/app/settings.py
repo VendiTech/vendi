@@ -15,6 +15,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from core.enums import AppEnvEnum
+from core.helpers import boolify
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -222,3 +223,10 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# AWS Credentials
+SQS_QUEUE_NAME = os.getenv("SQS_QUEUE_NAME", "VendiTech_Nayax_Integration")
+SQS_MAX_NUMBER_OF_MESSAGES = int(os.getenv("SQS_MAX_NUMBER_OF_MESSAGES", 10))
+SQS_VISIBILITY_TIMEOUT = int(os.getenv("SQS_VISIBILITY_TIMEOUT", 60))
+SQS_LONG_POLL_TIME = int(os.getenv("SQS_LONG_POLL_TIME", 20))
+SQS_AUTO_ACK = boolify(os.getenv("SQS_AUTO_ACK", False))

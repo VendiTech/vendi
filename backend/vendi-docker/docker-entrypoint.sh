@@ -41,10 +41,8 @@ case "${ACTION}" in
     exec python manage.py runserver 0.0.0.0:"$DJANGO_PORT"
     ;;
 
-  run_gunicorn) # Default for Production server up
-    initialize_application
-
-    exec gunicorn app.wsgi:application --bind 0.0.0.0:"$DJANGO_PORT"
+  nayax_consumer)
+    exec python -m consumers.nayax_consumer
     ;;
 
   *) # For script running

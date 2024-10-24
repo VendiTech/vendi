@@ -3,7 +3,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt
 
-from backend.core.helpers import to_title_case
+from core.helpers import to_title_case
 
 OptionalFloat = Annotated[float | None, Field(None)]
 OptionalString = Annotated[str | None, Field(None)]
@@ -30,9 +30,9 @@ class NayaxProductSchema(NayaxBaseModel):
     product_vat_amount: OptionalInt
     product_net_price: OptionalInt
     product_external_prepaid_price: OptionalInt
-    product_group_code: OptionalString
-    product_group_sub_code: OptionalString
-    product_retail_price: OptionalString
+    product_group_code: OptionalInt # Change from String
+    product_group_sub_code: OptionalInt # Change from String
+    product_retail_price: OptionalFloat # Change from String
     product_discount_percentage: OptionalFloat
     product_discount_amount: OptionalFloat
     product_bruto: OptionalFloat
@@ -171,7 +171,7 @@ class NayaxDataSchema(NayaxBaseModel):
     ) # Extra space at the end
     loyalty_card_number: OptionalString
     campaign_id: OptionalInt = Field(None, alias="Campaign ID")
-    campaign_type: OptionalString
+    campaign_type: OptionalInt # Changed from String
     card_id: OptionalString = Field(None, alias="Card ID")
     machine_serial_number: OptionalString
     machine_id: OptionalInt = Field(None, alias="Machine ID")
