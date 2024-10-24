@@ -86,9 +86,9 @@ class SQSConsumer:
 
                     error_count += 1
 
-                    # if self.sqs_dlq_enabled:
-                    #     # Place the message in the Dead Letter Queue for further analysis
-                    #     continue
+                    if self.sqs_dlq_enabled:
+                        # Place the message in the Dead Letter Queue for further analysis
+                        continue
 
                 self.logger.info(
                     "Current message processing statistics "
