@@ -3,6 +3,7 @@ import os
 
 from core.schemas.nayax import NayaxTransactionSchema
 
+
 def test_nayax_schema():
     path_to_examples: str = os.getenv("PREFIX_APP", "") + "/tests/mocking/nayax/nayax-data.json"
 
@@ -23,7 +24,7 @@ def test_nayax_schema():
 
         for pydantic_record, initial_record in zip(
             sorted(result.data.products, key=lambda item: item.product_id),
-            sorted(nayax_example["Data"]["Products"], key=lambda item: item["Product ID"])
+            sorted(nayax_example["Data"]["Products"], key=lambda item: item["Product ID"]),
         ):
             assert pydantic_record.product_id == initial_record["Product ID"]
             assert pydantic_record.product_name == initial_record["Product Name"]

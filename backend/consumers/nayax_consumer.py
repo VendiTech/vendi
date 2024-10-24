@@ -1,6 +1,7 @@
 from django.conf import settings
-from sqs.consumer import SQSConsumer
+
 from core.logger import LOG
+from sqs.consumer import SQSConsumer
 
 if __name__ == "__main__":
     SQSConsumer(

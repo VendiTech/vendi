@@ -1,7 +1,8 @@
+import logging
 from typing import Generator
 
 import boto3
-import logging
+
 
 class SQSManager:
     """

@@ -11,6 +11,7 @@ OptionalInt = Annotated[int | None, Field(None)]
 OptionalDatetime = Annotated[datetime | None, Field(None)]
 OptionalBool = Annotated[bool | None, Field(None)]
 
+
 class NayaxBaseModel(BaseModel):
     model_config = ConfigDict(alias_generator=to_title_case, populate_by_name=True, validate_assignment=True)
 
@@ -30,9 +31,9 @@ class NayaxProductSchema(NayaxBaseModel):
     product_vat_amount: OptionalInt
     product_net_price: OptionalInt
     product_external_prepaid_price: OptionalInt
-    product_group_code: OptionalInt # Change from String
-    product_group_sub_code: OptionalInt # Change from String
-    product_retail_price: OptionalFloat # Change from String
+    product_group_code: OptionalInt  # Change from String
+    product_group_sub_code: OptionalInt  # Change from String
+    product_retail_price: OptionalFloat  # Change from String
     product_discount_percentage: OptionalFloat
     product_discount_amount: OptionalFloat
     product_bruto: OptionalFloat
@@ -120,7 +121,7 @@ class NayaxDataSchema(NayaxBaseModel):
     cash_price: OptionalFloat
     default_price: OptionalFloat
     actor_code: OptionalInt
-    display_card_number: OptionalString # Maybe bool
+    display_card_number: OptionalString  # Maybe bool
     card_holder_name: OptionalString
     user_identity: OptionalString
     billing_provider_name: OptionalString
@@ -159,19 +160,21 @@ class NayaxDataSchema(NayaxBaseModel):
     prepaid_credit_amount_charge: OptionalString
     prepaid_credit_transaction_charge: OptionalFloat = Field(
         None, alias="Prepaid Credit  Transaction Charge"
-    ) # Extra space between words
+    )  # Extra space between words
     prepaid_card_current_revalue_credit: OptionalFloat
     prepaid_revalue_credit_amount_charge: OptionalFloat
     is_revalue_reward_transaction: OptionalBool
     prepaid_card_monthly_amount_credit_usage: OptionalString = Field(
-        None, alias="Prepaid Card Monthly Amount Credit Usage ",
-    ) # Extra space at the end
+        None,
+        alias="Prepaid Card Monthly Amount Credit Usage ",
+    )  # Extra space at the end
     prepaid_card_monthly_transactions_credit_usage: OptionalString = Field(
-        None, alias="Prepaid Card Monthly Transactions Credit Usage ",
-    ) # Extra space at the end
+        None,
+        alias="Prepaid Card Monthly Transactions Credit Usage ",
+    )  # Extra space at the end
     loyalty_card_number: OptionalString
     campaign_id: OptionalInt = Field(None, alias="Campaign ID")
-    campaign_type: OptionalInt # Changed from String
+    campaign_type: OptionalInt  # Changed from String
     card_id: OptionalString = Field(None, alias="Card ID")
     machine_serial_number: OptionalString
     machine_id: OptionalInt = Field(None, alias="Machine ID")
