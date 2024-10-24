@@ -76,7 +76,7 @@ class SQSConsumer:
                 total_count += 1
 
                 try:
-                    result = NayaxTransactionSchema.model_validate_json(message["Body"])
+                    NayaxTransactionSchema.model_validate_json(message["Body"])
                     success_count += 1
 
                     self.logger.info(f"Handling message '{message['MessageId']}'.")
