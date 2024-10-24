@@ -1,0 +1,11 @@
+services:
+
+  vendi-service:
+    container_name: vendi-service-tests
+    command:
+      - pytest tests/ -vvv
+    environment:
+      ENVIRONMENT: TEST
+    depends_on:
+      vendi-db:
+        condition: service_healthy

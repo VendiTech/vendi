@@ -1,0 +1,63 @@
+[tool.poetry]
+name = "vendi"
+version = "0.1.0"
+description = "Django REST API"
+authors = ["Vendi developers <unknown@venditech.com"]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+django = "^5.1.2"
+psycopg2-binary = "^2.9.10"
+djangorestframework = "^3.15.2"
+djangorestframework-simplejwt = "^5.3.1"
+drf-yasg = "^1.21.8"
+pydantic = "^2.9.2"
+gunicorn = "^23.0.0"
+whitenoise = "^6.7.0"
+boto3 = "^1.35.46"
+structlog = "^24.4.0"
+
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.7.0"
+mypy = "^1.12.1"
+pre-commit = "^4.0.1"
+pytest = "^8.3.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+lint.select = [
+    "E",   # Enable error codes checks
+    "F",   # Enable checks for source files errors
+    "W",   # Enable linter warnings
+    "I",   # Enable Isort related checks
+    "N",   # Enable pep8-naming conventions
+    "RSE", # Enable `unnecessary parentheses on raised exception` check
+    "RET", # Enable `return` checks
+    "T20", # Enable `print found` checks
+    "PIE"  # Enable `specific` checks: https://docs.astral.sh/ruff/rules/#flake8-pyi-pyi
+]
+lint.ignore = [
+    "N802", # Function name should be lowercase. Stick to gRPC generation tools -> use PascalCase methods.
+    "N805", # First argument of a method should be named `self`. Conflict with Pydantic validators.
+    "N999", # Invalid module name. Alembic autogenerate `incorrect` migrations.
+]
+
+[tool.ruff.format]
+quote-style = "double"
+
+
+[tool.mypy]
+python_version = 3.12
+files = ["mspy_vendi"]
+disable_error_code = [
+    "no-redef", "return", "return-value", "var-annotated", "import", "assignment", "call-arg", "arg-type"
+]
+ignore_missing_imports = true
+follow_imports = "skip"
+check_untyped_defs = true
