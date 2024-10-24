@@ -32,7 +32,6 @@ class SQSConsumer:
         Initializes the SQSConsumer instance.
 
         :param sqs_queue_name: str: The name of the SQS queue for message consumption.
-        :param handler_factory: Type[SQSMessageHandlerFactory]: Factory class for creating message handlers.
         :param sqs_max_number_of_messages: int: Maximum number of messages to retrieve per call. Defaults to 10.
         :param sqs_visibility_timeout: int: Duration in seconds messages are hidden from queue. Defaults to 30.
         :param sqs_long_poll_time: int: Wait time in seconds for messages if queue is empty. Defaults to 5.
