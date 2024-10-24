@@ -10,5 +10,6 @@ if __name__ == "__main__":
         sqs_visibility_timeout=settings.SQS_VISIBILITY_TIMEOUT,
         sqs_long_poll_time=settings.SQS_LONG_POLL_TIME,
         sqs_auto_ack=settings.SQS_AUTO_ACK,
+        is_enabled=settings.NAYAX_CONSUMER_ENABLED,
         logger=LOG,
     ).consume()

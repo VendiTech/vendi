@@ -1,3 +1,5 @@
+import time
+
 import structlog
 
 from mspy_vendi.core.schemas.nayax import NayaxTransactionSchema
@@ -26,6 +28,7 @@ class SQSConsumer:
         sqs_long_poll_time: int = 5,
         sqs_dlq_enabled: bool = False,
         sqs_auto_ack: bool = False,
+        is_enabled: bool = True,
         logger: structlog.BoundLogger,
     ):
         """
@@ -36,6 +39,8 @@ class SQSConsumer:
         :param sqs_visibility_timeout: int: Duration in seconds messages are hidden from queue. Defaults to 30.
         :param sqs_long_poll_time: int: Wait time in seconds for messages if queue is empty. Defaults to 5.
         :param sqs_dlq_enabled: bool: If True, enables Dead Letter Queue handling. Defaults to False.
+        :param sqs_auto_ack: bool: If True, deletes messages upon retrieval. Defaults to False.
+        :param is_enabled: bool: If True, enables the consumer. Defaults to True.
         :param logger: structlog.BoundLogger: Logger instance for logging. Defaults to structlog.get_logger().
         """
 
@@ -45,6 +50,7 @@ class SQSConsumer:
         self.sqs_long_poll_time = sqs_long_poll_time
         self.sqs_dlq_enabled = sqs_dlq_enabled
         self.sqs_auto_ack = sqs_auto_ack
+        self.is_enabled = is_enabled
         self.logger = logger
 
         self.consumer = SQSManager(sqs_queue_name, logger=logger)
@@ -58,6 +64,13 @@ class SQSConsumer:
 
         :raise: Exception: Raised if errors occur during message retrieval or processing.
         """
+        if not self.is_enabled:
+            while True:
+                self.logger.info(
+                    "SQS Consumer is disabled. To enable it set 'NAYAX_CONSUMER_ENABLED' to True. Will sleep for 1 min."
+                )
+
+                time.sleep(60)
 
         self.logger.info(f"Checking SQS '{self.sqs_queue_name}' for messages ...")
 
