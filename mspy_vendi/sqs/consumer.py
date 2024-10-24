@@ -67,10 +67,11 @@ class SQSConsumer:
         if not self.is_enabled:
             while True:
                 self.logger.info(
-                    "SQS Consumer is disabled. To enable it set 'NAYAX_CONSUMER_ENABLED' to True. Will sleep for 1 min."
+                    "SQS Consumer is disabled. To enable it set 'NAYAX_CONSUMER_ENABLED' to True. "
+                    "Will sleep for 1 hour."
                 )
 
-                time.sleep(60)
+                time.sleep(60 * 60)
 
         self.logger.info(f"Checking SQS '{self.sqs_queue_name}' for messages ...")
 
