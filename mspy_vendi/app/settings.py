@@ -55,7 +55,14 @@ THIRD_PARTY_APPS = [
     "drf_yasg",
 ]
 
-LOCAL_APPS = []
+LOCAL_APPS = [
+    "mspy_vendi.products.apps.ProductsConfig",
+    "mspy_vendi.brand_partners.apps.BrandPartnersConfig",
+    "mspy_vendi.geographies.apps.GeographiesConfig",
+    "mspy_vendi.machines.apps.MachinesConfig",
+    "mspy_vendi.sales.apps.SalesConfig",
+    "mspy_vendi.impressions.apps.ImpressionsConfig",
+]
 
 INSTALLED_APPS = [*DEFAULT_APPS, *THIRD_PARTY_APPS, *LOCAL_APPS]
 
@@ -230,4 +237,5 @@ SQS_MAX_NUMBER_OF_MESSAGES = int(os.getenv("SQS_MAX_NUMBER_OF_MESSAGES", 10))
 SQS_VISIBILITY_TIMEOUT = int(os.getenv("SQS_VISIBILITY_TIMEOUT", 60))
 SQS_LONG_POLL_TIME = int(os.getenv("SQS_LONG_POLL_TIME", 20))
 SQS_AUTO_ACK = boolify(os.getenv("SQS_AUTO_ACK", False))
+
 NAYAX_CONSUMER_ENABLED = boolify(os.getenv("NAYAX_CONSUMER_ENABLED", True))

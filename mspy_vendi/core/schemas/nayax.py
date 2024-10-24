@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Annotated
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt
 
@@ -10,6 +11,7 @@ OptionalString = Annotated[str | None, Field(None)]
 OptionalInt = Annotated[int | None, Field(None)]
 OptionalDatetime = Annotated[datetime | None, Field(None)]
 OptionalBool = Annotated[bool | None, Field(None)]
+OptionalUUID = Annotated[UUID | None, Field(None)]
 
 
 class NayaxBaseModel(BaseModel):

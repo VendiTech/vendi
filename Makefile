@@ -29,3 +29,12 @@ build-consumer:
 
 up-test:
 	docker compose -f ${DOCKER_PATH} -f ${TEST_PATH} up ${SERVICE_NAME} --remove-orphans --exit-code-from ${SERVICE_NAME}
+
+makemigrations:
+	docker compose -f ${DOCKER_PATH} run ${SERVICE_NAME} python3 manage.py makemigrations
+
+migrate:
+	docker compose -f ${DOCKER_PATH} run ${SERVICE_NAME} python3 manage.py migrate ${m}
+
+create_superuser:
+	docker compose -f ${DOCKER_PATH} run ${SERVICE_NAME} python3 manage.py createsuperuser
