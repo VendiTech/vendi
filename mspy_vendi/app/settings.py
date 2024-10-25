@@ -34,9 +34,9 @@ DEBUG = ENVIRONMENT in [AppEnvEnum.LOCAL, AppEnvEnum.TEST]
 ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "*").split()
 SWAGGER_HOSTS = ["http"] if DEBUG else ["https"]
 
-# CSRF Config
+# CSRF && CORS Config
 CSRF_COOKIE_SECURE = not DEBUG
-CSRF_TRUSTED_ORIGINS = os.getenv("DJANGO_ALLOWED_CSRF_HOSTS", "http://localhost").split()
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS = os.getenv("DJANGO_ALLOWED_CSRF_HOSTS", "http://localhost").split()
 
 # Application definition
 
