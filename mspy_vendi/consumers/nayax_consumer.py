@@ -1,6 +1,5 @@
 from django.conf import settings
 
-from mspy_vendi.core.logger import LOG
 from mspy_vendi.sqs.consumer import SQSConsumer
 
 if __name__ == "__main__":
@@ -11,5 +10,4 @@ if __name__ == "__main__":
         sqs_long_poll_time=settings.SQS_LONG_POLL_TIME,
         sqs_auto_ack=settings.SQS_AUTO_ACK,
         is_enabled=settings.NAYAX_CONSUMER_ENABLED,
-        logger=LOG,
     ).consume()

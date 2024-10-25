@@ -183,7 +183,6 @@ class Logger:
         shared_processors: list[Processor] = self._get_processors()
         self._configure_structlog(shared_processors)
         root_logger = self._configure_logging(shared_processors)
-        self._clear_uvicorn_loggers()
 
         def handle_exception(exc_type, exc_value, exc_traceback):
             """
