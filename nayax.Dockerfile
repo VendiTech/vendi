@@ -34,7 +34,7 @@ RUN python -m pip install --no-cache-dir "poetry==${POETRY_VERSION}" \
 
 COPY poetry.lock ./pyproject.toml ./
 
-COPY mspy_vendi ${PREFIX_APP}/mspy_vendi
+COPY mspy_vendi_old ${PREFIX_APP}/mspy_vendi
 COPY manage.py ${PREFIX_APP}/manage.py
 COPY nayax-entrypoint.sh ${PREFIX_APP}/nayax-entrypoint.sh
 

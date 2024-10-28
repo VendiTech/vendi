@@ -14,9 +14,6 @@ x-common-consumers: &common-consumers
     DATABASE_USER: vendi-user
     DATABASE_PASSWORD: vendi-password
     DATABASE_DB: vendi-db
-
-    DJANGO_SETTINGS_MODULE: mspy_vendi.app.settings
-
   depends_on:
     vendi-db:
       condition: service_healthy

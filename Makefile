@@ -1,6 +1,7 @@
 DOCKER_PATH ?= vendi-docker/docker-compose.yml
 CONSUMER_PATH ?= vendi-docker/consumers.yml
 TEST_PATH ?= vendi-docker/test.yml
+ALEMBIC_INI_PATH ?= mspy_vendi/db/migrations/alembic.ini
 
 SERVICE_NAME ?= vendi-service
 SERVICE_DB ?= vendi-db
@@ -30,11 +31,11 @@ build-consumer:
 up-test:
 	docker compose -f ${DOCKER_PATH} -f ${TEST_PATH} up ${SERVICE_NAME} --remove-orphans --exit-code-from ${SERVICE_NAME}
 
-makemigrations:
-	docker compose -f ${DOCKER_PATH} run ${SERVICE_NAME} python3 manage.py makemigrations
+migration:
+	docker compose -f ${DOCKER_PATH} run ${SERVICE_NAME} alembic -c ${ALEMBIC_INI_PATH} revision --autogenerate -m "$(m)"
 
-migrate:
-	docker compose -f ${DOCKER_PATH} run ${SERVICE_NAME} python3 manage.py migrate ${m}
+upgrade-version:
+	docker compose -f ${DOCKER_PATH} run ${SERVICE_NAME} alembic -c ${ALEMBIC_INI_PATH} upgrade $(if $(v),$(v),head)
 
-create_superuser:
-	docker compose -f ${DOCKER_PATH} run ${SERVICE_NAME} python3 manage.py createsuperuser
+downgrade-version:
+	docker compose -f ${DOCKER_PATH} run ${SERVICE_NAME} alembic -c ${ALEMBIC_INI_PATH} downgrade ${n}

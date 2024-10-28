@@ -1,7 +1,7 @@
 import json
 import os
 
-from mspy_vendi.core.schemas.nayax import NayaxTransactionSchema
+from mspy_vendi.core.schemas import NayaxTransactionSchema
 
 
 def test_nayax_schema():

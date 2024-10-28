@@ -4,6 +4,7 @@ set -euo pipefail
 
 # Initialize the variable
 ACTION=""
+ALEMBIC_PATH=mspy_vendi/db/migrations/alembic.ini
 
 # Check if the number of command line arguments passed to the script is greater than or equal to 1.
 if [ $# -ge 1 ]; then
@@ -13,32 +14,12 @@ if [ $# -ge 1 ]; then
   shift;
 fi
 
-initialize_application() {
-  # Collect static files
-  python manage.py collectstatic --noinput
-
-  # Apply database migrations
-  python manage.py migrate
-
-  create_superuser
-}
-
-
-# Function to create superuser non-interactively
-create_superuser() {
-  if [ -n "$DJANGO_SUPERUSER_USERNAME" ] && [ -n "$DJANGO_SUPERUSER_EMAIL" ] && [ -n "$DJANGO_SUPERUSER_PASSWORD" ]; then
-    python manage.py createsuperuser --no-input || true
-  else
-    echo "Superuser credentials are not set. Skipping superuser creation."
-  fi
-}
-
 case "${ACTION}" in
 
   ''|-*) # Default for Local server up
-    initialize_application
+    alembic -c ${ALEMBIC_PATH} upgrade head
 
-    exec python manage.py runserver 0.0.0.0:"$DJANGO_PORT"
+    exec python -m mspy_vendi.server
     ;;
 
   nayax_consumer)

@@ -15,7 +15,6 @@ Example usage:
 """
 
 import logging
-import os
 import sys
 
 import structlog
@@ -208,8 +207,3 @@ class Logger:
 
         self._configure()
         return structlog.get_logger()
-
-
-LOG = Logger(
-    json_logs=os.getenv("LOG_JSON_FORMAT", "False").lower() == "true", log_level=os.getenv("LOG_LEVEL", "INFO")
-).setup_logging()
