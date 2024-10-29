@@ -2,6 +2,7 @@ from functools import lru_cache
 from typing import Literal
 from urllib.parse import quote_plus
 
+from pydantic import Field
 from pydantic_settings import BaseSettings as PydanticBaseSettings
 from pydantic_settings import SettingsConfigDict
 
@@ -57,7 +58,7 @@ class WebSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="WEB_")
 
     host: str = "0.0.0.0"
-    port: int = 8080
+    port: int = Field(8080, alias="PORT")
 
     log_level: str = "info"
     workers: int = 1
