@@ -83,9 +83,9 @@ class Settings(BaseSettings):
     log_level: Literal["INFO", "DEBUG", "WARN", "ERROR"] = "INFO"
     log_json_format: bool = False
 
-    docs_url: str = "/"
+    docs_url: str = "/api/swagger"
     base_prefix: str = "/api"
-    login_url: str = "auth/jwt/login"
+    login_url: str = "/api/auth/login"
 
     version: str = "0.1.0"
 
