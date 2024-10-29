@@ -111,7 +111,7 @@ class Settings(BaseSettings):
 
     @property
     def title(self) -> str:
-        return f"Vendi Backend. Environment: {self.environment.capitalize()}"
+        return f"Vendi Backend. Environment: {self.environment.upper()}"
 
 
 class TestSettings(Settings):
