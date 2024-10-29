@@ -2,6 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import ORJSONResponse
+from pydantic import ValidationError
 
 from mspy_vendi.core.api import CRUDApi
 from mspy_vendi.core.pagination import Page
