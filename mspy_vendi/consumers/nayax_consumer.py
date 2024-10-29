@@ -1,13 +1,21 @@
-from django.conf import settings
+import asyncio
 
-from mspy_vendi.sqs.consumer import SQSConsumer
+from mspy_vendi.config import config
+from mspy_vendi.domain.sqs.consumer import SQSConsumer
+
+
+async def main():
+    sqs_consumer = SQSConsumer(
+        sqs_queue_name=config.sqs.queue_name,
+        sqs_max_number_of_messages=config.sqs.max_number_of_messages,
+        sqs_visibility_timeout=config.sqs.visibility_timeout,
+        sqs_long_poll_time=config.sqs.long_poll_time,
+        sqs_auto_ack=config.sqs.auto_ack,
+        is_enabled=config.nayax_consumer_enabled,
+    )
+
+    await sqs_consumer.consume()
+
 
 if __name__ == "__main__":
-    SQSConsumer(
-        sqs_queue_name=settings.SQS_QUEUE_NAME,
-        sqs_max_number_of_messages=settings.SQS_MAX_NUMBER_OF_MESSAGES,
-        sqs_visibility_timeout=settings.SQS_VISIBILITY_TIMEOUT,
-        sqs_long_poll_time=settings.SQS_LONG_POLL_TIME,
-        sqs_auto_ack=settings.SQS_AUTO_ACK,
-        is_enabled=settings.NAYAX_CONSUMER_ENABLED,
-    ).consume()
+    asyncio.run(main())

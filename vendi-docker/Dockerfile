@@ -15,8 +15,6 @@ ENV VIRTUAL_ENV="${PREFIX}/venv/"
 ENV PATH="${PREFIX}/venv/bin:$PATH"
 ENV HOME=${PREFIX}
 
-ENV DJANGO_PORT 8080
-
 COPY vendi-docker/docker-entrypoint.sh /docker-entrypoint.sh
 
 RUN chmod u+x docker-entrypoint.sh

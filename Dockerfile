@@ -11,8 +11,6 @@ ENV PYTHONPATH="${PREFIX_APP}:${PYTHONPATH}"
 ENV POETRY_VERSION  1.8.3
 ENV POETRY_VIRTUALENVS_IN_PROJECT=false
 
-ENV DJANGO_SETTINGS_MODULE=mspy_vendi.app.settings
-
 ENV VIRTUAL_ENV="${PREFIX}/venv/"
 ENV PATH="${PREFIX}/venv/bin:$PATH"
 ENV HOME=${PREFIX}
@@ -35,13 +33,10 @@ RUN python -m pip install --no-cache-dir "poetry==${POETRY_VERSION}" \
 COPY poetry.lock ./pyproject.toml ./
 
 COPY mspy_vendi ${PREFIX_APP}/mspy_vendi
-COPY manage.py ${PREFIX_APP}/manage.py
 COPY main-entrypoint.sh ${PREFIX_APP}/main-entrypoint.sh
 
 # Install production dependencies
 RUN poetry install --without dev --no-root
-
-RUN python manage.py collectstatic --noinput --clear
 
 RUN chmod u+x ${PREFIX_APP}/main-entrypoint.sh
 

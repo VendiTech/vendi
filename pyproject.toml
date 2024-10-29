@@ -1,23 +1,29 @@
 [tool.poetry]
 name = "vendi"
 version = "0.1.0"
-description = "Django REST API"
+description = "Vendi REST API"
 authors = ["Vendi developers <unknown@venditech.com"]
 
 [tool.poetry.dependencies]
 python = "^3.12"
-django = "^5.1.2"
-psycopg2-binary = "^2.9.10"
-djangorestframework = "^3.15.2"
-djangorestframework-simplejwt = "^5.3.1"
-drf-yasg = "^1.21.8"
+alembic = "1.13.2"
+alembic-utils = "0.8.3"
+email-validator = "2.1.2"
+orjson = "3.10.6"
 pydantic = "^2.9.2"
-gunicorn = "^23.0.0"
-whitenoise = "^6.7.0"
+pydantic-settings = "2.3.4"
 boto3 = "^1.35.46"
 structlog = "^24.4.0"
-django-cors-headers = "^4.5.0"
-
+sqlalchemy = "2.0.31"
+asyncpg = "0.29.0"
+fastapi = "0.111.0"
+fastapi-pagination = "0.12.26"
+fastapi-filter = "2.0.0"
+fastapi-users = {extras = ["sqlalchemy"], version = "13.0.0"}
+fastapi-debug-toolbar = "0.6.3"
+granian = "1.5.1"
+uvicorn = "0.30.3"
+phonenumbers = "^8.13.48"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.7.0"

@@ -16,11 +16,6 @@ services:
       DATABASE_PASSWORD: vendi-password
       DATABASE_DB: vendi-db
 
-      DJANGO_SUPERUSER_USERNAME: admin
-      DJANGO_SUPERUSER_EMAIL: admin@gmail.com
-      DJANGO_SUPERUSER_PASSWORD: pass
-      DJANGO_SETTINGS_MODULE: mspy_vendi.app.settings
-
       ENVIRONMENT: local
     env_file:
       - ../.env
