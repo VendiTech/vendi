@@ -38,8 +38,6 @@ COPY main-entrypoint.sh ${PREFIX_APP}/main-entrypoint.sh
 # Install production dependencies
 RUN poetry install --without dev --no-root
 
-RUN python manage.py collectstatic --noinput --clear
-
 RUN chmod u+x ${PREFIX_APP}/main-entrypoint.sh
 
 CMD ["/backend/vendi/main-entrypoint.sh"]
