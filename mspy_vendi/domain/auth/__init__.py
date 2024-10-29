@@ -1,9 +1,9 @@
-from typing import Annotated, Any, AsyncGenerator, Callable, Coroutine
+from typing import Annotated, Any, AsyncGenerator, Callable, Coroutine, Generic
 
-from fastapi import Depends, Request, WebSocketException, status
+from fastapi import Depends, Request, WebSocketException, status, APIRouter
 from fastapi.websockets import WebSocket
-from fastapi_users import FastAPIUsers
-from fastapi_users.authentication import JWTStrategy
+from fastapi_users import FastAPIUsers, models
+from fastapi_users.authentication import JWTStrategy, AuthenticationBackend
 from fastapi_users_db_sqlalchemy import SQLAlchemyUserDatabase
 
 from mspy_vendi.api.auth_backend import backend, get_jwt_strategy
@@ -12,6 +12,7 @@ from mspy_vendi.core.exceptions.base_exception import UnauthorizedError
 from mspy_vendi.core.helpers.auth_helpers import check_auth_criteria
 from mspy_vendi.core.helpers.logging_helpers import get_described_user_info
 from mspy_vendi.deps import get_user_db
+from mspy_vendi.domain.auth.routers.auth_router import get_auth_router
 from mspy_vendi.domain.user.models import User
 from mspy_vendi.domain.user.services import AuthUserService
 
@@ -21,8 +22,25 @@ async def get_auth_user_service(
 ) -> AsyncGenerator[AuthUserService, None]:
     yield AuthUserService(user_db)
 
+class CustomFastAPIUsers(FastAPIUsers, Generic[models.UP, models.ID]): # type: ignore
+    def get_auth_router(
+        self, auth_backend: AuthenticationBackend, requires_verification: bool = False
+    ) -> APIRouter:
+        """
+        Return an auth router for a given authentication backend.
 
-fastapi_users = FastAPIUsers[User, int](get_auth_user_service, [backend])
+        :param auth_backend: The authentication backend instance.
+        :param requires_verification: Whether the authentication
+        require the user to be verified or not. Defaults to False.
+        """
+        return get_auth_router(
+            auth_backend,
+            self.get_user_manager,
+            self.authenticator,
+            requires_verification,
+        )
+
+fastapi_users = CustomFastAPIUsers[User, int](get_auth_user_service, [backend])
 
 current_user: dict[str, bool] = dict(active=True, verified=True)
 super_user: dict[str, bool] = dict(active=True, verified=True, superuser=True)

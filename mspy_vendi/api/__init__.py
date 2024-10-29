@@ -2,7 +2,7 @@ from fastapi import APIRouter, FastAPI
 
 from mspy_vendi.api import healthcheck
 from mspy_vendi.api.auth_backend import backend
-from mspy_vendi.auth import fastapi_users
+from mspy_vendi.domain.auth import fastapi_users
 from mspy_vendi.core.enums import ApiTagEnum
 from mspy_vendi.domain.user.schemas import UserCreate, UserDetail
 
