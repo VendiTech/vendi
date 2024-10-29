@@ -4,10 +4,9 @@ import logging
 import uvicorn
 from fastapi import FastAPI
 from fastapi_pagination import add_pagination
-from uvicorn import Server
 
 from mspy_vendi.api import init_routers
-from mspy_vendi.config import Settings, config
+from mspy_vendi.config import config
 from mspy_vendi.core.exceptions import exception_handlers
 from mspy_vendi.core.middlewares import init_middlewares
 
@@ -54,6 +53,7 @@ class WebServer:
         logger.info(f"Starting server on {config.web.listen_address}")
 
         await server.serve()
+
 
 app = WebServer.get_app()
 

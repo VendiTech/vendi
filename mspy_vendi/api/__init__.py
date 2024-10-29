@@ -3,8 +3,8 @@ from fastapi import APIRouter, FastAPI
 from mspy_vendi.api import healthcheck
 from mspy_vendi.api.auth_backend import backend
 from mspy_vendi.api.v1 import router_v1
-from mspy_vendi.domain.auth import fastapi_users
 from mspy_vendi.core.enums import ApiTagEnum
+from mspy_vendi.domain.auth import fastapi_users
 from mspy_vendi.domain.user.schemas import UserCreate, UserDetail
 
 root_router = APIRouter()

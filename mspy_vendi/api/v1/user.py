@@ -2,20 +2,18 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import ORJSONResponse
-from pydantic import ValidationError
 
 from mspy_vendi.core.api import CRUDApi
+from mspy_vendi.core.enums import ApiTagEnum, CRUDEnum
 from mspy_vendi.core.pagination import Page
-from mspy_vendi.core.enums import CRUDEnum
-from mspy_vendi.domain.user.models import User
-
-from mspy_vendi.domain.user.schemas import UserDetail, UserUpdate
-from mspy_vendi.domain.user.services import UserService
-from mspy_vendi.core.enums import ApiTagEnum
 from mspy_vendi.deps import get_db_session
 from mspy_vendi.domain.auth import get_current_user
+from mspy_vendi.domain.user.models import User
+from mspy_vendi.domain.user.schemas import UserDetail, UserUpdate
+from mspy_vendi.domain.user.services import UserService
 
 router = APIRouter(prefix="/user", default_response_class=ORJSONResponse, tags=[ApiTagEnum.USER])
+
 
 @router.get("/me", response_model=UserDetail)
 async def get__show_me(
@@ -29,6 +27,7 @@ async def get__show_me(
     """
     return await service.get(obj_id=user.id)
 
+
 class UserAPI(CRUDApi):
     service = UserService
     schema = UserDetail
@@ -41,7 +40,7 @@ class UserAPI(CRUDApi):
     }
     pagination_schema = Page
     endpoints = (CRUDEnum.GET, CRUDEnum.LIST, CRUDEnum.UPDATE)
-    api_tags = (ApiTagEnum.USER, )
+    api_tags = (ApiTagEnum.USER,)
 
 
 UserAPI(router)

@@ -1,18 +1,17 @@
 import functools
 import inspect
 from abc import ABC
-from typing import Any, Callable, Generic, Type, TypeVar, Annotated
+from typing import Any, Callable, Generic, Type, TypeVar
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from pydantic import BaseModel, PositiveInt
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
+from mspy_vendi.core.enums import ApiTagEnum, CRUDEnum
 from mspy_vendi.core.pagination import Page
 from mspy_vendi.core.service import CRUDService
-from mspy_vendi.core.enums import CRUDEnum, ApiTagEnum
 from mspy_vendi.db import User
-from mspy_vendi.domain.auth import get_current_user
 
 Service = TypeVar("Service", bound=Type[CRUDService])
 CreateSchema = TypeVar("CreateSchema", bound=BaseModel)
@@ -94,7 +93,6 @@ class CRUDApi(
 
         if not hasattr(self, "update_schema"):
             self.update_schema = self.create_schema
-
 
         if CRUDEnum.LIST in self.endpoints:
             self._fix_method_signature(method_name="list", crud_method=CRUDEnum.LIST)

@@ -1,6 +1,6 @@
-from mspy_vendi.core.helpers import to_title_case
 from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt
 
+from mspy_vendi.core.helpers import to_title_case
 from mspy_vendi.core.schemas.base import (
     OptionalBool,
     OptionalDatetime,

@@ -1,4 +1,4 @@
-from enum import StrEnum, unique, IntEnum
+from enum import IntEnum, StrEnum, unique
 
 
 @unique
@@ -13,6 +13,7 @@ class CRUDEnum(IntEnum):
     LIST = 2
     UPDATE = 3
     DELETE = 4
+
 
 class HealthCheckStatusEnum(StrEnum):
     SUCCESS = "Success"

@@ -175,12 +175,7 @@ class CRUDManager(ABC, Generic[Model, Schema, CreateSchema, UpdateSchema, PageSc
         return await self._apply_changes(stmt=stmt, autocommit=autocommit, is_unique=is_unique)
 
     async def update(
-        self,
-        obj_id: int,
-        obj: UpdateSchema,
-        autocommit: bool = True,
-        is_unique: bool = False,
-        **_: Any
+        self, obj_id: int, obj: UpdateSchema, autocommit: bool = True, is_unique: bool = False, **_: Any
     ) -> Model:
         """
         Updates an object.

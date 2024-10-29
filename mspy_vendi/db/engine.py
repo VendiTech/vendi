@@ -5,9 +5,10 @@ from typing import AsyncGenerator
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
+    AsyncSession,
     async_scoped_session,
     async_sessionmaker,
-    create_async_engine, AsyncSession,
+    create_async_engine,
 )
 
 from mspy_vendi.config import config, log
@@ -20,6 +21,7 @@ AsyncSessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False)
 
 # Ideally for tests
 AsyncScopedSession = async_scoped_session(AsyncSessionLocal, scopefunc=current_task)
+
 
 @asynccontextmanager
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:

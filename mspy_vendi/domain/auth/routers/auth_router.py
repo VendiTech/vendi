@@ -1,8 +1,6 @@
 from typing import Tuple
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.security import OAuth2PasswordRequestForm
-
 from fastapi_users import models
 from fastapi_users.authentication import AuthenticationBackend, Authenticator, Strategy
 from fastapi_users.manager import BaseUserManager, UserManagerDependency
@@ -20,9 +18,7 @@ def get_auth_router(
 ) -> APIRouter:
     """Generate a router with login/logout routes for an authentication backend."""
     router = APIRouter()
-    get_current_user_token = authenticator.current_user_token(
-        active=True, verified=requires_verification
-    )
+    get_current_user_token = authenticator.current_user_token(active=True, verified=requires_verification)
 
     login_responses: OpenAPIResponseType = {
         status.HTTP_400_BAD_REQUEST: {
@@ -73,17 +69,11 @@ def get_auth_router(
         return response
 
     logout_responses: OpenAPIResponseType = {
-        **{
-            status.HTTP_401_UNAUTHORIZED: {
-                "description": "Missing token or inactive user."
-            }
-        },
+        status.HTTP_401_UNAUTHORIZED: {"description": "Missing token or inactive user."},
         **backend.transport.get_openapi_logout_responses_success(),
     }
 
-    @router.post(
-        "/logout", name=f"auth:{backend.name}.logout", responses=logout_responses
-    )
+    @router.post("/logout", name=f"auth:{backend.name}.logout", responses=logout_responses)
     async def logout(
         user_token: Tuple[models.UP, str] = Depends(get_current_user_token),
         strategy: Strategy[models.UP, models.ID] = Depends(backend.get_strategy),

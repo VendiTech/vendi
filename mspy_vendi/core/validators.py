@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from pydantic import AfterValidator, Field, HttpUrl, field_validator, ValidationError
+from pydantic import AfterValidator, Field, HttpUrl, ValidationError, field_validator
 from pydantic.functional_serializers import PlainSerializer
 from pydantic_core.core_schema import ValidationInfo
 

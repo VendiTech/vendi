@@ -1,10 +1,11 @@
 from typing import Annotated
 
-from mspy_vendi.deps import get_db_session
-from mspy_vendi.config import log
 from fastapi import Depends
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from mspy_vendi.config import log
+from mspy_vendi.deps import get_db_session
 
 
 class HealthCheckService:

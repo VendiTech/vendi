@@ -2,7 +2,6 @@ from fastapi import Request, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from pydantic import ValidationError
 
 from mspy_vendi.config import log
 from mspy_vendi.core.exceptions.base_exception import BaseError
@@ -20,6 +19,7 @@ async def request_validation_error_handler(_: Request, exc: RequestValidationErr
         },
     )
 
+
 async def value_error_handler(_: Request, exc: ValueError):
     log.info(f"{exc.__class__.__name__}", error=str(exc))
 
@@ -31,6 +31,7 @@ async def value_error_handler(_: Request, exc: ValueError):
             "detail": "The server cannot process the request from the client",
         },
     )
+
 
 async def base_error_handler(_: Request, exc: BaseError):
     log.info(f"{exc.__class__.__name__}", error=str(exc))
