@@ -44,7 +44,7 @@ class CRUDManager(ABC, Generic[Model, Schema, CreateSchema, UpdateSchema, PageSc
         query_filter: Filter | None = None,
         raw_result: bool = False,
         is_unique: bool = False,
-        **kwargs: Any,
+        **_: Any,
     ) -> Page[Schema] | list[Model]:  # type: ignore
         """
         This method retrieves all objects from the database.
@@ -55,7 +55,6 @@ class CRUDManager(ABC, Generic[Model, Schema, CreateSchema, UpdateSchema, PageSc
                            If True, a list of raw results will be returned.
                            If False, a Page object with paginated results will be returned. Default is False.
         :param is_unique: If True, apply unique filtering to the objects, otherwise do nothing.
-        :param kwargs: Additional keyword arguments.
 
         :return: A Page object with paginated results if raw_result is False, otherwise a list of raw results.
 
@@ -75,7 +74,7 @@ class CRUDManager(ABC, Generic[Model, Schema, CreateSchema, UpdateSchema, PageSc
 
         return await paginate(self.session, stmt)
 
-    async def get(self, obj_id: int, *, raise_error: bool = True, **kwargs: Any) -> Model | None:
+    async def get(self, obj_id: int, *, raise_error: bool = True, **_: Any) -> Model | None:
         """
         This method retrieves an object from the database using its ID.
 
@@ -83,7 +82,6 @@ class CRUDManager(ABC, Generic[Model, Schema, CreateSchema, UpdateSchema, PageSc
         :param raise_error: A flag that determines whether an error should be raised if the object is not found.
                             If True, a NotFoundError will be raised when the object is not found.
                             If False, the method will return None when the object is not found. Default is True.
-        :param kwargs: Additional keyword arguments.
 
         :return: The retrieved object if it exists. If the object does not exist and raise_error is False, the method
                  will return None.
@@ -152,7 +150,7 @@ class CRUDManager(ABC, Generic[Model, Schema, CreateSchema, UpdateSchema, PageSc
         obj_id: int | None = None,
         autocommit: bool = True,
         is_unique: bool = False,
-        **kwargs: Any,
+        **_: Any,
     ) -> Model:
         """
         Creates an entity in the database and returns the created object.
@@ -161,7 +159,6 @@ class CRUDManager(ABC, Generic[Model, Schema, CreateSchema, UpdateSchema, PageSc
         :param obj_id: The ID of the object to create.
         :param autocommit: If True, commit changes immediately, otherwise flush changes.
         :param is_unique: If True, apply unique filtering to the objects, otherwise do nothing.
-        :param kwargs: Additional keyword arguments.
 
         :return: The created object.
         """
@@ -183,6 +180,7 @@ class CRUDManager(ABC, Generic[Model, Schema, CreateSchema, UpdateSchema, PageSc
         obj: UpdateSchema,
         autocommit: bool = True,
         is_unique: bool = False,
+        **_: Any
     ) -> Model:
         """
         Updates an object.
@@ -204,7 +202,7 @@ class CRUDManager(ABC, Generic[Model, Schema, CreateSchema, UpdateSchema, PageSc
 
         return await self._apply_changes(stmt=stmt, obj_id=obj_id, autocommit=autocommit, is_unique=is_unique)
 
-    async def delete(self, obj_id: int, autocommit: bool = True) -> None:
+    async def delete(self, obj_id: int, autocommit: bool = True, **_: Any) -> None:
         """
         Delete an object.
 

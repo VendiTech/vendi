@@ -104,7 +104,7 @@ class CRUDService(ABC, Generic[Manager, Schema, CreateSchema, UpdateSchema, Page
 
         :return: None.
         """
-        await self.manager.delete(obj_id, autocommit=autocommit)
+        await self.manager.delete(obj_id, autocommit=autocommit, **kwargs)
 
     async def upsert(self, obj_id: int | None, obj: CreateSchema, *, autocommit: bool = True, **kwargs: Any):
         """
