@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from pydantic import AfterValidator, Field, HttpUrl, ValidationError, field_validator
+from pydantic import AfterValidator, Field, HttpUrl, field_validator
 from pydantic.functional_serializers import PlainSerializer
 from pydantic_core.core_schema import ValidationInfo
 
@@ -34,7 +34,7 @@ def validate_password(field_name: str = "password") -> classmethod:
             errors.append("Password cannot be the same as the email.")
 
         if errors:
-            raise ValidationError(errors)
+            raise ValueError(errors)
 
         return value
 
