@@ -113,6 +113,14 @@ class Settings(BaseSettings):
     def title(self) -> str:
         return f"Vendi Backend. Environment: {self.environment.upper()}"
 
+    @property
+    def auth_cookie_name(self) -> str:
+        return f"auth_token_{self.environment.lower()}"
+
+    @property
+    def auth_cookie_secure(self) -> bool:
+        return self.environment not in [AppEnvEnum.LOCAL, AppEnvEnum.TEST]
+
 
 class TestSettings(Settings):
     pass
