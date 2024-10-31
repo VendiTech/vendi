@@ -28,18 +28,28 @@ async def get__show_me(
     return await service.get(obj_id=user.id)
 
 
+@router.patch("/edit")
+async def update__user(
+    updated_obj: UserUpdate,
+    user: Annotated[User, Depends(get_current_user())],
+    service: Annotated[UserService, Depends()],
+) -> UserDetail:
+    """
+    Update the User by Provided `UserUpdate` object.
+    """
+    return await service.update(obj_id=user.id, obj=updated_obj)
+
+
 class UserAPI(CRUDApi):
     service = UserService
     schema = UserDetail
-    update_schema = UserUpdate
     get_db_session = Depends(get_db_session)
     current_user_mapping = {
         CRUDEnum.GET: Depends(get_current_user(is_superuser=True)),
         CRUDEnum.LIST: Depends(get_current_user(is_superuser=True)),
-        CRUDEnum.UPDATE: Depends(get_current_user()),
     }
     pagination_schema = Page
-    endpoints = (CRUDEnum.GET, CRUDEnum.LIST, CRUDEnum.UPDATE)
+    endpoints = (CRUDEnum.GET, CRUDEnum.LIST)
     api_tags = (ApiTagEnum.USER,)
 
 
