@@ -73,6 +73,27 @@ class WebSettings(BaseSettings):
         return AppEnvEnum.from_env() in [AppEnvEnum.LOCAL, AppEnvEnum.TEST]
 
 
+class RequestClientSettings(BaseSettings):
+    ssl_verify: bool = False
+    cert_path: str = ""
+    key_path: str = ""
+
+    default_connection_timeout: float = 3.0
+    max_connection_timeout: float = 7.0
+
+
+class DatajamSettings(BaseSettings):
+    model_config = SettingsConfigDict(extra="allow", env_prefix="DATAJAM_")
+
+    schema: str = "https"
+    host: str = "datajamportal.com"
+    get_data_url: str = "CustomerAPI/GetData/"
+
+    @property
+    def url(self) -> str:
+        return f"{self.schema}://{self.host}/{self.get_data_url}"
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(extra="allow")
 
@@ -80,6 +101,8 @@ class Settings(BaseSettings):
     sqs: SQSSettings = SQSSettings()
     web: WebSettings = WebSettings()
     cors: CORSSettings = CORSSettings()
+    request_client: RequestClientSettings = RequestClientSettings()
+    datajam: DatajamSettings = DatajamSettings()
 
     log_level: Literal["INFO", "DEBUG", "WARN", "ERROR"] = "INFO"
     log_json_format: bool = False
