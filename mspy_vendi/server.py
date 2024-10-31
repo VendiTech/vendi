@@ -4,10 +4,9 @@ import logging
 import uvicorn
 from fastapi import FastAPI
 from fastapi_pagination import add_pagination
-from uvicorn import Server
 
 from mspy_vendi.api import init_routers
-from mspy_vendi.config import Settings, config
+from mspy_vendi.config import config
 from mspy_vendi.core.exceptions import exception_handlers
 from mspy_vendi.core.middlewares import init_middlewares
 
@@ -16,24 +15,24 @@ logger = logging.getLogger(__name__)
 
 class WebServer:
     @classmethod
-    async def build_server(cls, app_config: Settings) -> Server:
-        app = await cls._get_app()
+    async def build_server(cls):
+        app = cls.get_app()
 
         u_config = uvicorn.Config(
             app,
-            host=app_config.web.host,
-            port=app_config.web.port,
-            reload=app_config.web.is_reload,
-            log_level=app_config.web.log_level,
-            workers=app_config.web.workers,
-            limit_concurrency=app_config.web.limit_concurrency,
+            host=config.web.host,
+            port=config.web.port,
+            reload=config.web.is_reload,
+            log_level=config.web.log_level,
+            workers=config.web.workers,
+            limit_concurrency=config.web.limit_concurrency,
         )
         u_config.load()
 
         return uvicorn.Server(config=u_config)
 
     @classmethod
-    async def _get_app(cls) -> FastAPI:
+    def get_app(cls) -> FastAPI:
         _app = FastAPI(
             title=config.title,
             version=config.version,
@@ -49,12 +48,14 @@ class WebServer:
         return _app
 
     @classmethod
-    async def web_server(cls, app_config: Settings):
-        server = await cls.build_server(app_config=app_config)
-        logger.info(f"Starting server on {app_config.web.listen_address}")
+    async def web_server(cls):
+        server = await cls.build_server()
+        logger.info(f"Starting server on {config.web.listen_address}")
 
         await server.serve()
 
 
+app = WebServer.get_app()
+
 if __name__ == "__main__":
-    asyncio.run(WebServer.web_server(app_config=config))
+    asyncio.run(WebServer.web_server())

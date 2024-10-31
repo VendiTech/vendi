@@ -19,7 +19,6 @@ class UserBase(BaseSchema):
     phone_number: PhoneNumber | None = None
 
 
-
 class UserDetail(UserBase):
     id: int
     status: StatusEnum
@@ -51,6 +50,7 @@ class UserPasswordChange(BaseSchema):
 
 class UserPasswordUpdate(BaseSchema):
     hashed_password: str
+
 
 class UserLoginSchema(BaseSchema):
     username: str

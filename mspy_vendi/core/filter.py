@@ -1,17 +1,17 @@
 from datetime import date, datetime
 from typing import Any, cast
 
-from mspy_vendi.core.constants import (
-    COMPOUND_SEARCH_FIELD_NAME,
-    DEFAULT_AGE_RANGE_DB_FIELD,
-    DEFAULT_RANGE_DB_FIELD,
-)
-from mspy_vendi.core.helpers import get_columns_for_model, is_join_present, set_end_of_day_time
 from fastapi_filter.contrib.sqlalchemy import Filter
 from fastapi_filter.contrib.sqlalchemy.filter import _orm_operator_transformer
 from pydantic import field_validator, model_validator
-from sqlalchemy import BinaryExpression, Column, Select, extract, func, or_
+from sqlalchemy import BinaryExpression, Column, Select, func, or_
 from sqlalchemy.orm import DeclarativeBase, Query
+
+from mspy_vendi.core.constants import (
+    COMPOUND_SEARCH_FIELD_NAME,
+    DEFAULT_RANGE_DB_FIELD,
+)
+from mspy_vendi.core.helpers import get_columns_for_model, is_join_present, set_end_of_day_time
 
 
 class BaseFilter(Filter, extra="allow"):  # type: ignore
@@ -189,9 +189,7 @@ class BaseFilter(Filter, extra="allow"):  # type: ignore
 
         # We get rid of range fields, because we've been already construct the query above
         filtering_fields_without_range_fields: list[tuple[str, Any]] = [
-            (key, value)
-            for key, value in self.filtering_fields
-            if key not in [*(range_fields or []), *(age_range_fields or [])]
+            (key, value) for key, value in self.filtering_fields if key not in (range_fields or [])
         ]
 
         for field_name, value in filtering_fields_without_range_fields:

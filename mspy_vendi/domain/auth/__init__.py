@@ -1,9 +1,9 @@
 from typing import Annotated, Any, AsyncGenerator, Callable, Coroutine, Generic
 
-from fastapi import Depends, Request, WebSocketException, status, APIRouter
+from fastapi import APIRouter, Depends, Request, WebSocketException, status
 from fastapi.websockets import WebSocket
 from fastapi_users import FastAPIUsers, models
-from fastapi_users.authentication import JWTStrategy, AuthenticationBackend
+from fastapi_users.authentication import AuthenticationBackend, JWTStrategy
 from fastapi_users_db_sqlalchemy import SQLAlchemyUserDatabase
 
 from mspy_vendi.api.auth_backend import backend, get_jwt_strategy
@@ -22,10 +22,9 @@ async def get_auth_user_service(
 ) -> AsyncGenerator[AuthUserService, None]:
     yield AuthUserService(user_db)
 
-class CustomFastAPIUsers(FastAPIUsers, Generic[models.UP, models.ID]): # type: ignore
-    def get_auth_router(
-        self, auth_backend: AuthenticationBackend, requires_verification: bool = False
-    ) -> APIRouter:
+
+class CustomFastAPIUsers(FastAPIUsers, Generic[models.UP, models.ID]):  # type: ignore
+    def get_auth_router(self, auth_backend: AuthenticationBackend, requires_verification: bool = False) -> APIRouter:
         """
         Return an auth router for a given authentication backend.
 
@@ -39,6 +38,7 @@ class CustomFastAPIUsers(FastAPIUsers, Generic[models.UP, models.ID]): # type: i
             self.authenticator,
             requires_verification,
         )
+
 
 fastapi_users = CustomFastAPIUsers[User, int](get_auth_user_service, [backend])
 

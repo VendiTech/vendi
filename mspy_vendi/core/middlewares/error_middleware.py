@@ -1,12 +1,13 @@
 import traceback
 from typing import Callable
 
-from mspy_vendi.config import log
-from mspy_vendi.core.constants import SERVER_ERROR_MESSAGE
 from fastapi import Request, Response
 from starlette import status
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
+
+from mspy_vendi.config import log
+from mspy_vendi.core.constants import SERVER_ERROR_MESSAGE
 
 
 class ErrorMiddleware(BaseHTTPMiddleware):
