@@ -1,6 +1,7 @@
-from typing import Annotated
+from datetime import datetime
+from typing import Annotated, Any
 
-from pydantic import AfterValidator, Field, HttpUrl, field_validator
+from pydantic import HttpUrl, field_validator
 from pydantic.functional_serializers import PlainSerializer
 from pydantic_core.core_schema import ValidationInfo
 
@@ -57,4 +58,33 @@ def check_alphanumeric_characters(value: str) -> str:
     return value
 
 
-AlphaString = Annotated[str, Field(..., min_length=1, max_length=50), AfterValidator(check_alphanumeric_characters)]
+def check_valid_iso_date(date: Any) -> str:
+    """
+    Try to convert a string to ISO 8601 format.
+
+    :param date: The string object to be converted.
+
+    :return: The string representation in ISO 8601
+    """
+    try:
+        # Attempt to create a datetime object
+        datetime.fromisoformat(str(date))
+    except ValueError:
+        raise ValueError("Invalid ISO date format")
+
+    return date
+
+
+def convert_to_str_date(date: Any) -> str:
+    """
+    Try to convert a string to Date format.
+
+    :param date: The string object to be converted.
+
+    :return: The string representation in ISO 8601
+    """
+    try:
+        # Attempt to create a datetime object
+        return datetime.fromisoformat(str(date)).strftime("%Y-%m-%d")
+    except ValueError:
+        raise ValueError("Invalid Str date format")

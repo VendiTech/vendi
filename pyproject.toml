@@ -24,6 +24,10 @@ fastapi-debug-toolbar = "0.6.3"
 granian = "1.5.1"
 uvicorn = "0.30.3"
 phonenumbers = "^8.13.48"
+taskiq = {extras = ["zmq"], version = "^0.11.7"}
+httpx = "^0.27.2"
+tenacity = "^9.0.0"
+pyzmq = "^26.2.0"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.7.0"

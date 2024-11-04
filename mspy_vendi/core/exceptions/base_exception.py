@@ -1,5 +1,5 @@
 import json
-from typing import Any, LiteralString, NoReturn, Type
+from typing import Any, LiteralString, NoReturn
 
 from fastapi.exceptions import RequestValidationError
 from pydantic_core import InitErrorDetails, PydanticCustomError, ValidationError
@@ -162,7 +162,7 @@ class PydanticLikeError(RequestValidationError):
         super().__init__(errors)
 
 
-db_error_mapping: dict[PGErrorCodeEnum, Type[BaseError]] = {
+db_error_mapping: dict[PGErrorCodeEnum, type[BaseError]] = {
     PGErrorCodeEnum.NOT_NULL_VIOLATION: NotNullViolationError,
     PGErrorCodeEnum.CONSTRAINT_VIOLATION: LogicalConstraintViolationError,
     PGErrorCodeEnum.FOREIGN_KEY_VIOLATION: ForeignKeyError,
@@ -193,3 +193,39 @@ def raise_db_error(ex: DBAPIError) -> NoReturn:
         raise error_class(". ".join(filter(None, errors)))
 
     raise ex
+
+
+http_error_mapping: dict[HttpCode, type[BaseError]] = {
+    400: BadRequestError,
+    401: UnauthorizedError,
+    403: ForbiddenError,
+    404: NotFoundError,
+    408: RequestTimeoutError,
+    409: ConflictError,
+    422: UnprocessableEntityError,
+    500: ServerError,
+}
+
+
+def raise_http_error(status_code: HttpCode, err_data: dict) -> NoReturn:
+    """
+    Raises an HTTP error based on the provided status code and error data.
+
+    This function looks up the appropriate exception class from a predefined
+    mapping of HTTP status codes to exception classes (`http_error_mapping`).
+    If the status code is not found in the mapping, a default `BadRequestError`
+    is raised. The error message is extracted from the `err_data` dictionary
+    using the key "detail".
+
+    Parameters:
+    - status_code (HttpCode): An integer representing the HTTP status code of the error.
+    - err_data (dict): A dictionary containing additional data about the error.
+      It must include a "detail" key with the error message as its value.
+
+    Raises:
+    - Type[BaseError]: The specific exception mapped to the provided `status_code`.
+      If `status_code` is not in `http_error_mapping`, raises `BadRequestError`.
+    """
+    error_class: type[BaseError] = http_error_mapping.get(status_code, BadRequestError)
+
+    raise error_class(err_data.get("detail"))

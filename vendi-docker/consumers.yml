@@ -24,3 +24,9 @@ services:
     container_name: nayax-consumer
     command:
       - nayax_consumer
+
+  datajam-consumer:
+    <<: *common-consumers
+    container_name: datajam-consumer
+    command:
+      - datajam_consumer

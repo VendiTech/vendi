@@ -1,7 +1,7 @@
 import functools
 import inspect
 from abc import ABC
-from typing import Any, Callable, Generic, Type, TypeVar
+from typing import Any, Callable, Generic, TypeVar
 
 from fastapi import APIRouter
 from pydantic import BaseModel, PositiveInt
@@ -13,7 +13,7 @@ from mspy_vendi.core.pagination import Page
 from mspy_vendi.core.service import CRUDService
 from mspy_vendi.db import User
 
-Service = TypeVar("Service", bound=Type[CRUDService])
+Service = TypeVar("Service", bound=type[CRUDService])
 CreateSchema = TypeVar("CreateSchema", bound=BaseModel)
 UpdateSchema = TypeVar("UpdateSchema", bound=BaseModel)
 DetailedSchema = TypeVar("DetailedSchema", bound=BaseModel)
