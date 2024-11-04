@@ -122,6 +122,7 @@ class Settings(BaseSettings):
         return self.environment not in [AppEnvEnum.LOCAL, AppEnvEnum.TEST]
 
     auth_cookie_samesite: Literal["strict", "lax", "none"] = "none"
+    auth_cookie_domain: str = ".herokuapp.com"
 
 
 class TestSettings(Settings):

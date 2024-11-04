@@ -7,6 +7,7 @@ cookie_transport = CookieTransport(
     cookie_max_age=config.token_lifetime,
     cookie_samesite=config.auth_cookie_samesite,
     cookie_secure=config.auth_cookie_secure,
+    cookie_domain=config.auth_cookie_domain,
 )
 
 
