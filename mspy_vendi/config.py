@@ -49,7 +49,7 @@ class SQSSettings(BaseSettings):
 
     queue_name: str = "VendiTech_Nayax_Integration"
     max_number_of_messages: int = 10
-    visibility_timeout: int = 60
+    visibility_timeout: int = 60 * 60  # 1 hour
     long_poll_time: int = 20
     auto_ack: bool = False
 
