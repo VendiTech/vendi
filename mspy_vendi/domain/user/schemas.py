@@ -5,8 +5,8 @@ from pydantic_extra_types.phone_numbers import PhoneNumber
 
 from mspy_vendi.core.constants import MAX_NUMBER_OF_CHARACTERS
 from mspy_vendi.core.schemas import BaseSchema
-from mspy_vendi.core.schemas.base import ConstraintString
-from mspy_vendi.core.validators import AlphaString, validate_password
+from mspy_vendi.core.schemas.base import AlphaString, ConstraintString
+from mspy_vendi.core.validators import validate_password
 from mspy_vendi.domain.user.enums import RoleEnum, StatusEnum
 
 

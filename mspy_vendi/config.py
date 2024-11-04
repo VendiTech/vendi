@@ -82,12 +82,15 @@ class RequestClientSettings(BaseSettings):
     max_connection_timeout: float = 7.0
 
 
-class DatajamSettings(BaseSettings):
+class DataJamSettings(BaseSettings):
     model_config = SettingsConfigDict(extra="allow", env_prefix="DATAJAM_")
 
     schema: str = "https"
     host: str = "datajamportal.com"
     get_data_url: str = "CustomerAPI/GetData/"
+
+    username: str
+    password: str
 
     @property
     def url(self) -> str:
@@ -102,7 +105,7 @@ class Settings(BaseSettings):
     web: WebSettings = WebSettings()
     cors: CORSSettings = CORSSettings()
     request_client: RequestClientSettings = RequestClientSettings()
-    datajam: DatajamSettings = DatajamSettings()
+    datajam: DataJamSettings = DataJamSettings()
 
     log_level: Literal["INFO", "DEBUG", "WARN", "ERROR"] = "INFO"
     log_json_format: bool = False

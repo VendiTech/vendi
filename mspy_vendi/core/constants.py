@@ -1,6 +1,11 @@
 MAX_NUMBER_OF_CHARACTERS: int = 100
 DEFAULT_SOURCE_SYSTEM: str = "Nayax"
 
+# DataJam API constants
+DEFAULT_PROJECT_NAME: str = "Vendi Tech"
+DEFAULT_TYPE_DATA: str = "Impression"
+DEFAULT_DATAJAM_DATE: str = "2023-11-09"
+
 SERVER_ERROR_MESSAGE: str = "Something went wrong. Try to use this service later"
 
 # Constants for fastapi-filter library

@@ -102,6 +102,7 @@ class RequestClient(metaclass=RequestMetaClass):
         data: dict | None = None,
         headers: dict | None = None,
         params: QueryParamTypes | None = None,
+        auth: httpx.Auth | None = None,
         with_retry: bool = False,
     ):
         """
@@ -113,6 +114,7 @@ class RequestClient(metaclass=RequestMetaClass):
         :param data: The data to include in the request form.
         :param params: The Query Params to include in the request url.
         :param headers: Additional HTTP headers to include in the request.
+        :param auth: The authentication credentials to use for the request.
         :param with_retry: if True, request will retry. Default to False.
 
         :return httpx.Response: The HTTP response received from the server.
@@ -126,7 +128,7 @@ class RequestClient(metaclass=RequestMetaClass):
             "url": url,
             "headers": headers or {},
             "params": params,
-            "auth": ...,
+            "auth": auth,
         }
 
         if payload:

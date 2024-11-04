@@ -2,7 +2,9 @@ from datetime import datetime
 from typing import Annotated, Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AfterValidator, BaseModel, BeforeValidator, ConfigDict, Field, PlainSerializer
+
+from mspy_vendi.core.validators import check_alphanumeric_characters, check_valid_iso_date, convert_to_str_date
 
 
 class BaseSchema(BaseModel):
@@ -38,4 +40,11 @@ OptionalDatetime = Annotated[datetime | None, Field(None)]
 OptionalBool = Annotated[bool | None, Field(None)]
 OptionalUUID = Annotated[UUID | None, Field(None)]
 
+AlphaString = Annotated[str, Field(..., min_length=1, max_length=50), AfterValidator(check_alphanumeric_characters)]
+
 ConstraintString = lambda max_length: Annotated[str | None, Field(None, max_length=max_length, min_length=1)]  # noqa: E731
+DateStr = Annotated[
+    str,
+    BeforeValidator(check_valid_iso_date),
+    PlainSerializer(convert_to_str_date, return_type=str),
+]
