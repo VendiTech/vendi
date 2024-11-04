@@ -147,7 +147,7 @@ class Settings(BaseSettings):
     def auth_cookie_secure(self) -> bool:
         return self.environment not in [AppEnvEnum.LOCAL, AppEnvEnum.TEST]
 
-    auth_cookie_samesite: Literal["strict", "lax", "none"] = "none"
+    auth_cookie_samesite: Literal["strict", "lax", "none"] = "lax"
     auth_cookie_domain: str = ".herokuapp.com"
 
     # crontab_twice_a_day: str = "0 0,12 * * *"  # Every day at 00:00 and 12:00
