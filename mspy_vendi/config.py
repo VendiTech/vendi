@@ -121,6 +121,8 @@ class Settings(BaseSettings):
     def auth_cookie_secure(self) -> bool:
         return self.environment not in [AppEnvEnum.LOCAL, AppEnvEnum.TEST]
 
+    auth_cookie_samesite: Literal["strict", "lax", "none"] = "lax"
+
 
 class TestSettings(Settings):
     pass

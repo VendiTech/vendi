@@ -5,7 +5,7 @@ from mspy_vendi.config import config
 cookie_transport = CookieTransport(
     cookie_name=config.auth_cookie_name,
     cookie_max_age=config.token_lifetime,
-    cookie_samesite="none",
+    cookie_samesite=config.auth_cookie_samesite,
     cookie_secure=config.auth_cookie_secure,
 )
 
