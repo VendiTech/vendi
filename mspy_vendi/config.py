@@ -1,4 +1,3 @@
-import os
 from functools import lru_cache
 from typing import Literal
 from urllib.parse import quote_plus
@@ -8,7 +7,6 @@ from pydantic_settings import BaseSettings as PydanticBaseSettings
 from pydantic_settings import SettingsConfigDict
 
 from mspy_vendi.core.enums import AppEnvEnum
-from mspy_vendi.core.helpers import boolify
 from mspy_vendi.core.logger import Logger
 
 
@@ -121,9 +119,9 @@ class Settings(BaseSettings):
 
     @property
     def auth_cookie_secure(self) -> bool:
-        return boolify(os.getenv("AUTH_COOKIE_SECURE"))
+        return self.environment not in [AppEnvEnum.LOCAL, AppEnvEnum.TEST]
 
-    auth_cookie_samesite: Literal["strict", "lax", "none"] = "lax"
+    auth_cookie_samesite: Literal["strict", "lax", "none"] = "none"
 
 
 class TestSettings(Settings):
