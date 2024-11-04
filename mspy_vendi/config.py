@@ -121,7 +121,7 @@ class Settings(BaseSettings):
 
     @property
     def auth_cookie_secure(self) -> bool:
-        return boolify(os.getenv("AUTH_COOKIE_SECURE")) or self.environment not in [AppEnvEnum.LOCAL, AppEnvEnum.TEST]
+        return boolify(os.getenv("AUTH_COOKIE_SECURE"))
 
 
 class TestSettings(Settings):
