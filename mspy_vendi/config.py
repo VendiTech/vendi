@@ -148,7 +148,7 @@ class Settings(BaseSettings):
         return self.environment not in [AppEnvEnum.LOCAL, AppEnvEnum.TEST]
 
     auth_cookie_samesite: Literal["strict", "lax", "none"] = "none"
-    auth_cookie_domain: str | None = None
+    auth_cookie_domain: str | None = ".com"
 
     # crontab_twice_a_day: str = "0 0,12 * * *"  # Every day at 00:00 and 12:00
     crontab_twice_a_day: str = "* * * * *"  # Every day at 00:00 and 12:00
