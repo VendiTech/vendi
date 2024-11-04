@@ -6,6 +6,7 @@ ALEMBIC_INI_PATH ?= mspy_vendi/db/migrations/alembic.ini
 SERVICE_NAME ?= vendi-service
 SERVICE_DB ?= vendi-db
 CONSUMER_NAYAX ?= nayax-consumer
+CONSUMER_DATAJAM ?= datajam-consumer
 
 ruff-fix:
 	ruff check . --fix
@@ -19,8 +20,14 @@ lint: format ruff-fix
 up:
 	docker compose -f ${DOCKER_PATH} up --remove-orphans
 
-up-consumer:
+up-nayax-consumer:
 	docker compose -f ${DOCKER_PATH} -f ${CONSUMER_PATH} up ${CONSUMER_NAYAX} --remove-orphans
+
+up-datajam-consumer:
+	docker compose -f ${DOCKER_PATH} -f ${CONSUMER_PATH} up ${CONSUMER_DATAJAM} --remove-orphans
+
+up-consumers:
+	docker compose -f ${DOCKER_PATH} -f ${CONSUMER_PATH} up --remove-orphans
 
 build:
 	docker compose -f ${DOCKER_PATH} build

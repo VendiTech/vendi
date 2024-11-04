@@ -147,6 +147,8 @@ class Settings(BaseSettings):
     def auth_cookie_secure(self) -> bool:
         return self.environment not in [AppEnvEnum.LOCAL, AppEnvEnum.TEST]
 
+    crontab_twice_a_day: str = "0 0,12 * * *"  # Every day at 00:00 and 12:00
+
 
 class TestSettings(Settings):
     pass

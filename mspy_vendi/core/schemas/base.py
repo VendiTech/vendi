@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -44,7 +44,7 @@ AlphaString = Annotated[str, Field(..., min_length=1, max_length=50), AfterValid
 
 ConstraintString = lambda max_length: Annotated[str | None, Field(None, max_length=max_length, min_length=1)]  # noqa: E731
 DateStr = Annotated[
-    str,
+    date,
     BeforeValidator(check_valid_iso_date),
     PlainSerializer(convert_to_str_date, return_type=str),
 ]

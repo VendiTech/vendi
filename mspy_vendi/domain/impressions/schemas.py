@@ -11,3 +11,4 @@ class CreateImpressionSchema(BaseSchema):
     rainfall: int
     source_system: str = DEFAULT_SOURCE_SYSTEM
     source_system_id: str
+    device_number: str

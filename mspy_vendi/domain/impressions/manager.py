@@ -1,11 +1,11 @@
 from datetime import date
 
-from domain.impressions.schemas import CreateImpressionSchema
 from sqlalchemy import select
-from sqlalchemy.dialects.mysql import insert
+from sqlalchemy.dialects.postgresql import insert
 
 from mspy_vendi.core.manager import CRUDManager
 from mspy_vendi.db import Impression
+from mspy_vendi.domain.impressions.schemas import CreateImpressionSchema
 
 
 class ImpressionManager(CRUDManager):
@@ -28,7 +28,7 @@ class ImpressionManager(CRUDManager):
         :param obj: A list of impressions to create.
         """
         try:
-            stmt = insert(self.sql_model)
+            stmt = insert(self.sql_model).on_conflict_do_nothing(index_elements=[self.sql_model.source_system_id])
 
             await self.session.execute(stmt, [item.model_dump() for item in obj])
             await self.session.commit()

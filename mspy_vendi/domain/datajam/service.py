@@ -1,18 +1,47 @@
-from datetime import date, timedelta
-
-from domain.impressions.schemas import CreateImpressionSchema
+from datetime import date, datetime, timedelta
 
 from mspy_vendi.config import log
 from mspy_vendi.core.constants import DEFAULT_DATAJAM_DATE
+from mspy_vendi.core.exceptions.base_exception import BadRequestError
 from mspy_vendi.db.engine import get_db_session
 from mspy_vendi.domain.datajam.client import DataJamClient
 from mspy_vendi.domain.datajam.schemas import DataJamImpressionSchema, DataJamRequestSchema
 from mspy_vendi.domain.impressions.manager import ImpressionManager
+from mspy_vendi.domain.impressions.schemas import CreateImpressionSchema
 
 
 class DataJamService:
     def __init__(self):
         self.datajam_client: DataJamClient = DataJamClient()
+
+    @staticmethod
+    def generate_date_year_mapping(start_date: date, end_date: date) -> dict[str, int]:
+        # Create a dictionary to store date-year mappings
+        date_year_mapping: dict[str, int] = {}
+        current_date: date = start_date
+
+        # Loop through each date in the range and map it to its year
+        while current_date <= end_date:
+            # Store the date in "dd-MMM" format as the key, and year as the value
+            date_str: str = current_date.strftime("%d-%b")
+            date_year_mapping[date_str] = current_date.year
+
+            current_date += timedelta(days=1)
+
+        return date_year_mapping
+
+    def get_full_date_in_range(self, start_date: date, end_date: date, input_date: str) -> date:
+        """
+        TODO: Add docstring
+        """
+        # Look up the year for the input_date in the mapping
+        date_year_mapping = self.generate_date_year_mapping(start_date, end_date)
+
+        current_year: int = date_year_mapping.get(input_date, date.today().year)
+
+        # Construct the full date with the found year
+        full_date = datetime.strptime(f"{current_year}-{input_date}", "%Y-%d-%b")
+        return full_date.date()
 
     @staticmethod
     def split_date_ranges(start_date: date, end_date: date) -> list[tuple[str, str]]:
@@ -28,21 +57,19 @@ class DataJamService:
 
         while start_date <= end_date:
             # We need to split the date range into 30-day segments
-            segment_end = min(start_date + timedelta(days=29), end_date)
+            segment_end: date = min(start_date + timedelta(days=30), end_date)
 
             # Add the segment to the list
-            date_ranges.append((start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")))
+            date_ranges.append((start_date.strftime("%Y-%m-%d"), segment_end.strftime("%Y-%m-%d")))
 
             # Define the new start date.
-            start_date: date = segment_end + timedelta(days=1)
+            start_date += timedelta(days=30)
 
         return date_ranges
 
     async def process_messages(self) -> None:
         """
         Process a list of messages.
-
-        :param messages: A list of messages to be processed.
         """
         async with get_db_session() as session:
             impression_manager: ImpressionManager = ImpressionManager(session=session)
@@ -52,7 +79,7 @@ class DataJamService:
             for device_number in list_of_devices:
                 latest_date: date = (
                     await impression_manager.get_latest_impression_date(device_number=device_number)
-                ) or DEFAULT_DATAJAM_DATE
+                ) or date.fromisoformat(DEFAULT_DATAJAM_DATE)
 
                 for start_date, end_date in self.split_date_ranges(latest_date, date.today()):
                     await self.process_by_range(
@@ -65,14 +92,14 @@ class DataJamService:
         """
         Process data from DataJam API by date range.
         """
-        log.info("Processing data from DataJam API by date range")
+        log.info("Processing data from DataJam API by date range", start_date=start_date, end_date=end_date)
 
-        # Get data from DataJam API
         try:
+            # Get data from DataJam API
             data: DataJamImpressionSchema = await self.datajam_client.get_impressions(
                 request_data=DataJamRequestSchema(
-                    date_from=start_date,
-                    date_to=end_date,
+                    start_date=start_date,
+                    end_date=end_date,
                     device_number=device_number,
                 )
             )
@@ -81,7 +108,30 @@ class DataJamService:
             async with get_db_session() as session:
                 impression_manager: ImpressionManager = ImpressionManager(session=session)
 
-                await impression_manager.create(obj=CreateImpressionSchema(), obj_id=data.device)
+                await impression_manager.create_batch(
+                    obj=[
+                        CreateImpressionSchema(
+                            device_number=impression.device,
+                            date=(full_date := self.get_full_date_in_range(start_date, end_date, impression.date)),
+                            total_impressions=impression.total_impressions,
+                            temperature=impression.temperature,
+                            rainfall=impression.rainfall,
+                            source_system_id=f"{impression.device}_{full_date}",
+                        )
+                        for impression in data.device_info
+                    ]
+                )
 
-        except ...:
-            ...
+        except BadRequestError as err:
+            log.info(
+                "Error processing data from DataJam API. Continue fetching",
+                response=err.content,
+                start_date=start_date,
+                end_date=end_date,
+            )
+
+        except Exception as err:
+            log.error("Exception occurred", error=str(err), start_date=start_date, end_date=end_date)
+
+        else:
+            log.info("Data processing completed", start_date=start_date, end_date=end_date)

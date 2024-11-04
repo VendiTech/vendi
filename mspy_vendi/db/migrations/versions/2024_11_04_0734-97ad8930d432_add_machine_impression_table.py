@@ -25,16 +25,8 @@ def upgrade() -> None:
     if table_has_column("impression", "machine_id"):
         op.drop_column("impression", "machine_id")
 
-    if table_has_column("impression", "id"):
-        op.execute(sa.text("ALTER TABLE impression ALTER COLUMN id DROP IDENTITY"))
-        op.alter_column(
-            "impression",
-            "id",
-            existing_type=sa.BIGINT(),
-            server_default=None,
-            type_=sa.String(),
-            existing_nullable=False,
-        )
+    if not table_has_column("impression", "device_number"):
+        op.add_column("impression", sa.Column("device_number", sa.String(), nullable=False))
 
     if table_has_column("impression", "source_system_id"):
         op.alter_column(
@@ -43,8 +35,13 @@ def upgrade() -> None:
             existing_type=sa.BIGINT(),
             type_=sa.String(),
             existing_comment="ID of the impression in the source system",
+            comment="""
+            ID of the impression in the source system. Combination of the `device_number` and `date`. Must be unique.
+            """,
             existing_nullable=False,
         )
+    if not constraint_exists("uq_impression_source_system_id"):
+        op.create_unique_constraint("uq_impression_source_system_id", "impression", ["source_system_id"])
 
     if not table_exists("machine_impression"):
         op.create_table(
@@ -52,22 +49,31 @@ def upgrade() -> None:
             sa.Column("name", sa.String(), nullable=True),
             sa.Column("description", sa.String(), nullable=True),
             sa.Column("machine_id", sa.BigInteger(), nullable=False),
-            sa.Column("impression_id", sa.String(), nullable=False),
+            sa.Column(
+                "impression_device_number",
+                sa.String(),
+                nullable=False,
+                comment="Identifier of the `device_number` that stored in impression table",
+            ),
             sa.Column("id", sa.BigInteger(), sa.Identity(always=False, start=1, cycle=True), nullable=False),
             sa.Column(
                 "created_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False
             ),
             sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
-            sa.ForeignKeyConstraint(["impression_id"], ["impression.id"], onupdate="CASCADE", ondelete="CASCADE"),
             sa.ForeignKeyConstraint(["machine_id"], ["machine.id"], onupdate="CASCADE", ondelete="CASCADE"),
             sa.PrimaryKeyConstraint("id"),
         )
 
-    if not index_exists("machine_impression_machine_id"):
+    if not index_exists("idx_machine_impression_machine_id"):
         op.create_index("idx_machine_impression_machine_id", "machine_impression", ["machine_id"])
 
-    if not index_exists("machine_impression_impression_id"):
-        op.create_index("idx_machine_impression_impression_id", "machine_impression", ["impression_id"])
+    if not index_exists("idx_machine_impression_impression_device_number"):
+        op.create_index(
+            "idx_machine_impression_impression_device_number", "machine_impression", ["impression_device_number"]
+        )
+
+    if not index_exists("idx_impression_device_number"):
+        op.create_index("idx_impression_device_number", "impression", ["device_number"])
 
 
 def downgrade() -> None:
@@ -107,4 +113,14 @@ def downgrade() -> None:
             type_=sa.BIGINT(),
             existing_comment="ID of the impression in the source system",
             existing_nullable=False,
+            postgresql_using="source_system_id::bigint",
         )
+
+    if constraint_exists("uq_impression_source_system_id"):
+        op.drop_constraint("uq_impression_source_system_id", "impression")
+
+    if index_exists("idx_impression_device_number"):
+        op.drop_index("idx_impression_device_number", "impression")
+
+    if table_has_column("impression", "device_number"):
+        op.drop_column("impression", "device_number")

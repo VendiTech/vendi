@@ -26,6 +26,14 @@ case "${ACTION}" in
     exec python -m mspy_vendi.consumers.nayax_consumer
     ;;
 
+  datajam_consumer)
+    # Start the scheduler in the background
+    taskiq scheduler mspy_vendi.consumers.datajam_consumer:scheduler &
+
+    # Start the worker
+    exec taskiq worker mspy_vendi.consumers.datajam_consumer:broker -w 1 --ack-type when_executed --no-configure-logging
+    ;;
+
   *) # For script running
     exec ${ACTION} ${@}
     ;;

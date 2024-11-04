@@ -25,6 +25,7 @@ class DataJamClient:
             RequestMethodEnum.GET,
             url=self.base_url,
             payload=request_data.model_dump(),
+            auth=self.auth_credentials,
         )
 
         return DataJamImpressionSchema.model_validate(response.json())

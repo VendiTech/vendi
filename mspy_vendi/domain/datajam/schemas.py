@@ -9,8 +9,8 @@ class DataJamDeviceInfoSchema(BaseSchema):
     device: str = Field(..., alias="Device")
     date: str = Field(..., alias="Date")
     total_impressions: int = Field(..., alias="Total")
-    temperature: int = Field(..., alias="dev_temp")
-    rainfall: int = Field(..., alias="dev_rain")
+    temperature: int = Field(..., alias="avg_temp")
+    rainfall: int = Field(..., alias="rain")
 
 
 class DataJamImpressionSchema(BaseSchema):
