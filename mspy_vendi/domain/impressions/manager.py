@@ -27,6 +27,12 @@ class ImpressionManager(CRUDManager):
 
         :param obj: A list of impressions to create.
         """
-        stmt = insert(self.sql_model)
+        try:
+            stmt = insert(self.sql_model)
 
-        await self._apply_changes(stmt, autocommit=True)
+            await self.session.execute(stmt, [item.model_dump() for item in obj])
+            await self.session.commit()
+
+        except Exception as ex:
+            await self.session.rollback()
+            raise ex
