@@ -1,6 +1,8 @@
 from datetime import date
 
+from domain.impressions.schemas import CreateImpressionSchema
 from sqlalchemy import select
+from sqlalchemy.dialects.mysql import insert
 
 from mspy_vendi.core.manager import CRUDManager
 from mspy_vendi.db import Impression
@@ -18,3 +20,13 @@ class ImpressionManager(CRUDManager):
         stmt = select(self.sql_model.date).order_by(self.sql_model.date.desc()).limit(1)
 
         return await self.session.scalar(stmt)
+
+    async def create_batch(self, obj: list[CreateImpressionSchema]) -> None:
+        """
+        Create a batch of impressions in the database.
+
+        :param obj: A list of impressions to create.
+        """
+        stmt = insert(self.sql_model)
+
+        await self._apply_changes(stmt, autocommit=True)
