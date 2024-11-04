@@ -123,6 +123,8 @@ class Settings(BaseSettings):
     def auth_cookie_secure(self) -> bool:
         return boolify(os.getenv("AUTH_COOKIE_SECURE"))
 
+    auth_cookie_samesite: Literal["strict", "lax", "none"] = "lax"
+
 
 class TestSettings(Settings):
     pass
