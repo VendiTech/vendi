@@ -16,6 +16,18 @@ class DataJamService:
 
     @staticmethod
     def generate_date_year_mapping(start_date: date, end_date: date) -> dict[str, int]:
+        """
+        Generate a dictionary to map dates to years.
+        Dictionary key is the date in "dd-MMM" format, and the value is the year.
+
+        Example:
+        >>> {"01-Jan": 2022, "02-Jan": 2022, ...}
+
+        :param start_date: The start date of the range.
+        :param end_date: The end date of the range.
+
+        :return: A dictionary with date-year mappings.
+        """
         # Create a dictionary to store date-year mappings
         date_year_mapping: dict[str, int] = {}
         current_date: date = start_date
@@ -32,7 +44,14 @@ class DataJamService:
 
     def get_full_date_in_range(self, start_date: date, end_date: date, input_date: str) -> date:
         """
-        TODO: Add docstring
+        Get the full date in the range for the given input date.
+        This function helps to detect the year for the input date in the range.
+
+        :param start_date: The start date of the range.
+        :param end_date: The end date of the range.
+        :param input_date: The input date in "dd-MMM" format. Example: "01-Jan".
+
+        :return: The full date in the range.
         """
         # Look up the year for the input_date in the mapping
         date_year_mapping = self.generate_date_year_mapping(start_date, end_date)
@@ -47,6 +66,7 @@ class DataJamService:
     def split_date_ranges(start_date: date, end_date: date) -> list[tuple[str, str]]:
         """
         Split the date range into 30-day segments.
+        Return the list of date ranges. Each date range is a tuple of start and end dates.
 
         :param start_date: The start date of the range.
         :param end_date: The end date of the range.
@@ -69,7 +89,11 @@ class DataJamService:
 
     async def process_messages(self) -> None:
         """
-        Process a list of messages.
+        Process a list of messages in 30-days segment.
+
+        This function is called by the TaskiqScheduler to process messages.
+        For every device, it retrieves the latest date from the database and processes the data from DataJam API.
+        And then store the data in the database.
         """
         async with get_db_session() as session:
             impression_manager: ImpressionManager = ImpressionManager(session=session)

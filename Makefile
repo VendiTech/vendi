@@ -27,7 +27,7 @@ up-datajam-consumer:
 	docker compose -f ${DOCKER_PATH} -f ${CONSUMER_PATH} up ${CONSUMER_DATAJAM} --remove-orphans
 
 up-consumers:
-	docker compose -f ${DOCKER_PATH} -f ${CONSUMER_PATH} up --remove-orphans
+	docker compose -f ${DOCKER_PATH} -f ${CONSUMER_PATH} up ${CONSUMER_DATAJAM} ${CONSUMER_NAYAX} --remove-orphans
 
 build:
 	docker compose -f ${DOCKER_PATH} build
