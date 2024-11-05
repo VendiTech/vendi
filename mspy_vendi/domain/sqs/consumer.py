@@ -1,10 +1,15 @@
 import time
 
+import sentry_sdk
+from sentry_sdk.integrations.logging import ignore_logger
+
 from mspy_vendi.config import log
 from mspy_vendi.db.engine import get_db_session
 from mspy_vendi.domain.nayax.schemas import NayaxTransactionSchema
 from mspy_vendi.domain.nayax.service import NayaxService
 from mspy_vendi.domain.sqs.manager import SQSManager
+
+ignore_logger(__name__)
 
 
 class SQSConsumer:
@@ -90,12 +95,16 @@ class SQSConsumer:
 
                         log.info("Message processed successfully.", message_id=message["MessageId"])
 
-                except Exception as e:
-                    log.error(f"Error processing message {message['MessageId']}: {e}")
+                except Exception as exc:
+                    log.error(f"Error processing message {message['MessageId']}", exc_info=True)
+
+                    sentry_sdk.capture_exception(exc)
 
                     if self.sqs_dlq_enabled:
                         # Place the message in the Dead Letter Queue for further analysis
                         continue
 
-        except Exception as e:
-            log.error(f"Error receiving messages from SQS: {e}", exc_info=True)
+        except Exception as exc:
+            log.error("Error receiving messages from SQS", exc_info=True)
+
+            sentry_sdk.capture_exception(exc)

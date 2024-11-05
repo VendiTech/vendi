@@ -4,11 +4,13 @@ import logging
 import uvicorn
 from fastapi import FastAPI
 from fastapi_pagination import add_pagination
+from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 
 from mspy_vendi.api import init_routers
 from mspy_vendi.config import config
 from mspy_vendi.core.exceptions import exception_handlers
 from mspy_vendi.core.middlewares import init_middlewares
+from mspy_vendi.core.sentry import setup_sentry
 
 logger = logging.getLogger(__name__)
 
@@ -16,10 +18,10 @@ logger = logging.getLogger(__name__)
 class WebServer:
     @classmethod
     async def build_server(cls):
-        app = cls.get_app()
+        _app = SentryAsgiMiddleware(cls.get_app())
 
         u_config = uvicorn.Config(
-            app,
+            _app,
             host=config.web.host,
             port=config.web.port,
             reload=config.web.is_reload,
@@ -58,4 +60,5 @@ class WebServer:
 app = WebServer.get_app()
 
 if __name__ == "__main__":
+    setup_sentry(config.sentry.dsn)
     asyncio.run(WebServer.web_server())

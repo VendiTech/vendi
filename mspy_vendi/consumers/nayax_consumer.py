@@ -1,6 +1,7 @@
 import asyncio
 
 from mspy_vendi.config import config
+from mspy_vendi.core.sentry import setup_sentry
 from mspy_vendi.domain.sqs.consumer import SQSConsumer
 
 
@@ -18,4 +19,5 @@ async def main():
 
 
 if __name__ == "__main__":
+    setup_sentry(config.sentry.nayax_consumer_dsn)
     asyncio.run(main())

@@ -13,6 +13,7 @@ router = APIRouter(prefix="/health-check", tags=[ApiTagEnum.HEALTH_CHECK], defau
 
 @router.get("/", response_model=HealthCheckSchema)
 async def perform_healthcheck(service: Annotated[HealthCheckService, Depends()]):
+    raise Exception
     db_connection: bool = await service.check_database_connection()
 
     if db_connection:

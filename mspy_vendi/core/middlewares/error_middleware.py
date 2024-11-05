@@ -1,13 +1,17 @@
 import traceback
 from typing import Callable
 
+import sentry_sdk
 from fastapi import Request, Response
+from sentry_sdk.integrations.logging import ignore_logger
 from starlette import status
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 from mspy_vendi.config import log
 from mspy_vendi.core.constants import SERVER_ERROR_MESSAGE
+
+ignore_logger(__name__)
 
 
 class ErrorMiddleware(BaseHTTPMiddleware):
@@ -37,6 +41,8 @@ class ErrorMiddleware(BaseHTTPMiddleware):
                 url=request.url.path,
                 method=request.method,
             )
+
+            sentry_sdk.capture_exception(exc)
 
             return JSONResponse(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
