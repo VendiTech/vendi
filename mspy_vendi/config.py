@@ -150,8 +150,7 @@ class Settings(BaseSettings):
     auth_cookie_samesite: Literal["strict", "lax", "none"] = "none"
     auth_cookie_domain: str | None = None
 
-    # crontab_twice_a_day: str = "0 0,12 * * *"  # Every day at 00:00 and 12:00
-    crontab_twice_a_day: str = "* * * * *"  # Every day at 00:00 and 12:00
+    crontab_twice_a_day: str = "0 0,12 * * *"  # Every day at 00:00 and 12:00
 
 
 class TestSettings(Settings):
