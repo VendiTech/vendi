@@ -1,5 +1,8 @@
 from datetime import date, datetime, timedelta
 
+import sentry_sdk
+from sentry_sdk.integrations.logging import ignore_logger
+
 from mspy_vendi.config import log
 from mspy_vendi.core.constants import DEFAULT_DATAJAM_DATE
 from mspy_vendi.core.exceptions.base_exception import BadRequestError
@@ -8,6 +11,8 @@ from mspy_vendi.domain.datajam.client import DataJamClient
 from mspy_vendi.domain.datajam.schemas import DataJamImpressionSchema, DataJamRequestSchema
 from mspy_vendi.domain.impressions.manager import ImpressionManager
 from mspy_vendi.domain.impressions.schemas import CreateImpressionSchema
+
+ignore_logger(__name__)
 
 
 class DataJamService:
@@ -156,6 +161,8 @@ class DataJamService:
 
         except Exception as err:
             log.error("Exception occurred", error=str(err), start_date=start_date, end_date=end_date)
+
+            sentry_sdk.capture_exception(err)
 
         else:
             log.info("Data processing completed", start_date=start_date, end_date=end_date)

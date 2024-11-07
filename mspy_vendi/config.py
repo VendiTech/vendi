@@ -97,6 +97,27 @@ class DataJamSettings(BaseSettings):
         return f"{self.schema}://{self.host}/{self.get_data_url}"
 
 
+class SentrySettings(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="SENTRY_")
+
+    dsn: str = str()
+    nayax_consumer_dsn: str = str()
+
+    datajam_cronjob_dsn: str = str()
+    datajam_monitoring_slug: str = "datajam-monitoring-slug"
+
+    traces_sample_rate: float = 1.0
+    profiles_sample_rate: float = 1.0
+    enable_tracing: bool = True
+
+    @property
+    def is_enabled(self) -> bool:
+        """
+        Enable Sentry for all environments except LOCAL and TEST accordingly.
+        """
+        return AppEnvEnum.from_env() not in [AppEnvEnum.LOCAL, AppEnvEnum.TEST]
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(extra="allow")
 
@@ -106,6 +127,7 @@ class Settings(BaseSettings):
     cors: CORSSettings = CORSSettings()
     request_client: RequestClientSettings = RequestClientSettings()
     datajam: DataJamSettings = DataJamSettings()
+    sentry: SentrySettings = SentrySettings()
 
     log_level: Literal["INFO", "DEBUG", "WARN", "ERROR"] = "INFO"
     log_json_format: bool = False
