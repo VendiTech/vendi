@@ -1,9 +1,10 @@
 from datetime import date, datetime, timedelta
 
+import pandas as pd
 import sentry_sdk
 from sentry_sdk.integrations.logging import ignore_logger
 
-from mspy_vendi.config import log
+from mspy_vendi.config import config, log
 from mspy_vendi.core.constants import DEFAULT_DATAJAM_DATE
 from mspy_vendi.core.exceptions.base_exception import BadRequestError
 from mspy_vendi.db.engine import get_db_session
@@ -92,6 +93,17 @@ class DataJamService:
 
         return date_ranges
 
+    @staticmethod
+    def read_datajam_devices() -> list[str]:
+        """
+        Read the list of devices from .csv file for the DataJam API.
+
+        :return: A list of device numbers.
+        """
+        device_df = pd.read_csv(config.datajam.device_number_path)
+
+        return device_df["device_number"].tolist()
+
     async def process_messages(self) -> None:
         """
         Process a list of messages in 30-days segment.
@@ -103,12 +115,18 @@ class DataJamService:
         async with get_db_session() as session:
             impression_manager: ImpressionManager = ImpressionManager(session=session)
 
-            list_of_devices = ["JB001690"]  # We will retrieve it from DB after we will fill the data.
+            list_of_devices: list[str] = self.read_datajam_devices()
 
             for device_number in list_of_devices:
                 latest_date: date = (
                     await impression_manager.get_latest_impression_date(device_number=device_number)
                 ) or date.fromisoformat(DEFAULT_DATAJAM_DATE)
+
+                log.info(
+                    "Start Data sync, according the following params",
+                    first_run=latest_date == date.fromisoformat(DEFAULT_DATAJAM_DATE),
+                    device_number=device_number,
+                )
 
                 for start_date, end_date in self.split_date_ranges(latest_date, date.today()):
                     await self.process_by_range(
@@ -121,7 +139,12 @@ class DataJamService:
         """
         Process data from DataJam API by date range.
         """
-        log.info("Processing data from DataJam API by date range", start_date=start_date, end_date=end_date)
+        log.info(
+            "Processing data from DataJam API by date range",
+            start_date=start_date.isoformat(),
+            end_date=end_date.isoformat(),
+            device_number=device_number,
+        )
 
         try:
             # Get data from DataJam API
@@ -155,14 +178,26 @@ class DataJamService:
             log.info(
                 "Error processing data from DataJam API. Continue fetching",
                 response=err.content,
-                start_date=start_date,
-                end_date=end_date,
+                start_date=start_date.isoformat(),
+                end_date=end_date.isoformat(),
+                device_number=device_number,
             )
 
         except Exception as err:
-            log.error("Exception occurred", error=str(err), start_date=start_date, end_date=end_date)
+            log.error(
+                "Exception occurred",
+                error=str(err),
+                start_date=start_date.isoformat(),
+                end_date=end_date.isoformat(),
+                device_number=device_number,
+            )
 
             sentry_sdk.capture_exception(err)
 
         else:
-            log.info("Data processing completed", start_date=start_date, end_date=end_date)
+            log.info(
+                "Data processing completed",
+                start_date=start_date.isoformat(),
+                end_date=end_date.isoformat(),
+                device_number=device_number,
+            )
