@@ -159,8 +159,6 @@ class DataJamService:
                 end_date=end_date,
             )
 
-            sentry_sdk.capture_exception(err)
-
         except Exception as err:
             log.error("Exception occurred", error=str(err), start_date=start_date, end_date=end_date)
 
