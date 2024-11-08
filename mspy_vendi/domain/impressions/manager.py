@@ -5,7 +5,7 @@ from sqlalchemy.dialects.postgresql import insert
 
 from mspy_vendi.core.manager import CRUDManager
 from mspy_vendi.db import Impression
-from mspy_vendi.domain.impressions.schemas import CreateImpressionSchema
+from mspy_vendi.domain.impressions.schemas import ImpressionCreateSchema
 
 
 class ImpressionManager(CRUDManager):
@@ -21,7 +21,7 @@ class ImpressionManager(CRUDManager):
 
         return await self.session.scalar(stmt)
 
-    async def create_batch(self, obj: list[CreateImpressionSchema]) -> None:
+    async def create_batch(self, obj: list[ImpressionCreateSchema]) -> None:
         """
         Create a batch of impressions in the database.
 

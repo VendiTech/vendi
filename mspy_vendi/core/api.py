@@ -3,7 +3,7 @@ import inspect
 from abc import ABC
 from typing import Any, Callable, Generic, TypeVar
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, PositiveInt
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
@@ -12,6 +12,7 @@ from mspy_vendi.core.enums import ApiTagEnum, CRUDEnum
 from mspy_vendi.core.pagination import Page
 from mspy_vendi.core.service import CRUDService
 from mspy_vendi.db import User
+from mspy_vendi.domain.auth import get_current_user
 
 Service = TypeVar("Service", bound=type[CRUDService])
 CreateSchema = TypeVar("CreateSchema", bound=BaseModel)
@@ -20,6 +21,16 @@ DetailedSchema = TypeVar("DetailedSchema", bound=BaseModel)
 Schema = TypeVar("Schema", bound=BaseModel)
 PageSchema = TypeVar("PageSchema", bound=BaseModel)
 FilterClass = TypeVar("FilterClass", bound=BaseModel)
+
+# Basic variables for CRUD operations
+basic_permissions = {
+    CRUDEnum.CREATE: Depends(get_current_user(is_superuser=True)),
+    CRUDEnum.UPDATE: Depends(get_current_user(is_superuser=True)),
+    CRUDEnum.DELETE: Depends(get_current_user(is_superuser=True)),
+    CRUDEnum.GET: Depends(get_current_user(is_superuser=False)),
+    CRUDEnum.LIST: Depends(get_current_user(is_superuser=False)),
+}
+basic_endpoints = (CRUDEnum.CREATE, CRUDEnum.UPDATE, CRUDEnum.DELETE, CRUDEnum.GET, CRUDEnum.LIST)
 
 
 class CRUDApi(
