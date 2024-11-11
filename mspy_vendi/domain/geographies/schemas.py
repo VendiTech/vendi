@@ -1,3 +1,5 @@
+from pydantic import PositiveInt
+
 from mspy_vendi.core.schemas import BaseSchema
 
 
@@ -10,4 +12,4 @@ class GeographyCreateSchema(GeographyBaseSchema): ...
 
 
 class GeographyDetailSchema(GeographyBaseSchema):
-    id: int
+    id: PositiveInt

@@ -14,7 +14,7 @@ router = APIRouter(prefix="/impression", default_response_class=ORJSONResponse, 
 class ImpressionAPI(CRUDApi):
     service = ImpressionsService
     schema = ImpressionDetailSchema
-    current_user_mapping = {**basic_permissions}
+    current_user_mapping = basic_permissions
     endpoints = basic_endpoints
     get_db_session = Depends(get_db_session)
     pagination_schema = Page

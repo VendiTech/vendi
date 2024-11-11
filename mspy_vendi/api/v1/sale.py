@@ -14,7 +14,7 @@ router = APIRouter(prefix="/sale", default_response_class=ORJSONResponse, tags=[
 class SaleAPI(CRUDApi):
     service = SaleService
     schema = SaleDetailSchema
-    current_user_mapping = {**basic_permissions}
+    current_user_mapping = basic_permissions
     endpoints = basic_endpoints
     get_db_session = Depends(get_db_session)
     pagination_schema = Page

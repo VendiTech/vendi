@@ -12,4 +12,4 @@ class MachineCreateSchema(MachineBaseSchema): ...
 
 
 class MachineDetailSchema(MachineBaseSchema):
-    id: int
+    id: PositiveInt

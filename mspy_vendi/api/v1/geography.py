@@ -14,7 +14,7 @@ router = APIRouter(prefix="/geography", default_response_class=ORJSONResponse, t
 class GeographyAPI(CRUDApi):
     service = GeographyService
     schema = GeographyDetailSchema
-    current_user_mapping = {**basic_permissions}
+    current_user_mapping = basic_permissions
     endpoints = basic_endpoints
     get_db_session = Depends(get_db_session)
     pagination_schema = Page

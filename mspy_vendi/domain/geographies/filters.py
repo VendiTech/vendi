@@ -1,11 +1,11 @@
-from pydantic import NonNegativeInt
+from pydantic import PositiveInt
 
 from mspy_vendi.core.filter import BaseFilter
 from mspy_vendi.domain.geographies.models import Geography
 
 
 class GeographyFilter(BaseFilter):
-    id__in: list[NonNegativeInt] | None = None
+    id__in: list[PositiveInt] | None = None
 
     name: str | None = None
     postcode: str | None = None

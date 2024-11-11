@@ -20,4 +20,4 @@ class SaleCreateSchema(SaleBaseSchema): ...
 
 
 class SaleDetailSchema(SaleBaseSchema):
-    id: int
+    id: PositiveInt
