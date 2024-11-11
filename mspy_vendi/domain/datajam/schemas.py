@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from pydantic import Field
 
 from mspy_vendi.core.constants import DEFAULT_PROJECT_NAME, DEFAULT_TYPE_DATA
@@ -8,7 +10,7 @@ from mspy_vendi.core.schemas.base import DateStr
 class DataJamDeviceInfoSchema(BaseSchema):
     device: str = Field(..., alias="Device")
     date: str = Field(..., alias="Date")
-    total_impressions: int = Field(..., alias="Total")
+    total_impressions: Decimal = Field(..., alias="Total")
     temperature: int = Field(..., alias="avg_temp")
     rainfall: int = Field(..., alias="rain")
 

@@ -17,7 +17,12 @@ class ImpressionManager(CRUDManager):
 
         :return: The date of the latest impression or None if no impressions are found.
         """
-        stmt = select(self.sql_model.date).order_by(self.sql_model.date.desc()).limit(1)
+        stmt = (
+            select(self.sql_model.date)
+            .where(self.sql_model.device_number == device_number)
+            .order_by(self.sql_model.date.desc())
+            .limit(1)
+        )
 
         return await self.session.scalar(stmt)
 

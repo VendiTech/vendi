@@ -33,6 +33,8 @@ RUN python -m pip install --no-cache-dir "poetry==${POETRY_VERSION}" \
 COPY poetry.lock ./pyproject.toml ./
 
 COPY mspy_vendi ${PREFIX_APP}/mspy_vendi
+# Remove after we will switch to real data inside DB.
+COPY temporary_datajam_devices.csv ${PREFIX_APP}/temporary_datajam_devices.csv
 COPY datajam-entrypoint.sh ${PREFIX_APP}/datajam-entrypoint.sh
 
 # Install production dependencies

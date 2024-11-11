@@ -78,8 +78,8 @@ class RequestClientSettings(BaseSettings):
     cert_path: str = ""
     key_path: str = ""
 
-    default_connection_timeout: float = 3.0
-    max_connection_timeout: float = 7.0
+    default_connection_timeout: float = 7.0
+    max_connection_timeout: float = 15.0
 
 
 class DataJamSettings(BaseSettings):
@@ -91,6 +91,8 @@ class DataJamSettings(BaseSettings):
 
     username: str
     password: str
+
+    device_number_path: str = "temporary_datajam_devices.csv"
 
     @property
     def url(self) -> str:
