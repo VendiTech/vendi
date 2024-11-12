@@ -1,10 +1,15 @@
 from datetime import date, time
+from typing import TYPE_CHECKING
 
 from sqlalchemy import BigInteger, ForeignKey, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from mspy_vendi.core.enums.db import CascadesEnum
+from mspy_vendi.core.enums.db import CascadesEnum, ORMRelationshipCascadeTechniqueEnum
 from mspy_vendi.db.base import Base, CommonMixin
+
+if TYPE_CHECKING:
+    from mspy_vendi.domain.machines.models import Machine
+    from mspy_vendi.domain.products.models import Product
 
 
 class Sale(CommonMixin, Base):
@@ -29,4 +34,15 @@ class Sale(CommonMixin, Base):
             ondelete=CascadesEnum.CASCADE.value,
             onupdate=CascadesEnum.CASCADE.value,
         ),
+    )
+
+    product: Mapped["Product"] = relationship(
+        back_populates="sales",
+        uselist=False,
+        passive_deletes=ORMRelationshipCascadeTechniqueEnum.all.value,
+    )
+    machine: Mapped["Machine"] = relationship(
+        back_populates="sales",
+        uselist=False,
+        passive_deletes=ORMRelationshipCascadeTechniqueEnum.all.value,
     )
