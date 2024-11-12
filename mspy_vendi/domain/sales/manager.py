@@ -22,6 +22,15 @@ class SaleManager(CRUDManager):
     sql_model = Sale
 
     def _generate_geography_query(self, query_filter: BaseFilter, stmt: Select) -> Select:
+        """
+        Generate query to filter by geography_id field.
+        It makes a join with Machine and Geography tables to filter by geography_id field.
+
+        :param query_filter: Filter object.
+        :param stmt: Current statement.
+
+        :return: New statement with the filter applied.
+        """
         if query_filter.geography_id__in:
             stmt = (
                 stmt.join(Machine, Machine.id == self.sql_model.machine_id)
@@ -35,6 +44,15 @@ class SaleManager(CRUDManager):
 
     @staticmethod
     def _generate_date_range_cte(time_frame: DateRangeEnum, query_filter: StatisticDateRangeFilter) -> CTE:
+        """
+        Generate CTE with date range.
+        It uses generate_series function to generate a range of dates between date_from and date_to.
+
+        :param time_frame: Time frame to group the data.
+        :param query_filter: Filter object.
+
+        :return: CTE with the date range.
+        """
         return select(
             func.generate_series(
                 cast(query_filter.date_from, Date),
@@ -44,6 +62,14 @@ class SaleManager(CRUDManager):
         ).cte()
 
     async def get_sales_quantity_by_product(self, query_filter: SaleFilter) -> BaseQuantitySchema:
+        """
+        Get the total quantity of sales by product|s.
+        Calculate the sum of the quantity field. If no sales are found, raise a NotFoundError.
+
+        :param query_filter: Filter object.
+
+        :return: Total quantity of sales.
+        """
         stmt = select(func.sum(self.sql_model.quantity).label("quantity"))
 
         stmt = self._generate_geography_query(query_filter, stmt)
@@ -57,6 +83,16 @@ class SaleManager(CRUDManager):
     async def get_sales_quantity_per_range(
         self, time_frame: DateRangeEnum, query_filter: SaleFilter
     ) -> Page[TimeFrameSalesSchema]:
+        """
+        Get the total quantity of sales per time frame.
+        Calculate the sum of the quantity field and group by the time frame.
+        If no sales are found, raise a NotFoundError.
+
+        :param time_frame: Time frame to group the data.
+        :param query_filter: Filter object.
+
+        :return: Total quantity of sales per time frame.
+        """
         stmt_time_frame = label("time_frame", func.date_trunc(time_frame.value, self.sql_model.sale_date))
         stmt_sum_quantity = label("quantity", func.sum(self.sql_model.quantity))
 
@@ -78,6 +114,14 @@ class SaleManager(CRUDManager):
         return await paginate(self.session, final_stmt)
 
     async def get_average_sales_across_machines(self, query_filter: SaleFilter) -> DecimalQuantitySchema:
+        """
+        Get the average quantity of sales across machines.
+        Calculate the average of the quantity field. If no sales are found, raise a NotFoundError.
+
+        :param query_filter: Filter object.
+
+        :return: Average quantity of sales.
+        """
         stmt = select(func.avg(self.sql_model.quantity).label("quantity"))
 
         stmt = self._generate_geography_query(query_filter, stmt)
@@ -91,6 +135,16 @@ class SaleManager(CRUDManager):
     async def get_average_sales_per_range(
         self, time_frame: DateRangeEnum, query_filter: SaleFilter
     ) -> Page[DecimalTimeFrameSalesSchema]:
+        """
+        Get the average quantity of sales per time frame.
+        Calculate the average of the quantity field and group by the time frame.
+        If no sales are found, raise a NotFoundError.
+
+        :param time_frame: Time frame to group the data.
+        :param query_filter: Filter object.
+
+        :return: Average quantity of sales per time frame.
+        """
         stmt_time_frame = label("time_frame", func.date_trunc(time_frame.value, self.sql_model.sale_date))
         stmt_avg_quantity = label("quantity", func.avg(self.sql_model.quantity))
 
