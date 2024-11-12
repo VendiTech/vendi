@@ -7,10 +7,11 @@ from fastapi_users_db_sqlalchemy import SQLAlchemyUserDatabase
 
 from mspy_vendi.api.auth_backend import backend, get_jwt_strategy
 from mspy_vendi.config import config, log
+from mspy_vendi.core.email import MailGunService
 from mspy_vendi.core.exceptions.base_exception import UnauthorizedError
 from mspy_vendi.core.helpers.auth_helpers import check_auth_criteria
 from mspy_vendi.core.helpers.logging_helpers import get_described_user_info
-from mspy_vendi.deps import get_user_db
+from mspy_vendi.deps import get_email_service, get_user_db
 from mspy_vendi.domain.auth.routers.auth_router import get_auth_router
 from mspy_vendi.domain.user.models import User
 from mspy_vendi.domain.user.services import AuthUserService
@@ -18,8 +19,9 @@ from mspy_vendi.domain.user.services import AuthUserService
 
 async def get_auth_user_service(
     user_db: Annotated[SQLAlchemyUserDatabase, Depends(get_user_db)],
+    email_service: Annotated[MailGunService, Depends(get_email_service)],
 ) -> AsyncGenerator[AuthUserService, None]:
-    yield AuthUserService(user_db)
+    yield AuthUserService(user_db, email_service)
 
 
 class CustomFastAPIUsers(FastAPIUsers, Generic[models.UP, models.ID]):  # type: ignore
@@ -48,7 +50,8 @@ super_user: dict[str, bool] = dict(active=True, verified=True, superuser=True)
 async def get_jwt_token(request: Request = None) -> str:
     if request:
         if not (token := request.cookies.get(config.auth_cookie_name)):
-            raise UnauthorizedError
+            if not (token := request.headers.get(config.auth_cookie_name)):
+                raise UnauthorizedError
 
         return token
 

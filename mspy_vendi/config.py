@@ -82,6 +82,21 @@ class RequestClientSettings(BaseSettings):
     max_connection_timeout: float = 15.0
 
 
+class MailGunSettings(BaseSettings):
+    model_config = SettingsConfigDict(extra="allow", env_prefix="MAILGUN_")
+
+    api_key: str = str()
+    region: Literal["eu", "us"] = "us"
+    domain_name: str = str()
+
+    @property
+    def url(self) -> str:
+        if self.region == "us":
+            return f"https://api.mailgun.net/v3/{self.domain_name}/messages"
+
+        return f"https://api.eu.mailgun.net/v3/{self.domain_name}/messages"
+
+
 class DataJamSettings(BaseSettings):
     model_config = SettingsConfigDict(extra="allow", env_prefix="DATAJAM_")
 
@@ -130,6 +145,7 @@ class Settings(BaseSettings):
     request_client: RequestClientSettings = RequestClientSettings()
     datajam: DataJamSettings = DataJamSettings()
     sentry: SentrySettings = SentrySettings()
+    mailgun: MailGunSettings = MailGunSettings()
 
     log_level: Literal["INFO", "DEBUG", "WARN", "ERROR"] = "INFO"
     log_json_format: bool = False
@@ -137,6 +153,7 @@ class Settings(BaseSettings):
     docs_url: str = "/api/swagger"
     base_prefix: str = "/api"
     login_url: str = "/api/auth/login"
+    frontend_domain: str = str()
 
     version: str = "0.1.0"
 
@@ -146,6 +163,10 @@ class Settings(BaseSettings):
     token_lifetime: int = 3600  # 1 hour in seconds
 
     nayax_consumer_enabled: bool = True
+
+    @property
+    def email_sender(self) -> str:
+        return f"no-reply@{self.frontend_domain}"
 
     @property
     def environment(self) -> AppEnvEnum:

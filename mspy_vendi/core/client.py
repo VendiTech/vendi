@@ -102,7 +102,7 @@ class RequestClient(metaclass=RequestMetaClass):
         data: dict | None = None,
         headers: dict | None = None,
         params: QueryParamTypes | None = None,
-        auth: httpx.Auth | None = None,
+        auth: httpx.Auth | tuple | None = None,
         with_retry: bool = False,
     ):
         """
