@@ -3,9 +3,12 @@ from typing import LiteralString, cast, Optional, Any
 from fastapi import Request
 from fastapi_users import BaseUserManager, IntegerIDMixin, schemas, models, exceptions
 
-from mspy_vendi.config import config
+from mspy_vendi.config import config, log
+from mspy_vendi.core.email import EmailService
 from mspy_vendi.core.exceptions.base_exception import PydanticLikeError
+from mspy_vendi.core.helpers import get_described_user_info
 from mspy_vendi.core.service import CRUDService
+from mspy_vendi.domain.user.enums.enum import FrontendLinkEnum
 from mspy_vendi.domain.user.filters import UserFilter
 from mspy_vendi.domain.user.managers import UserManager
 from mspy_vendi.domain.user.models import User
@@ -15,6 +18,77 @@ from mspy_vendi.domain.user.models import User
 class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
     reset_password_token_secret = config.secret_key
     verification_token_secret = config.secret_key
+
+    def __init__(self, user_db, email_service: EmailService, password_helper=None):
+        self.email_service = email_service
+        self.css_style: str = """
+            <head>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                    }
+                    .email-content {
+                        background-color: white;
+                        margin: 0 auto;
+                        max-width: 600px;
+                        padding: 20px;
+                        border: 1px solid #F6B0B1;
+                        border-radius: 35px;
+                    }
+                    .greeting {
+                        font-size: 20px;
+                        font-weight: bold;
+                        color: #2C3344;
+                    }
+                    .message {
+                        font-size: 16px;
+                        line-height: 1.5;
+                        margin: 10px 0;
+                    }
+
+                    .container-link {
+                        display: flex;
+                        justify-content: center;
+                    }
+
+                    .link {
+                        display: inline-block;
+                        margin: 2px auto;
+                        padding: 17px 25px;
+                        background-color: #E9EEF9;
+                        color: #0050C8 !important;
+                        text-decoration: none;
+                        border-radius: 20px;
+                    }
+
+                    .link:hover{
+                        background-color: #fefefe;
+                    }
+                    .closing {
+                        font-size: 16px;
+                        line-height: 1.5;
+                    }
+                    .closing span {
+                        display: block;
+                        margin-bottom: 20px;
+                    }
+                    .im {
+                        color: black;
+                    }
+                </style>
+            </head>
+        """
+        self.message_footer: str = """
+            <p class="message" style="flex-direction: column">
+                If you have any questions or need assistance, feel free to contact us anytime at contact@vendi-portal.com. We’re here to support you and always available to help!
+            </p>
+            <p class="closing">
+                <span>Thank you, and welcome to Vendi!</span>
+                Warm regards,<br>
+                Vendi Team
+            </p>
+        """
+        super().__init__(user_db, password_helper)
 
     async def create(
         self,
@@ -46,7 +120,101 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
         password = user_dict.pop("password")
         user_dict["hashed_password"] = self.password_helper.hash(password)
 
-        return await UserManager(self.user_db.session).create(user_dict, is_unique=True)  # type: ignore
+        created_user = await UserManager(self.user_db.session).create(user_dict, is_unique=True)  # type: ignore
+
+        await self.request_verify(created_user, request)
+
+        return created_user
+
+    async def on_after_request_verify(self, user: User, token: str, request: Request | None = None) -> None:
+        verification_link = f"https://{config.frontend_domain}/{FrontendLinkEnum.EMAIL_VERIFY}/?token={token}"
+
+        html_content: str = f"""
+            <!DOCTYPE html>
+            <html>
+            {self.css_style}
+            <body>
+                <div class="email-content">
+                    <p class="greeting">Hi {user.firstname.capitalize()},</p>
+                    <p class="message">
+                        Thank you for signing up with Vendi!
+                        To complete your registration and explore the fascinating possibilities our platform offers, please confirm your email address by clicking the link below:
+                    </p>
+                    <div class="container-link">
+                        <a class="link" href="{verification_link}">Confirm Email Address</a>
+                    </div>
+                    {self.message_footer}
+                </div>
+            </body>
+            </html>
+        """
+
+        await self.email_service.send_message(
+            receivers=[user.email],
+            subject="Email Verification for Vendi admin",
+            html=html_content,
+        )
+        log.info("Sent verify email message", info=get_described_user_info(user, request=request))
+
+    async def on_after_forgot_password(self, user: User, token: str, request: Request | None = None) -> None:
+        reset_link: str = f"https://{config.frontend_domain}/{FrontendLinkEnum.PASSWORD_RESET}/?token={token}"
+
+        html_content: str = f"""
+            <!DOCTYPE html>
+            <html>
+            {self.css_style}
+            <body>
+                <div class="email-content">
+                    <p class="greeting">Hi {user.firstname.capitalize()},</p>
+                    <p class="message">
+                        We’ve received a request to reset the password for your account. If you didn’t request this, please disregard this email.
+                        To reset your password, simply click the link below:
+                    </p>
+                    <div class="container-link">
+                        <a class="link" href="{reset_link}">Reset Password</a>
+                    </div>
+                    {self.message_footer}
+                </div>
+            </body>
+            </html>
+        """
+
+        await self.email_service.send_message(
+            receivers=[user.email],
+            subject="Reset Your Password",
+            html=html_content,
+        )
+        log.info("Sent forgot password email message", info=get_described_user_info(user, request=request))
+
+    async def on_after_reset_password(self, user: User, request: Request | None = None) -> None:
+        sign_in_link: str = f"https://{config.frontend_domain}/{FrontendLinkEnum.LOG_IN}"
+
+        html_content: str = f"""
+            <!DOCTYPE html>
+            <html>
+            {self.css_style}
+            <body>
+                <div class="email-content">
+                    <p class="greeting">Hi {user.firstname.capitalize()},</p>
+                    <p class="message">
+                        Your password has been successfully reset. You can now log in to Vendi Platform using your new password.
+                        To log in again, please click the link below:
+                    </p>
+                    <div class="container-link">
+                        <a class="link" href="{sign_in_link}">Login Link</a>
+                    </div>
+                    {self.message_footer}
+                </div>
+            </body>
+            </html>
+        """
+
+        await self.email_service.send_message(
+            receivers=[user.email],
+            subject="Password Successfully Reset",
+            html=html_content,
+        )
+        log.info("Sent reset password email message", info=get_described_user_info(user, request=request))
 
     async def validate_password(self, password: str, user: User) -> None:
         """

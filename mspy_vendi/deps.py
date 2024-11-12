@@ -4,6 +4,8 @@ from fastapi import Depends
 from fastapi_users_db_sqlalchemy import SQLAlchemyUserDatabase
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mspy_vendi.core.client import RequestClient
+from mspy_vendi.core.email import EmailService, MailGunService
 from mspy_vendi.db.engine import AsyncSessionLocal
 from mspy_vendi.domain.user.models import User
 
@@ -11,6 +13,10 @@ from mspy_vendi.domain.user.models import User
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         yield session
+
+
+async def get_email_service() -> AsyncGenerator[EmailService, None]:
+    yield MailGunService(client=RequestClient())
 
 
 async def get_user_db(
