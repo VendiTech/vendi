@@ -25,7 +25,7 @@ async def extract_datajam_impressions():
         await DataJamService().process_messages()
 
     except Exception as exc:
-        await log.aerror("An error occurred during extraction of the DataJam impressions")
+        await log.aerror("An error occurred during extraction of the DataJam impressions", exc=str(exc))
 
         sentry_sdk.capture_exception(exc)
 
