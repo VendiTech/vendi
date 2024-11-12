@@ -1,11 +1,11 @@
-from pydantic import NonNegativeInt
+from pydantic import PositiveInt
 
 from mspy_vendi.core.filter import BaseFilter
 from mspy_vendi.domain.user.models import User
 
 
 class UserFilter(BaseFilter):
-    id__in: list[NonNegativeInt] | None = None
+    id__in: list[PositiveInt] | None = None
 
     firstname: str | None = None
     lastname: str | None = None

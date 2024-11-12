@@ -8,3 +8,7 @@ class ApiTagEnum(StrEnum):
     AUTH_RESISTER = "[Auth] Register"
     AUTH_VERIFY = "[Auth] Verify"
     AUTH_RESET_PASSWORD = "[Auth] Reset Password"
+    SALES = "Sales"
+    MACHINES = "Machines"
+    IMPRESSIONS = "Impressions"
+    GEOGRAPHIES = "Geographies"

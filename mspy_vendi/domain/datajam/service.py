@@ -11,7 +11,7 @@ from mspy_vendi.db.engine import get_db_session
 from mspy_vendi.domain.datajam.client import DataJamClient
 from mspy_vendi.domain.datajam.schemas import DataJamImpressionSchema, DataJamRequestSchema
 from mspy_vendi.domain.impressions.manager import ImpressionManager
-from mspy_vendi.domain.impressions.schemas import CreateImpressionSchema
+from mspy_vendi.domain.impressions.schemas import ImpressionCreateSchema
 
 ignore_logger(__name__)
 
@@ -162,7 +162,7 @@ class DataJamService:
 
                 await impression_manager.create_batch(
                     obj=[
-                        CreateImpressionSchema(
+                        ImpressionCreateSchema(
                             device_number=impression.device,
                             date=(full_date := self.get_full_date_in_range(start_date, end_date, impression.date)),
                             total_impressions=impression.total_impressions,
