@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import ORJSONResponse
 from fastapi.security import APIKeyHeader
 
-from mspy_vendi.api.v1 import user
+from mspy_vendi.api.v1 import geography, impression, machine, sale, user
 from mspy_vendi.config import config
 
 router_v1 = APIRouter(
@@ -12,3 +12,7 @@ router_v1 = APIRouter(
 )
 
 router_v1.include_router(user.router)
+router_v1.include_router(sale.router)
+router_v1.include_router(machine.router)
+router_v1.include_router(impression.router)
+router_v1.include_router(geography.router)

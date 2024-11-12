@@ -1,5 +1,5 @@
 from fastapi_users import schemas
-from pydantic import EmailStr
+from pydantic import EmailStr, PositiveInt
 from pydantic.json_schema import SkipJsonSchema
 from pydantic_extra_types.phone_numbers import PhoneNumber
 
@@ -20,7 +20,7 @@ class UserBase(BaseSchema):
 
 
 class UserDetail(UserBase):
-    id: int
+    id: PositiveInt
     status: StatusEnum
     role: RoleEnum
 

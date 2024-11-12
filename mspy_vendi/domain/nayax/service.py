@@ -2,16 +2,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mspy_vendi.config import log
 from mspy_vendi.domain.geographies.manager import GeographyManager
-from mspy_vendi.domain.geographies.schemas import CreateGeographySchema
+from mspy_vendi.domain.geographies.schemas import GeographyCreateSchema
 from mspy_vendi.domain.machines.manager import MachineManager
-from mspy_vendi.domain.machines.schemas import CreateMachineSchema
+from mspy_vendi.domain.machines.schemas import MachineCreateSchema
 from mspy_vendi.domain.nayax.schemas import NayaxTransactionSchema
 from mspy_vendi.domain.product_category.manager import ProductCategoryManager
 from mspy_vendi.domain.product_category.schemas import CreateProductCategorySchema
 from mspy_vendi.domain.products.manager import ProductManager
 from mspy_vendi.domain.products.schemas import CreateProductSchema
 from mspy_vendi.domain.sales.manager import SaleManager
-from mspy_vendi.domain.sales.schemas import CreateSaleSchema
+from mspy_vendi.domain.sales.schemas import SaleCreateSchema
 
 
 class NayaxService:
@@ -25,7 +25,7 @@ class NayaxService:
     async def process_message(self, message: NayaxTransactionSchema) -> None:
         geography, is_created = await self.geography_manager.get_or_create(
             name=message.data.area_description or message.data.actor_description,
-            obj=CreateGeographySchema(
+            obj=GeographyCreateSchema(
                 name=message.data.area_description or message.data.actor_description,
                 postcode=str(message.data.location_code or message.data.actor_code),
             ),
@@ -35,7 +35,7 @@ class NayaxService:
 
         machine, is_created = await self.machine_manager.get_or_create(
             obj_id=message.machine_id,
-            obj=CreateMachineSchema(
+            obj=MachineCreateSchema(
                 name=message.data.machine_name,
                 geography_id=geography.id,
             ),
@@ -83,7 +83,7 @@ class NayaxService:
             sale_datetime = message.machine_time or message.data.machine_au_time
             sale, is_created = await self.sale_manager.get_or_create(
                 obj_id=message.transaction_id,
-                obj=CreateSaleSchema(
+                obj=SaleCreateSchema(
                     sale_date=sale_datetime.date(),
                     sale_time=sale_datetime.time(),
                     quantity=product_item.product_quantity or 1,

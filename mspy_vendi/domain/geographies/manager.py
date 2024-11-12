@@ -2,7 +2,7 @@ from sqlalchemy import select
 
 from mspy_vendi.core.manager import CRUDManager
 from mspy_vendi.db import Geography
-from mspy_vendi.domain.geographies.schemas import CreateGeographySchema
+from mspy_vendi.domain.geographies.schemas import GeographyCreateSchema
 
 
 class GeographyManager(CRUDManager):
@@ -13,7 +13,7 @@ class GeographyManager(CRUDManager):
 
         return await self.session.scalar(stmt)
 
-    async def get_or_create(self, obj: CreateGeographySchema, name: str | None = None) -> tuple[Geography, bool]:
+    async def get_or_create(self, obj: GeographyCreateSchema, name: str | None = None) -> tuple[Geography, bool]:
         """
         Get or create an entity in the database, and returns the DB object.
 
