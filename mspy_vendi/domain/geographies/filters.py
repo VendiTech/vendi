@@ -10,9 +10,6 @@ class GeographyFilter(BaseFilter):
     name: str | None = None
     postcode: str | None = None
 
-    # Multi-field search
-    search: str | None = None
-
     order_by: list[str] | None = ["-id"]
 
     class Constants(BaseFilter.Constants):
