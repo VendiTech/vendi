@@ -1,5 +1,5 @@
 from datetime import datetime
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 from typing import Annotated, Any
 
 from pydantic import HttpUrl, field_validator
@@ -17,7 +17,7 @@ def format_decimal(initial_value: Decimal) -> float:
 
     :return: The formatted value with a scale of 2.
     """
-    return float(initial_value.quantize(Decimal("0.0"), rounding=ROUND_HALF_UP))
+    return float(initial_value.quantize(Decimal("0.0")))
 
 
 DecimalFloat = Annotated[Decimal, PlainSerializer(format_decimal, return_type=float)]
