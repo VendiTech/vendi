@@ -11,7 +11,6 @@ class ImpressionFilter(BaseFilter):
     date_from: datetime.date | None = None
     date_to: datetime.date | None = None
 
-    date: datetime.date | None = None
     total_impressions: NonNegativeInt | None = None
     temperature: int | None = None
     rainfall: int | None = None
@@ -21,4 +20,5 @@ class ImpressionFilter(BaseFilter):
 
     class Constants(BaseFilter.Constants):
         model = Impression
-        date_range_fields = ["date"]
+        date_range_fields = ["date_from", "date_to"]
+        default_date_range_db_field = "date"

@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import Annotated, Any
 
 from pydantic import HttpUrl, field_validator
@@ -6,6 +7,20 @@ from pydantic.functional_serializers import PlainSerializer
 from pydantic_core.core_schema import ValidationInfo
 
 StrLink = Annotated[HttpUrl, PlainSerializer(str, return_type=str)]
+
+
+def format_decimal(initial_value: Decimal) -> float:
+    """
+    Format the initial value to have a scale of 2.
+
+    :param initial_value: The initial value to format.
+
+    :return: The formatted value with a scale of 2.
+    """
+    return float(initial_value.quantize(Decimal("0.0")))
+
+
+DecimalFloat = Annotated[Decimal, PlainSerializer(format_decimal, return_type=float)]
 
 
 def validate_password(field_name: str = "password") -> classmethod:

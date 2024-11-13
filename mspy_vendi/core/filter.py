@@ -7,10 +7,7 @@ from pydantic import field_validator, model_validator
 from sqlalchemy import BinaryExpression, Column, Select, func, or_
 from sqlalchemy.orm import DeclarativeBase, Query
 
-from mspy_vendi.core.constants import (
-    COMPOUND_SEARCH_FIELD_NAME,
-    DEFAULT_RANGE_DB_FIELD,
-)
+from mspy_vendi.core.constants import COMPOUND_SEARCH_FIELD_NAME
 from mspy_vendi.core.helpers import get_columns_for_model, is_join_present, set_end_of_day_time
 
 
@@ -40,6 +37,7 @@ class BaseFilter(Filter, extra="allow"):  # type: ignore
         disallowed_order_by_fields: list[str] | None = None
         multi_search_fields: list[str] | None = None
         date_range_fields: list[str] | None = None
+        default_date_range_db_field: str = "created_at"
         age_range_fields: list[str] | None = None
 
     @model_validator(mode="before")
@@ -49,9 +47,10 @@ class BaseFilter(Filter, extra="allow"):  # type: ignore
 
         db_model: type[DeclarativeBase] = cast(type[DeclarativeBase], cls.Constants.model)
 
-        if DEFAULT_RANGE_DB_FIELD not in get_columns_for_model(db_model):
+        if cls.Constants.default_date_range_db_field not in get_columns_for_model(db_model):
             raise ValueError(
-                f"You can't use date range fields without the corresponding `{DEFAULT_RANGE_DB_FIELD}` in DB table."
+                "You can't use date range fields without the corresponding "
+                f"`{cls.Constants.default_date_range_db_field}` in DB table."
             )
 
         for field in date_range_fields:
@@ -184,7 +183,7 @@ class BaseFilter(Filter, extra="allow"):  # type: ignore
             date_to: datetime = set_end_of_day_time(getattr(self, date_to_field) or datetime.max)
 
             query: Select = query.where(
-                getattr(self.Constants.model, DEFAULT_RANGE_DB_FIELD).between(date_from, date_to)
+                getattr(self.Constants.model, self.Constants.default_date_range_db_field).between(date_from, date_to)
             )
 
         # We get rid of range fields, because we've been already construct the query above
@@ -236,3 +235,34 @@ class BaseFilter(Filter, extra="allow"):  # type: ignore
                     query: Select = query.filter(getattr(model_field, operator)(value))
 
         return query
+
+    def group_by(self, query: Query | Select) -> Query | Select:
+        """
+        Group by the query by the fields provided in the `order_by` attribute.
+        """
+        if not self.ordering_values:
+            return query
+
+        for field_name in self.ordering_values:
+            field_name = field_name.replace("-", "").replace("+", "")
+
+            group_by_field = getattr(self.Constants.model, field_name)
+
+            query = query.group_by(group_by_field)
+
+        return query
+
+    def set_without_validation(self, name: str, value: Any) -> None:
+        """
+        Workaround to be able to set fields without validation.
+
+        Because due to the validate_assignment=True, we can't set fields without validation.
+        And as fact, it raises the RecursionError.
+        """
+        attr = getattr(self.__class__, name, None)
+
+        if isinstance(attr, property):
+            attr.__set__(self, value)
+        else:
+            self.__dict__[name] = value
+            self.__pydantic_fields_set__.add(name)
