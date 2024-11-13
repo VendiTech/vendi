@@ -1,11 +1,15 @@
+from typing import Any
+
+from fastapi_filter.contrib.sqlalchemy import Filter
+from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import CTE, Date, Select, cast, func, label, select, text
+from sqlalchemy.orm import joinedload
 
 from mspy_vendi.core.enums.date_range import DateRangeEnum
 from mspy_vendi.core.exceptions.base_exception import NotFoundError
 from mspy_vendi.core.filter import BaseFilter
-from mspy_vendi.core.manager import CRUDManager
-from mspy_vendi.core.pagination import Page
+from mspy_vendi.core.manager import CRUDManager, Model, Schema
 from mspy_vendi.db import Sale
 from mspy_vendi.domain.geographies.models import Geography
 from mspy_vendi.domain.machines.models import Machine
@@ -20,6 +24,30 @@ from mspy_vendi.domain.sales.schemas import (
 
 class SaleManager(CRUDManager):
     sql_model = Sale
+
+    async def get_all(
+        self,
+        query_filter: Filter | None = None,
+        raw_result: bool = False,
+        is_unique: bool = False,
+        **_: Any,
+    ) -> Page[Schema] | list[Model]:
+        stmt = self.get_query().options(
+            joinedload(Sale.product),
+            joinedload(Sale.machine),
+        )
+
+        if query_filter:
+            stmt = query_filter.filter(stmt)
+            stmt = query_filter.sort(stmt)
+
+        if raw_result:
+            if is_unique:
+                return (await self.session.execute(stmt)).unique().all()  # type: ignore
+
+            return (await self.session.scalars(stmt)).all()  # type: ignore
+
+        return await paginate(self.session, stmt)
 
     def _generate_geography_query(self, query_filter: BaseFilter, stmt: Select) -> Select:
         """

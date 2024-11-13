@@ -3,11 +3,12 @@ from typing import TYPE_CHECKING
 from sqlalchemy import BigInteger, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from mspy_vendi.core.enums.db import CascadesEnum
+from mspy_vendi.core.enums.db import CascadesEnum, ORMRelationshipCascadeTechniqueEnum
 from mspy_vendi.db.base import Base, CommonMixin
 
 if TYPE_CHECKING:
     from mspy_vendi.domain.geographies.models import Geography
+    from mspy_vendi.domain.sales.models import Sale
 
 
 class Machine(CommonMixin, Base):
@@ -22,6 +23,10 @@ class Machine(CommonMixin, Base):
     )
 
     geography: Mapped["Geography"] = relationship(uselist=False)
+    sales: Mapped["Sale"] = relationship(
+        back_populates="machine",
+        passive_deletes=ORMRelationshipCascadeTechniqueEnum.all.value,
+    )
 
 
 class MachineUser(CommonMixin, Base):
