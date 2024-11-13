@@ -4,6 +4,8 @@ from pydantic import PositiveInt
 
 from mspy_vendi.core.constants import DEFAULT_SOURCE_SYSTEM
 from mspy_vendi.core.schemas import BaseSchema
+from mspy_vendi.domain.machines.schemas import MachineDetailSchema
+from mspy_vendi.domain.products.schemas import ProductDetailSchema
 
 
 class SaleBaseSchema(BaseSchema):
@@ -12,8 +14,8 @@ class SaleBaseSchema(BaseSchema):
     quantity: PositiveInt
     source_system: str = DEFAULT_SOURCE_SYSTEM
     source_system_id: PositiveInt
-    product_id: PositiveInt
-    machine_id: PositiveInt
+    product: ProductDetailSchema
+    machine: MachineDetailSchema
 
 
 class SaleCreateSchema(SaleBaseSchema): ...

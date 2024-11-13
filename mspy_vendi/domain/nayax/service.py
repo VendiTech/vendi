@@ -9,7 +9,7 @@ from mspy_vendi.domain.nayax.schemas import NayaxTransactionSchema
 from mspy_vendi.domain.product_category.manager import ProductCategoryManager
 from mspy_vendi.domain.product_category.schemas import CreateProductCategorySchema
 from mspy_vendi.domain.products.manager import ProductManager
-from mspy_vendi.domain.products.schemas import CreateProductSchema
+from mspy_vendi.domain.products.schemas import ProductCreateSchema
 from mspy_vendi.domain.sales.manager import SaleManager
 from mspy_vendi.domain.sales.schemas import SaleCreateSchema
 
@@ -65,7 +65,7 @@ class NayaxService:
 
             product, is_created = await self.product_manager.get_or_create(
                 obj_id=product_item.product_id,
-                obj=CreateProductSchema(
+                obj=ProductCreateSchema(
                     name=product_item.product_name,
                     price=product_item.product_bruto,
                     product_category_id=product_category.id,
