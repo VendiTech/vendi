@@ -3,7 +3,7 @@ from typing import Any
 from fastapi_filter.contrib.sqlalchemy import Filter
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
-from sqlalchemy import CTE, Date, Select, cast, func, label, select, text
+from sqlalchemy import CTE, Date, Float, Select, cast, func, label, select, text
 from sqlalchemy.orm import joinedload
 
 from mspy_vendi.core.enums.date_range import DateRangeEnum
@@ -13,9 +13,12 @@ from mspy_vendi.core.manager import CRUDManager, Model, Schema
 from mspy_vendi.db import Sale
 from mspy_vendi.domain.geographies.models import Geography
 from mspy_vendi.domain.machines.models import Machine
+from mspy_vendi.domain.product_category.models import ProductCategory
+from mspy_vendi.domain.products.models import Product
 from mspy_vendi.domain.sales.filter import SaleFilter, StatisticDateRangeFilter
 from mspy_vendi.domain.sales.schemas import (
     BaseQuantitySchema,
+    DecimalPercentageProductSchema,
     DecimalQuantitySchema,
     DecimalTimeFrameSalesSchema,
     TimeFrameSalesSchema,
@@ -192,3 +195,28 @@ class SaleManager(CRUDManager):
         )
 
         return await paginate(self.session, final_stmt)
+
+    async def get_sales_proportion_per_product(self, query_filter: SaleFilter) -> Page[DecimalPercentageProductSchema]:
+        """
+        Get the proportion of sales quantity for each product.
+
+        :param query_filter: Filter object.
+        :return: A paginated list with each product's proportion of total sales.
+        """
+        stmt_category_name = label("category_name", ProductCategory.name)
+        stmt_sum_category_quantity = label("quantity", func.sum(self.sql_model.quantity))
+        stmt_total_quantity = select(func.sum(self.sql_model.quantity).label("total_quantity"))
+        stmt_percentage = label("percentage", cast(stmt_sum_category_quantity / stmt_total_quantity, Float) * 100)
+
+        stmt = (
+            select(stmt_category_name, stmt_percentage)
+            .join(Product, Product.id == self.sql_model.product_id)
+            .join(ProductCategory, ProductCategory.id == Product.product_category_id)
+            .group_by(stmt_category_name)
+            .order_by(stmt_percentage.desc())
+        )
+
+        stmt = self._generate_geography_query(query_filter, stmt)
+        stmt = query_filter.filter(stmt)
+
+        return await paginate(self.session, stmt)
