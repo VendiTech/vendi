@@ -15,6 +15,15 @@ class SaleBaseSchema(BaseSchema):
     quantity: PositiveInt
     source_system: str = DEFAULT_SOURCE_SYSTEM
     source_system_id: PositiveInt
+    product_id: PositiveInt
+    machine_id: PositiveInt
+
+
+class SaleCreateSchema(SaleBaseSchema): ...
+
+
+class SaleDetailSchema(SaleBaseSchema):
+    id: PositiveInt
     product: ProductDetailSchema
     machine: MachineDetailSchema
 
@@ -35,8 +44,6 @@ class DecimalTimeFrameSalesSchema(DecimalQuantitySchema):
     time_frame: datetime
 
 
-class SaleCreateSchema(SaleBaseSchema): ...
-
-
-class SaleDetailSchema(SaleBaseSchema):
-    id: PositiveInt
+class DecimalPercentageProductSchema(BaseSchema):
+    category_name: str
+    percentage: DecimalFloat
