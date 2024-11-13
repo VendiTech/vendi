@@ -122,7 +122,8 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
 
         created_user = await UserManager(self.user_db.session).create(user_dict, is_unique=True)  # type: ignore
 
-        await self.request_verify(created_user, request)
+        if not config.debug:
+            await self.request_verify(created_user, request)
 
         return created_user
 
