@@ -3,6 +3,7 @@ from mspy_vendi.core.pagination import Page
 from mspy_vendi.core.service import CRUDService
 from mspy_vendi.domain.sales.filter import (
     SaleFilter,
+    SaleGetAllFilter,
     StatisticDateRangeFilter,
 )
 from mspy_vendi.domain.sales.manager import SaleManager
@@ -16,7 +17,7 @@ from mspy_vendi.domain.sales.schemas import (
 
 class SaleService(CRUDService):
     manager_class = SaleManager
-    filter_class = SaleFilter
+    filter_class = SaleGetAllFilter
 
     async def get_sales_quantity_by_product(self, query_filter: SaleFilter) -> BaseQuantitySchema:
         return await self.manager.get_sales_quantity_by_product(query_filter)

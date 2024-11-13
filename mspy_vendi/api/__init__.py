@@ -18,8 +18,8 @@ auth_router.include_router(fastapi_users.get_verify_router(UserDetail), tags=[Ap
 auth_router.include_router(fastapi_users.get_reset_password_router(), tags=[ApiTagEnum.AUTH_RESET_PASSWORD])
 
 root_router.include_router(healthcheck.router)
-root_router.include_router(router_v1)
 root_router.include_router(auth_router)
+root_router.include_router(router_v1)
 
 
 def init_routers(app: FastAPI):
