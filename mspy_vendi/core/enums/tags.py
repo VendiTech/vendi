@@ -10,5 +10,6 @@ class ApiTagEnum(StrEnum):
     AUTH_RESET_PASSWORD = "[Auth] Reset Password"
     SALES = "Sales"
     MACHINES = "Machines"
+    MACHINE_IMPRESSION = "Machine Impression"
     IMPRESSIONS = "Impressions"
     GEOGRAPHIES = "Geographies"

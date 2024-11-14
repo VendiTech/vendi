@@ -1,4 +1,4 @@
-from sqlalchemy import BigInteger, ForeignKey, Index
+from sqlalchemy import BigInteger, ForeignKey, Index, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from mspy_vendi.core.enums.db import CascadesEnum
@@ -24,4 +24,7 @@ class MachineImpression(CommonMixin, Base):
     __table_args__ = (
         Index("idx_machine_impression_machine_id", "machine_id"),
         Index("idx_machine_impression_impression_device_number", "impression_device_number"),
+        UniqueConstraint(
+            "machine_id", "impression_device_number", name="uq_machine_impression_machine_id_impression_device_number"
+        ),
     )
