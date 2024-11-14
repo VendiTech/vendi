@@ -3,7 +3,7 @@ from typing import Any
 from fastapi_filter.contrib.sqlalchemy import Filter
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
-from sqlalchemy import CTE, Date, Float, Select, cast, func, label, select, text
+from sqlalchemy import CTE, Date, Select, cast, func, label, select, text
 from sqlalchemy.orm import joinedload
 
 from mspy_vendi.core.enums.date_range import DateRangeEnum
@@ -18,7 +18,8 @@ from mspy_vendi.domain.products.models import Product
 from mspy_vendi.domain.sales.filter import SaleFilter, StatisticDateRangeFilter
 from mspy_vendi.domain.sales.schemas import (
     BaseQuantitySchema,
-    DecimalPercentageProductSchema,
+    CategoryProductQuantitySchema,
+    CategoryTimeFrameSalesSchema,
     DecimalQuantitySchema,
     DecimalTimeFrameSalesSchema,
     TimeFrameSalesSchema,
@@ -196,27 +197,66 @@ class SaleManager(CRUDManager):
 
         return await paginate(self.session, final_stmt)
 
-    async def get_sales_proportion_per_product(self, query_filter: SaleFilter) -> Page[DecimalPercentageProductSchema]:
+    async def get_sales_quantity_per_category(self, query_filter: SaleFilter) -> Page[CategoryProductQuantitySchema]:
         """
-        Get the proportion of sales quantity for each product.
+        Get the sales quantity for each product category.
 
         :param query_filter: Filter object.
-        :return: A paginated list with each product's proportion of total sales.
+        :return: A paginated list with each product category's quantity.
         """
         stmt_category_name = label("category_name", ProductCategory.name)
         stmt_sum_category_quantity = label("quantity", func.sum(self.sql_model.quantity))
-        stmt_total_quantity = select(func.sum(self.sql_model.quantity).label("total_quantity"))
-        stmt_percentage = label("percentage", cast(stmt_sum_category_quantity / stmt_total_quantity, Float) * 100)
 
         stmt = (
-            select(stmt_category_name, stmt_percentage)
+            select(stmt_category_name, stmt_sum_category_quantity)
             .join(Product, Product.id == self.sql_model.product_id)
             .join(ProductCategory, ProductCategory.id == Product.product_category_id)
             .group_by(stmt_category_name)
-            .order_by(stmt_percentage.desc())
+            .order_by(stmt_sum_category_quantity.desc())
         )
 
         stmt = self._generate_geography_query(query_filter, stmt)
         stmt = query_filter.filter(stmt)
 
         return await paginate(self.session, stmt)
+
+    async def get_sales_category_quantity_per_time_frame(
+        self, query_filter: SaleFilter
+    ) -> Page[CategoryTimeFrameSalesSchema]:
+        """
+        Get the sales quantity per day for each product category.
+
+        :param query_filter: Filter object.
+        :return: A paginated list with each product category's sales quantity over time.
+        """
+        stmt_category_name = label("category_name", ProductCategory.name)
+        stmt_sale_date = label("time_frame", func.date_trunc("day", self.sql_model.sale_date))
+        stmt_sum_quantity = label("quantity", func.sum(self.sql_model.quantity))
+
+        subquery = (
+            select(stmt_category_name, stmt_sale_date, stmt_sum_quantity)
+            .join(Product, Product.id == self.sql_model.product_id)
+            .join(ProductCategory, ProductCategory.id == Product.product_category_id)
+            .group_by(stmt_category_name, stmt_sale_date)
+            .order_by(stmt_category_name, stmt_sale_date)
+        )
+
+        subquery = self._generate_geography_query(query_filter, subquery)
+        subquery = query_filter.filter(subquery).subquery()
+
+        stmt = (
+            select(
+                func.jsonb_build_object(
+                    "category_name",
+                    subquery.c.category_name,
+                    "sale_range",
+                    func.array_agg(
+                        func.jsonb_build_object("time_frame", subquery.c.time_frame, "quantity", subquery.c.quantity)
+                    ),
+                )
+            )
+            .group_by(subquery.c.category_name)
+            .order_by(subquery.c.category_name)
+        )
+
+        return await paginate(self.session, stmt, unique=False)

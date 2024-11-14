@@ -9,7 +9,8 @@ from mspy_vendi.domain.sales.filter import (
 from mspy_vendi.domain.sales.manager import SaleManager
 from mspy_vendi.domain.sales.schemas import (
     BaseQuantitySchema,
-    DecimalPercentageProductSchema,
+    CategoryProductQuantitySchema,
+    CategoryTimeFrameSalesSchema,
     DecimalQuantitySchema,
     DecimalTimeFrameSalesSchema,
     TimeFrameSalesSchema,
@@ -36,5 +37,10 @@ class SaleService(CRUDService):
     ) -> Page[DecimalTimeFrameSalesSchema]:
         return await self.manager.get_average_sales_per_range(time_frame, query_filter)
 
-    async def get_sales_proportion_per_product(self, query_filter: SaleFilter) -> Page[DecimalPercentageProductSchema]:
-        return await self.manager.get_sales_proportion_per_product(query_filter)
+    async def get_sales_quantity_per_category(self, query_filter: SaleFilter) -> Page[CategoryProductQuantitySchema]:
+        return await self.manager.get_sales_quantity_per_category(query_filter)
+
+    async def get_sales_category_quantity_per_time_frame(
+        self, query_filter: SaleFilter
+    ) -> Page[CategoryTimeFrameSalesSchema]:
+        return await self.manager.get_sales_category_quantity_per_time_frame(query_filter)
