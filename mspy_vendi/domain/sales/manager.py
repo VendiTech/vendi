@@ -107,7 +107,10 @@ class SaleManager(CRUDManager):
         stmt = self._generate_geography_query(query_filter, stmt)
         stmt = query_filter.filter(stmt)
 
-        if not (result := (await self.session.execute(stmt)).mappings().one_or_none()):
+        if (
+            not (result := (await self.session.execute(stmt)).mappings().one_or_none())
+            or result.get("quantity") is None
+        ):
             raise NotFoundError(detail="No sales were find.")
 
         return result  # type: ignore
@@ -159,7 +162,10 @@ class SaleManager(CRUDManager):
         stmt = self._generate_geography_query(query_filter, stmt)
         stmt = query_filter.filter(stmt)
 
-        if not (result := (await self.session.execute(stmt)).mappings().one_or_none()):
+        if (
+            not (result := (await self.session.execute(stmt)).mappings().one_or_none())
+            or result.get("quantity") is None
+        ):
             raise NotFoundError(detail="No sales were find.")
 
         return result  # type: ignore
