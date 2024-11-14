@@ -12,7 +12,8 @@ from mspy_vendi.deps import get_db_session
 from mspy_vendi.domain.sales.filter import SaleFilter
 from mspy_vendi.domain.sales.schemas import (
     BaseQuantitySchema,
-    DecimalPercentageProductSchema,
+    CategoryProductQuantitySchema,
+    CategoryTimeFrameSalesSchema,
     DecimalQuantitySchema,
     DecimalTimeFrameSalesSchema,
     SaleCreateSchema,
@@ -58,12 +59,20 @@ async def get__average_sales_per_range(
     return await sale_service.get_average_sales_per_range(time_frame, query_filter)
 
 
-@router.get("/quantity_per_product", response_model=Page[DecimalPercentageProductSchema])
+@router.get("/quantity-per-product", response_model=Page[CategoryProductQuantitySchema])
 async def get__quantity_per_product(
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
-) -> Page[DecimalPercentageProductSchema]:
-    return await sale_service.get_sales_proportion_per_product(query_filter)
+) -> Page[CategoryProductQuantitySchema]:
+    return await sale_service.get_sales_quantity_per_category(query_filter)
+
+
+@router.get("/quantity-per-product-over-time", response_model=Page[CategoryTimeFrameSalesSchema])
+async def get__quantity_per_product_over_time(
+    query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
+    sale_service: Annotated[SaleService, Depends()],
+) -> Page[CategoryTimeFrameSalesSchema]:
+    return await sale_service.get_sales_category_quantity_per_time_frame(query_filter)
 
 
 class SaleAPI(CRUDApi):

@@ -1,6 +1,6 @@
 from datetime import date, datetime, time
 
-from pydantic import PositiveInt
+from pydantic import NonNegativeInt, PositiveInt
 
 from mspy_vendi.core.constants import DEFAULT_SOURCE_SYSTEM
 from mspy_vendi.core.schemas import BaseSchema
@@ -29,7 +29,7 @@ class SaleDetailSchema(SaleBaseSchema):
 
 
 class BaseQuantitySchema(BaseSchema):
-    quantity: int
+    quantity: NonNegativeInt
 
 
 class DecimalQuantitySchema(BaseSchema):
@@ -44,6 +44,10 @@ class DecimalTimeFrameSalesSchema(DecimalQuantitySchema):
     time_frame: datetime
 
 
-class DecimalPercentageProductSchema(BaseSchema):
+class CategoryProductQuantitySchema(BaseQuantitySchema):
     category_name: str
-    percentage: DecimalFloat
+
+
+class CategoryTimeFrameSalesSchema(BaseSchema):
+    category_name: str
+    sale_range: list[TimeFrameSalesSchema]
