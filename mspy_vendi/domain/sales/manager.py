@@ -86,7 +86,7 @@ class SaleManager(CRUDManager):
         """
         return select(
             func.generate_series(
-                cast(query_filter.date_from, Date),
+                func.date_trunc(time_frame.value, cast(query_filter.date_from, Date)),
                 cast(query_filter.date_to, Date),
                 text(f"'1 {time_frame}'"),
             ).label("time_frame")
