@@ -35,7 +35,7 @@ def check_auth_criteria(
     if is_superuser and permissions:
         log.debug(
             "You don't need to provide both is_superuser and permissions."
-            "Hint: if you provide `is_superuser` - permissions check is redundant.",
+            "Hint: if you provide `is_superuser=True` - permissions check is redundant.",
         )
 
     if user.status in [StatusEnum.SUSPENDED, StatusEnum.DELETED]:
