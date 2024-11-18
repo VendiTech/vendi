@@ -45,9 +45,11 @@ class DecimalTimeFrameSalesSchema(DecimalQuantitySchema):
 
 
 class CategoryProductQuantitySchema(BaseQuantitySchema):
+    category_id: PositiveInt
     category_name: str
 
 
 class CategoryTimeFrameSalesSchema(BaseSchema):
+    category_id: PositiveInt
     category_name: str
     sale_range: list[TimeFrameSalesSchema]

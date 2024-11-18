@@ -211,13 +211,14 @@ class SaleManager(CRUDManager):
         :return: A paginated list with each product category's quantity.
         """
         stmt_category_name = label("category_name", ProductCategory.name)
+        stmt_category_id = label("category_id", ProductCategory.id)
         stmt_sum_category_quantity = label("quantity", func.sum(self.sql_model.quantity))
 
         stmt = (
-            select(stmt_category_name, stmt_sum_category_quantity)
+            select(stmt_category_id, stmt_category_name, stmt_sum_category_quantity)
             .join(Product, Product.id == self.sql_model.product_id)
             .join(ProductCategory, ProductCategory.id == Product.product_category_id)
-            .group_by(stmt_category_name)
+            .group_by(stmt_category_name, stmt_category_id)
             .order_by(stmt_sum_category_quantity.desc())
         )
 
@@ -236,14 +237,15 @@ class SaleManager(CRUDManager):
         :return: A paginated list with each product category's sales quantity over time.
         """
         stmt_category_name = label("category_name", ProductCategory.name)
+        stmt_category_id = label("category_id", ProductCategory.id)
         stmt_sale_date = label("time_frame", func.date_trunc("day", self.sql_model.sale_date))
         stmt_sum_quantity = label("quantity", func.sum(self.sql_model.quantity))
 
         subquery = (
-            select(stmt_category_name, stmt_sale_date, stmt_sum_quantity)
+            select(stmt_category_id, stmt_category_name, stmt_sale_date, stmt_sum_quantity)
             .join(Product, Product.id == self.sql_model.product_id)
             .join(ProductCategory, ProductCategory.id == Product.product_category_id)
-            .group_by(stmt_category_name, stmt_sale_date)
+            .group_by(stmt_category_name, stmt_sale_date, stmt_category_id)
             .order_by(stmt_category_name, stmt_sale_date)
         )
 
@@ -253,6 +255,8 @@ class SaleManager(CRUDManager):
         stmt = (
             select(
                 func.jsonb_build_object(
+                    "category_id",
+                    subquery.c.category_id,
                     "category_name",
                     subquery.c.category_name,
                     "sale_range",
@@ -261,7 +265,7 @@ class SaleManager(CRUDManager):
                     ),
                 )
             )
-            .group_by(subquery.c.category_name)
+            .group_by(subquery.c.category_name, subquery.c.category_id)
             .order_by(subquery.c.category_name)
         )
 
