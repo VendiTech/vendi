@@ -18,7 +18,12 @@ def check_auth_criteria(
     """
     Check if the user meets the criteria for the given parameters.
 
-    We raise different types of exceptions based on the communication type.
+    Here are the criteria that are checked:
+    - If the user is active.
+    - If the user is a superuser.
+    - If the user is verified.
+    - If the user has the valid permissions.
+
 
     :param user: The user to check.
     :param is_active: Parameter to check if the user is active.
