@@ -147,8 +147,11 @@ class Settings(BaseSettings):
     sentry: SentrySettings = SentrySettings()
     mailgun: MailGunSettings = MailGunSettings()
 
-    log_level: Literal["INFO", "DEBUG", "WARN", "ERROR"] = "INFO"
     log_json_format: bool = False
+
+    @property
+    def log_level(self) -> Literal["INFO", "DEBUG", "WARN", "ERROR"]:
+        return "DEBUG" if self.debug else "INFO"
 
     docs_url: str = "/api/swagger"
     base_prefix: str = "/api"
