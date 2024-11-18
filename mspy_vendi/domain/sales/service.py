@@ -14,6 +14,7 @@ from mspy_vendi.domain.sales.schemas import (
     DecimalQuantitySchema,
     DecimalTimeFrameSalesSchema,
     TimeFrameSalesSchema,
+    TimePeriodSalesCountSchema,
 )
 
 
@@ -44,3 +45,6 @@ class SaleService(CRUDService):
         self, query_filter: SaleFilter
     ) -> Page[CategoryTimeFrameSalesSchema]:
         return await self.manager.get_sales_category_quantity_per_time_frame(query_filter)
+
+    async def get_sales_count_per_time_period(self, query_filter: SaleFilter) -> list[TimePeriodSalesCountSchema]:
+        return await self.manager.get_sales_count_per_time_period(query_filter)
