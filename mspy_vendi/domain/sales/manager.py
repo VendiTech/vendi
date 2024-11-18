@@ -87,7 +87,8 @@ class SaleManager(CRUDManager):
         :return: New statement with the filter applied.
         """
         return (
-            stmt.join(Machine, Machine.id == self.sql_model.machine_id)
+            stmt
+            .join(Machine, Machine.id == self.sql_model.machine_id)
             .join(MachineUser, MachineUser.machine_id == Machine.id)
             .where(MachineUser.user_id == user.id)
         )
@@ -313,7 +314,7 @@ class SaleManager(CRUDManager):
 
         current_time = datetime.now()
 
-        stmt = select(self.sql_model.sale_time).filter(
+        stmt = select(self.sql_model.sale_time).where(
             extract("month", self.sql_model.sale_date) == current_time.month,
             extract("year", self.sql_model.sale_date) == current_time.year,
         )
