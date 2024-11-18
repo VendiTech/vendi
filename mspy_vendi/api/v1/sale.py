@@ -9,6 +9,7 @@ from mspy_vendi.core.enums import ApiTagEnum
 from mspy_vendi.core.enums.date_range import DateRangeEnum
 from mspy_vendi.core.pagination import Page
 from mspy_vendi.deps import get_db_session
+from mspy_vendi.domain.auth import get_current_user
 from mspy_vendi.domain.sales.filter import SaleFilter
 from mspy_vendi.domain.sales.schemas import (
     BaseQuantitySchema,
@@ -19,60 +20,77 @@ from mspy_vendi.domain.sales.schemas import (
     SaleCreateSchema,
     SaleDetailSchema,
     TimeFrameSalesSchema,
+    TimePeriodSalesCountSchema,
 )
 from mspy_vendi.domain.sales.service import SaleService
+from mspy_vendi.domain.user.models import User
 
 router = APIRouter(prefix="/sale", default_response_class=ORJSONResponse, tags=[ApiTagEnum.SALES])
 
 
 @router.get("/quantity-by-products", response_model=BaseQuantitySchema)
 async def get__quantity_by_product(
+    user: Annotated[User, Depends(get_current_user())],
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
 ) -> BaseQuantitySchema:
-    return await sale_service.get_sales_quantity_by_product(query_filter)
+    return await sale_service.get_sales_quantity_by_product(user, query_filter)
 
 
 @router.get("/quantity-per-range", response_model=Page[TimeFrameSalesSchema])
 async def get__sales_per_range(
     time_frame: DateRangeEnum,
+    user: Annotated[User, Depends(get_current_user())],
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
 ) -> Page[TimeFrameSalesSchema]:
-    return await sale_service.get_sales_quantity_per_range(time_frame, query_filter)
+    return await sale_service.get_sales_quantity_per_range(user, time_frame, query_filter)
 
 
 @router.get("/average-sales", response_model=DecimalQuantitySchema)
 async def get__average_sales_across_machines(
+    user: Annotated[User, Depends(get_current_user())],
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
 ) -> DecimalQuantitySchema:
-    return await sale_service.get_average_sales_across_machines(query_filter)
+    return await sale_service.get_average_sales_across_machines(user, query_filter)
 
 
 @router.get("/average-sales-per-range", response_model=Page[DecimalTimeFrameSalesSchema])
 async def get__average_sales_per_range(
     time_frame: DateRangeEnum,
+    user: Annotated[User, Depends(get_current_user())],
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
 ) -> Page[DecimalTimeFrameSalesSchema]:
-    return await sale_service.get_average_sales_per_range(time_frame, query_filter)
+    return await sale_service.get_average_sales_per_range(user, time_frame, query_filter)
 
 
 @router.get("/quantity-per-product", response_model=Page[CategoryProductQuantitySchema])
 async def get__quantity_per_product(
+    user: Annotated[User, Depends(get_current_user())],
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
 ) -> Page[CategoryProductQuantitySchema]:
-    return await sale_service.get_sales_quantity_per_category(query_filter)
+    return await sale_service.get_sales_quantity_per_category(user, query_filter)
 
 
 @router.get("/quantity-per-product-over-time", response_model=Page[CategoryTimeFrameSalesSchema])
 async def get__quantity_per_product_over_time(
+    user: Annotated[User, Depends(get_current_user())],
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
 ) -> Page[CategoryTimeFrameSalesSchema]:
-    return await sale_service.get_sales_category_quantity_per_time_frame(query_filter)
+    return await sale_service.get_sales_category_quantity_per_time_frame(user, query_filter)
+
+
+@router.get("/sales-per-time-period", response_model=list[TimePeriodSalesCountSchema])
+async def get__sales_per_time_period(
+    user: Annotated[User, Depends(get_current_user())],
+    query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
+    sale_service: Annotated[SaleService, Depends()],
+) -> list[TimePeriodSalesCountSchema]:
+    return await sale_service.get_sales_count_per_time_period(user, query_filter)
 
 
 class SaleAPI(CRUDApi):
