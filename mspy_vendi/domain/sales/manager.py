@@ -118,7 +118,7 @@ class SaleManager(CRUDManager):
         """
         return {period.name: (period.start, period.end) for period in TimePeriodEnum}
 
-    async def get_sales_quantity_by_product(self, user: User, query_filter: SaleFilter) -> BaseQuantitySchema:
+    async def get_sales_quantity_by_product(self, query_filter: SaleFilter) -> BaseQuantitySchema:
         """
         Get the total quantity of sales by product|s.
         Calculate the sum of the quantity field. If no sales are found, raise a NotFoundError.
@@ -131,7 +131,6 @@ class SaleManager(CRUDManager):
         stmt = select(func.sum(self.sql_model.quantity).label("quantity"))
 
         stmt = self._generate_geography_query(query_filter, stmt)
-        stmt = self._generate_user_filtration_query(user, stmt)
         stmt = query_filter.filter(stmt)
 
         if (
@@ -143,7 +142,7 @@ class SaleManager(CRUDManager):
         return result  # type: ignore
 
     async def get_sales_quantity_per_range(
-        self, user: User, time_frame: DateRangeEnum, query_filter: SaleFilter
+        self, time_frame: DateRangeEnum, query_filter: SaleFilter
     ) -> Page[TimeFrameSalesSchema]:
         """
         Get the total quantity of sales per time frame.
@@ -162,7 +161,6 @@ class SaleManager(CRUDManager):
         stmt = select(stmt_time_frame, stmt_sum_quantity).group_by(stmt_time_frame).order_by(stmt_time_frame)
 
         stmt = self._generate_geography_query(query_filter, stmt)
-        stmt = self._generate_user_filtration_query(user, stmt)
         stmt = query_filter.filter(stmt)
         stmt = stmt.subquery()
 
@@ -177,7 +175,7 @@ class SaleManager(CRUDManager):
 
         return await paginate(self.session, final_stmt)
 
-    async def get_average_sales_across_machines(self, user: User, query_filter: SaleFilter) -> DecimalQuantitySchema:
+    async def get_average_sales_across_machines(self, query_filter: SaleFilter) -> DecimalQuantitySchema:
         """
         Get the average quantity of sales across machines.
         Calculate the average of the quantity field. If no sales are found, raise a NotFoundError.
@@ -190,7 +188,6 @@ class SaleManager(CRUDManager):
         stmt = select(func.avg(self.sql_model.quantity).label("quantity"))
 
         stmt = self._generate_geography_query(query_filter, stmt)
-        stmt = self._generate_user_filtration_query(user, stmt)
         stmt = query_filter.filter(stmt)
 
         if (
@@ -202,7 +199,7 @@ class SaleManager(CRUDManager):
         return result  # type: ignore
 
     async def get_average_sales_per_range(
-        self, user: User, time_frame: DateRangeEnum, query_filter: SaleFilter
+        self, time_frame: DateRangeEnum, query_filter: SaleFilter
     ) -> Page[DecimalTimeFrameSalesSchema]:
         """
         Get the average quantity of sales per time frame.
@@ -221,7 +218,6 @@ class SaleManager(CRUDManager):
         stmt = select(stmt_time_frame, stmt_avg_quantity).group_by(stmt_time_frame)
 
         stmt = self._generate_geography_query(query_filter, stmt)
-        stmt = self._generate_user_filtration_query(user, stmt)
         stmt = query_filter.filter(stmt)
         stmt = stmt.subquery()
 
@@ -236,9 +232,7 @@ class SaleManager(CRUDManager):
 
         return await paginate(self.session, final_stmt)
 
-    async def get_sales_quantity_per_category(
-        self, user: User, query_filter: SaleFilter
-    ) -> Page[CategoryProductQuantitySchema]:
+    async def get_sales_quantity_per_category(self, query_filter: SaleFilter) -> Page[CategoryProductQuantitySchema]:
         """
         Get the sales quantity for each product category.
 
@@ -259,13 +253,12 @@ class SaleManager(CRUDManager):
         )
 
         stmt = self._generate_geography_query(query_filter, stmt)
-        stmt = self._generate_user_filtration_query(user, stmt)
         stmt = query_filter.filter(stmt)
 
         return await paginate(self.session, stmt)
 
     async def get_sales_category_quantity_per_time_frame(
-        self, user: User, query_filter: SaleFilter
+        self, query_filter: SaleFilter
     ) -> Page[CategoryTimeFrameSalesSchema]:
         """
         Get the sales quantity per day for each product category.
@@ -288,7 +281,6 @@ class SaleManager(CRUDManager):
         )
 
         subquery = self._generate_geography_query(query_filter, subquery)
-        subquery = self._generate_user_filtration_query(user, subquery)
         subquery = query_filter.filter(subquery).subquery()
 
         stmt = (
@@ -308,9 +300,7 @@ class SaleManager(CRUDManager):
 
         return await paginate(self.session, stmt, unique=False)
 
-    async def get_sales_count_per_time_period(
-        self, user: User, query_filter: SaleFilter
-    ) -> list[TimePeriodSalesCountSchema]:
+    async def get_sales_count_per_time_period(self, query_filter: SaleFilter) -> list[TimePeriodSalesCountSchema]:
         """
         Get the sales count for each time frame.
 
@@ -329,7 +319,6 @@ class SaleManager(CRUDManager):
         )
 
         stmt = self._generate_geography_query(query_filter, stmt)
-        stmt = self._generate_user_filtration_query(user, stmt)
         stmt = query_filter.filter(stmt)
 
         result = await self.session.execute(stmt)
