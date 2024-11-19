@@ -2,17 +2,18 @@ from typing import LiteralString, cast, Optional, Any
 
 from fastapi import Request
 from fastapi_users import BaseUserManager, IntegerIDMixin, schemas, models, exceptions
+from fastapi_users.schemas import BaseUserCreate
 
 from mspy_vendi.config import config, log
 from mspy_vendi.core.email import EmailService
-from mspy_vendi.core.exceptions.base_exception import PydanticLikeError
-from mspy_vendi.core.helpers import get_described_user_info
+from mspy_vendi.core.exceptions.base_exception import PydanticLikeError, BadRequestError
+from mspy_vendi.core.helpers import get_described_user_info, generate_random_password
 from mspy_vendi.core.service import CRUDService
 from mspy_vendi.domain.user.enums.enum import FrontendLinkEnum
 from mspy_vendi.domain.user.filters import UserFilter
 from mspy_vendi.domain.user.managers import UserManager
 from mspy_vendi.domain.user.models import User
-from mspy_vendi.domain.user.schemas import UserPermissionsModifySchema, UserDetail
+from mspy_vendi.domain.user.schemas import UserPermissionsModifySchema, UserDetail, UserAdminCreateSchema
 
 
 # ruff: noqa
@@ -110,16 +111,20 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
         :raises UserAlreadyExists: A user already exists with the same e-mail.
         :return: A new user.
         """
-        await self.validate_password(user_create.password, user_create)
-
         if await self.user_db.get_by_email(user_create.email):
-            raise exceptions.UserAlreadyExists
+            raise BadRequestError("Provided User already exists")
 
-        user_dict: dict[str, Any] = (
-            user_create.create_update_dict() if safe else user_create.create_update_dict_superuser()
-        )
-        password = user_dict.pop("password")
-        user_dict["hashed_password"] = self.password_helper.hash(password)
+        if isinstance(user_create, BaseUserCreate):
+            await self.validate_password(user_create.password, user_create)
+            user_dict: dict[str, Any] = (
+                user_create.create_update_dict() if safe else user_create.create_update_dict_superuser()
+            )
+            password = user_dict.pop("password")
+            user_dict["hashed_password"] = self.password_helper.hash(password)
+
+        else:
+            user_dict: dict[str, Any] = user_create.model_dump(exclude={"machines"})
+            user_dict["hashed_password"] = self.password_helper.hash(generate_random_password())
 
         created_user = await UserManager(self.user_db.session).create(user_dict, is_unique=True)  # type: ignore
 

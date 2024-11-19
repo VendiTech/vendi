@@ -60,3 +60,11 @@ class UserLoginSchema(BaseSchema):
 
 class UserPermissionsModifySchema(BaseSchema):
     permissions: list[PermissionEnum]
+
+
+class UserAdminCreateSchema(BaseSchema):
+    email: EmailStr
+    firstname: AlphaString
+    lastname: AlphaString
+    permissions: list[PermissionEnum]
+    machines: list[PositiveInt]

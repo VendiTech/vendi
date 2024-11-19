@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import ORJSONResponse
 from pydantic import PositiveInt
 
@@ -8,15 +8,16 @@ from mspy_vendi.core.api import CRUDApi
 from mspy_vendi.core.enums import ApiTagEnum, CRUDEnum
 from mspy_vendi.core.pagination import Page
 from mspy_vendi.deps import get_db_session
-from mspy_vendi.domain.auth import get_current_user
+from mspy_vendi.domain.auth import get_auth_user_service, get_current_user
+from mspy_vendi.domain.machine_user.service import MachineUserService
 from mspy_vendi.domain.user.models import User
-from mspy_vendi.domain.user.schemas import UserDetail, UserPermissionsModifySchema, UserUpdate
-from mspy_vendi.domain.user.services import UserService
+from mspy_vendi.domain.user.schemas import UserAdminCreateSchema, UserDetail, UserPermissionsModifySchema, UserUpdate
+from mspy_vendi.domain.user.services import AuthUserService, UserService
 
-router = APIRouter(prefix="/user", default_response_class=ORJSONResponse, tags=[ApiTagEnum.USER])
+router = APIRouter(prefix="/user", default_response_class=ORJSONResponse)
 
 
-@router.get("/me", response_model=UserDetail)
+@router.get("/me", response_model=UserDetail, tags=[ApiTagEnum.USER])
 async def get__show_me(
     user: Annotated[User, Depends(get_current_user())],
     service: Annotated[UserService, Depends()],
@@ -29,7 +30,7 @@ async def get__show_me(
     return await service.get(obj_id=user.id)
 
 
-@router.patch("/edit")
+@router.patch("/edit", tags=[ApiTagEnum.ADMIN_USER])
 async def update__user(
     updated_obj: UserUpdate,
     user: Annotated[User, Depends(get_current_user())],
@@ -41,7 +42,7 @@ async def update__user(
     return await service.update(obj_id=user.id, obj=updated_obj)
 
 
-@router.patch("/permission/add/{user_id}")
+@router.patch("/permission/add/{user_id}", tags=[ApiTagEnum.ADMIN_USER])
 async def patch__add_permissions(
     user_id: PositiveInt,
     user_permissions: UserPermissionsModifySchema,
@@ -56,7 +57,7 @@ async def patch__add_permissions(
     return await service.add_permission(user_id=user_id, obj=user_permissions)
 
 
-@router.patch("/permission/delete/{user_id}")
+@router.patch("/permission/delete/{user_id}", tags=[ApiTagEnum.ADMIN_USER])
 async def patch__delete_permissions(
     user_id: PositiveInt,
     user_permissions: UserPermissionsModifySchema,
@@ -69,6 +70,41 @@ async def patch__delete_permissions(
     - **user_id**: User ID
     """
     return await service.delete_permissions(user_id=user_id, obj=user_permissions)
+
+
+@router.delete("/admin/{obj_id}", status_code=status.HTTP_204_NO_CONTENT, tags=[ApiTagEnum.ADMIN_USER])
+async def delete__user(
+    user_id: PositiveInt,
+    service: Annotated[UserService, Depends()],
+    _: Annotated[User, Depends(get_current_user(is_superuser=True))],
+):
+    return await service.delete(obj_id=user_id)
+
+
+@router.post("/admin/reset-password/{user_id}", status_code=status.HTTP_202_ACCEPTED, tags=[ApiTagEnum.ADMIN_USER])
+async def post__reset_password(
+    request: Request,
+    user_id: PositiveInt,
+    user_service: Annotated[UserService, Depends()],
+    auth_service: Annotated[AuthUserService, Depends(get_auth_user_service)],
+    _: Annotated[User, Depends(get_current_user(is_superuser=True))],
+):
+    user = await user_service.get(obj_id=user_id)
+
+    return await auth_service.forgot_password(user, request)
+
+
+@router.post("/admin/create", response_model=UserDetail, tags=[ApiTagEnum.ADMIN_USER])
+async def post__create_user(
+    user_obj: UserAdminCreateSchema,
+    machine_user_service: Annotated[MachineUserService, Depends()],
+    auth_service: Annotated[AuthUserService, Depends(get_auth_user_service)],
+    _: Annotated[User, Depends(get_current_user(is_superuser=True))],
+) -> UserDetail:
+    created_user = await auth_service.create(user_obj)  # type: ignore
+    await machine_user_service.attach_user_to_machine(created_user.id, *user_obj.machines)
+
+    return created_user
 
 
 class UserAPI(CRUDApi):
