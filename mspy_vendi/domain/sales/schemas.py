@@ -30,12 +30,12 @@ class SaleDetailSchema(SaleBaseSchema):
 
 
 class TimePeriodEnum(Enum):
-    MORNING = ("6 AM - 6 PM", time(6, 0, 0), time(17, 59, 59))
-    EVENING = ("6 PM - 8 PM", time(18, 0, 0), time(19, 59, 59))
-    NIGHT = ("8 PM - 10 PM", time(20, 0, 0), time(21, 59, 59))
-    LATE_NIGHT = ("10 PM - 12 AM", time(22, 0, 0), time(23, 59, 59))
-    MIDNIGHT = ("12 AM - 2 AM", time(0, 0, 0), time(1, 59, 59))
-    EARLY_MORNING = ("2 AM - 6 AM", time(2, 0, 0), time(5, 59, 59))
+    MORNING = ("6 AM-6 PM", time(6, 0, 0), time(17, 59, 59))
+    EVENING = ("6 PM-8 PM", time(18, 0, 0), time(19, 59, 59))
+    NIGHT = ("8 PM-10 PM", time(20, 0, 0), time(21, 59, 59))
+    LATE_NIGHT = ("10 PM-12 AM", time(22, 0, 0), time(23, 59, 59))
+    MIDNIGHT = ("12 AM-2 AM", time(0, 0, 0), time(1, 59, 59))
+    EARLY_MORNING = ("2 AM-6 AM", time(2, 0, 0), time(5, 59, 59))
 
     @property
     def name(self) -> str:

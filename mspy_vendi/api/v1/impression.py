@@ -1,14 +1,30 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends
 from fastapi.responses import ORJSONResponse
+from fastapi_filter import FilterDepends
 
 from mspy_vendi.core.api import CRUDApi, basic_endpoints, basic_permissions
 from mspy_vendi.core.enums import ApiTagEnum
 from mspy_vendi.core.pagination import Page
 from mspy_vendi.deps import get_db_session
-from mspy_vendi.domain.impressions.schemas import ImpressionCreateSchema, ImpressionDetailSchema
+from mspy_vendi.domain.impressions.filters import ImpressionFilter
+from mspy_vendi.domain.impressions.schemas import (
+    ImpressionCreateSchema,
+    ImpressionDetailSchema,
+    TimeFrameImpressionsSchema,
+)
 from mspy_vendi.domain.impressions.service import ImpressionsService
 
 router = APIRouter(prefix="/impression", default_response_class=ORJSONResponse, tags=[ApiTagEnum.IMPRESSIONS])
+
+
+@router.get("/impressions-per-week", response_model=Page[TimeFrameImpressionsSchema])
+async def get__impressions_per_week(
+    query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
+    impression_service: Annotated[ImpressionsService, Depends()],
+) -> Page[TimeFrameImpressionsSchema]:
+    return await impression_service.get_impressions_per_week(query_filter)
 
 
 class ImpressionAPI(CRUDApi):
