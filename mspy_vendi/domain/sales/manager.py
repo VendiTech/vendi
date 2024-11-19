@@ -87,8 +87,7 @@ class SaleManager(CRUDManager):
         :return: New statement with the filter applied.
         """
         return (
-            stmt
-            .join(Machine, Machine.id == self.sql_model.machine_id)
+            stmt.join(Machine, Machine.id == self.sql_model.machine_id)
             .join(MachineUser, MachineUser.machine_id == Machine.id)
             .where(MachineUser.user_id == user.id)
         )

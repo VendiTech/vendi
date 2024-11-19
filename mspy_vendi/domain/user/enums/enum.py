@@ -6,6 +6,14 @@ class RoleEnum(StrEnum):
     USER = "user"
 
 
+class PermissionEnum(StrEnum):
+    ANY = "any"
+    READ = "read"
+    CREATE = "create"
+    UPDATE = "update"
+    DELETE = "delete"
+
+
 class StatusEnum(StrEnum):
     """
     This enum represents every account's status.
