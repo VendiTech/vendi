@@ -308,6 +308,7 @@ class SaleManager(CRUDManager):
     async def get_sales_count_per_time_period(self, query_filter: SaleFilter) -> list[TimePeriodSalesCountSchema]:
         """
         Get the sales count for each time frame.
+        (6 AM - 6 PM, 6 PM - 8 PM, 8 AM - 10 PM, 10 PM - 12 AM, 12 AM - 2 AM, 2 AM - 6 AM).
 
         :param user: Current user.
         :param query_filter: Filter object.
@@ -316,12 +317,7 @@ class SaleManager(CRUDManager):
         """
         time_periods = self._get_time_periods()
 
-        current_time = datetime.now()
-
-        stmt = select(self.sql_model.sale_time).where(
-            extract("month", self.sql_model.sale_date) == current_time.month,
-            extract("year", self.sql_model.sale_date) == current_time.year,
-        )
+        stmt = select(self.sql_model.sale_time)
 
         stmt = self._generate_geography_query(query_filter, stmt)
         stmt = query_filter.filter(stmt)
@@ -336,8 +332,5 @@ class SaleManager(CRUDManager):
                 if start <= sale_time <= end:
                     sales_by_period[period_name] += 1
                     break
-
-        if not sale_times:
-            raise NotFoundError(detail="No sales were found.")
 
         return [{"time_period": period, "sales": count} for period, count in sales_by_period.items()]  # type: ignore
