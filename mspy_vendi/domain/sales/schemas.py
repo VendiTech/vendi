@@ -80,3 +80,8 @@ class CategoryTimeFrameSalesSchema(BaseSchema):
 class TimePeriodSalesCountSchema(BaseSchema):
     time_period: str
     sales: NonNegativeInt
+
+
+class UnitsTimeFrameSchema(BaseSchema):
+    units: DecimalFloat
+    time_frame: datetime
