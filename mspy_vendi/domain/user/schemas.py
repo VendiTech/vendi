@@ -7,7 +7,7 @@ from mspy_vendi.core.constants import MAX_NUMBER_OF_CHARACTERS
 from mspy_vendi.core.schemas import BaseSchema
 from mspy_vendi.core.schemas.base import AlphaString, ConstraintString
 from mspy_vendi.core.validators import validate_password
-from mspy_vendi.domain.user.enums import RoleEnum, StatusEnum
+from mspy_vendi.domain.user.enums import PermissionEnum, RoleEnum, StatusEnum
 
 
 class UserBase(BaseSchema):
@@ -23,6 +23,7 @@ class UserDetail(UserBase):
     id: PositiveInt
     status: StatusEnum
     role: RoleEnum
+    permissions: list[PermissionEnum]
 
 
 class UserCreate(UserBase, schemas.BaseUserCreate):
@@ -55,3 +56,7 @@ class UserPasswordUpdate(BaseSchema):
 class UserLoginSchema(BaseSchema):
     username: str
     password: str
+
+
+class UserPermissionsModifySchema(BaseSchema):
+    permissions: list[PermissionEnum]

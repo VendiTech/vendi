@@ -13,6 +13,7 @@ from mspy_vendi.core.pagination import Page
 from mspy_vendi.core.service import CRUDService
 from mspy_vendi.db import User
 from mspy_vendi.domain.auth import get_current_user
+from mspy_vendi.domain.user.enums import PermissionEnum
 
 Service = TypeVar("Service", bound=type[CRUDService])
 CreateSchema = TypeVar("CreateSchema", bound=BaseModel)
@@ -27,8 +28,8 @@ basic_permissions = {
     CRUDEnum.CREATE: Depends(get_current_user(is_superuser=True)),
     CRUDEnum.UPDATE: Depends(get_current_user(is_superuser=True)),
     CRUDEnum.DELETE: Depends(get_current_user(is_superuser=True)),
-    CRUDEnum.GET: Depends(get_current_user(is_superuser=False)),
-    CRUDEnum.LIST: Depends(get_current_user(is_superuser=False)),
+    CRUDEnum.GET: Depends(get_current_user(permissions=[PermissionEnum.READ])),
+    CRUDEnum.LIST: Depends(get_current_user(permissions=[PermissionEnum.READ])),
 }
 basic_endpoints = (CRUDEnum.CREATE, CRUDEnum.UPDATE, CRUDEnum.DELETE, CRUDEnum.GET, CRUDEnum.LIST)
 
