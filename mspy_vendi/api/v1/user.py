@@ -11,7 +11,13 @@ from mspy_vendi.deps import get_db_session
 from mspy_vendi.domain.auth import get_auth_user_service, get_current_user
 from mspy_vendi.domain.machine_user.service import MachineUserService
 from mspy_vendi.domain.user.models import User
-from mspy_vendi.domain.user.schemas import UserAdminCreateSchema, UserDetail, UserPermissionsModifySchema, UserUpdate
+from mspy_vendi.domain.user.schemas import (
+    UserAdminCreateSchema,
+    UserDetail,
+    UserListSchema,
+    UserPermissionsModifySchema,
+    UserUpdate,
+)
 from mspy_vendi.domain.user.services import AuthUserService, UserService
 
 router = APIRouter(prefix="/user", default_response_class=ORJSONResponse)
@@ -102,14 +108,30 @@ async def post__create_user(
     _: Annotated[User, Depends(get_current_user(is_superuser=True))],
 ) -> UserDetail:
     created_user = await auth_service.create(user_obj)  # type: ignore
-    await machine_user_service.attach_user_to_machine(created_user.id, *user_obj.machines)
+    await machine_user_service.update_user_machines(created_user.id, *user_obj.machines)
 
     return created_user
 
 
+@router.patch("/admin/edit", response_model=UserDetail, tags=[ApiTagEnum.ADMIN_USER])
+async def patch__edit_user(
+    user_obj: UserAdminCreateSchema,
+    machine_user_service: Annotated[MachineUserService, Depends()],
+    user_service: Annotated[UserService, Depends(get_auth_user_service)],
+    _: Annotated[User, Depends(get_current_user(is_superuser=True))],
+) -> UserDetail:
+    updated_user = await user_service.update(user_obj)  # type: ignore
+
+    if user_obj.machines:
+        await machine_user_service.update_user_machines(updated_user.id, *user_obj.machines)
+
+    return updated_user
+
+
 class UserAPI(CRUDApi):
     service = UserService
-    schema = UserDetail
+    detailed_schema = UserDetail
+    schema = UserListSchema
     get_db_session = Depends(get_db_session)
     current_user_mapping = {
         CRUDEnum.GET: Depends(get_current_user(is_superuser=True)),

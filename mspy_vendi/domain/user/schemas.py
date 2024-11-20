@@ -7,6 +7,7 @@ from mspy_vendi.core.constants import MAX_NUMBER_OF_CHARACTERS
 from mspy_vendi.core.schemas import BaseSchema
 from mspy_vendi.core.schemas.base import AlphaString, ConstraintString
 from mspy_vendi.core.validators import validate_password
+from mspy_vendi.domain.machines.schemas import MachineDetailSchema
 from mspy_vendi.domain.user.enums import PermissionEnum, RoleEnum, StatusEnum
 
 
@@ -24,6 +25,10 @@ class UserDetail(UserBase):
     status: StatusEnum
     role: RoleEnum
     permissions: list[PermissionEnum]
+
+
+class UserListSchema(UserDetail):
+    machines: list[MachineDetailSchema]
 
 
 class UserCreate(UserBase, schemas.BaseUserCreate):
@@ -68,3 +73,10 @@ class UserAdminCreateSchema(BaseSchema):
     lastname: AlphaString
     permissions: list[PermissionEnum]
     machines: list[PositiveInt]
+
+
+class UserAdminEditSchema(BaseSchema):
+    firstname: AlphaString | None = None
+    lastname: AlphaString | None = None
+    permissions: list[PermissionEnum] | None = None
+    machines: list[PositiveInt] | None = None

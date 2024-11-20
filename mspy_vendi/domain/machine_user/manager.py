@@ -1,4 +1,4 @@
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import DBAPIError
 
@@ -33,3 +33,8 @@ class MachineUserManager(CRUDManager):
         except DBAPIError as ex:
             await self.session.rollback()
             raise_db_error(ex)
+
+    async def get_machines_for_user(self, user_id: int) -> list[int]:
+        stmt = select(self.sql_model.machine_id).where(self.sql_model.user_id == user_id)
+
+        return (await self.session.scalars(stmt)).all()  # type: ignore

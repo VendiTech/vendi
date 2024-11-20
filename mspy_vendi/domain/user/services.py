@@ -128,12 +128,14 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
 
         created_user = await UserManager(self.user_db.session).create(user_dict, is_unique=True)  # type: ignore
 
-        if not config.debug:
-            await self.request_verify(created_user, request)
+        await self.request_verify(created_user, request)
 
         return created_user
 
     async def on_after_request_verify(self, user: User, token: str, request: Request | None = None) -> None:
+        if config.debug:
+            return None
+
         verification_link = f"https://{config.frontend_domain}/{FrontendLinkEnum.EMAIL_VERIFY}/?token={token}"
 
         html_content: str = f"""
@@ -164,6 +166,9 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
         log.info("Sent verify email message", info=get_described_user_info(user, request=request))
 
     async def on_after_forgot_password(self, user: User, token: str, request: Request | None = None) -> None:
+        if config.debug:
+            return None
+
         reset_link: str = f"https://{config.frontend_domain}/{FrontendLinkEnum.PASSWORD_RESET}/?token={token}"
 
         html_content: str = f"""
@@ -194,6 +199,9 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
         log.info("Sent forgot password email message", info=get_described_user_info(user, request=request))
 
     async def on_after_reset_password(self, user: User, request: Request | None = None) -> None:
+        if config.debug:
+            return None
+
         sign_in_link: str = f"https://{config.frontend_domain}/{FrontendLinkEnum.LOG_IN}"
 
         html_content: str = f"""
