@@ -23,6 +23,7 @@ from mspy_vendi.domain.sales.schemas import (
     CategoryTimeFrameSalesSchema,
     DecimalQuantitySchema,
     DecimalTimeFrameSalesSchema,
+    GeographyDecimalQuantitySchema,
     TimeFrameSalesSchema,
     TimePeriodEnum,
     TimePeriodSalesCountSchema,
@@ -88,7 +89,8 @@ class SaleManager(CRUDManager):
         :return: New statement with the filter applied.
         """
         return (
-            stmt.join(Machine, Machine.id == self.sql_model.machine_id)
+            stmt
+            .join(Machine, Machine.id == self.sql_model.machine_id)
             .join(MachineUser, MachineUser.machine_id == Machine.id)
             .where(MachineUser.user_id == user.id)
         )
@@ -351,8 +353,10 @@ class SaleManager(CRUDManager):
             select(stmt_time_frame, stmt_units)
             .join(Product, Product.id == self.sql_model.product_id)
             .group_by(stmt_time_frame)
-            .subquery()
         )
+
+        sales_subquery = self._generate_geography_query(query_filter, sales_subquery)
+        sales_subquery = query_filter.filter(sales_subquery).subquery()
 
         date_range_cte = self._generate_date_range_cte(time_frame, query_filter)
 
@@ -364,3 +368,38 @@ class SaleManager(CRUDManager):
         )
 
         return await paginate(self.session, final_stmt)
+
+    async def get_sales_quantity_per_geography(self, query_filter: SaleFilter) -> Page[GeographyDecimalQuantitySchema]:
+        """
+        Get the sales quantity across geography locations.
+
+        :param query_filter: Filter object.
+        :return: Paginated list of sales quantity across geography locations and geography objects.
+        """
+        stmt_sum_quantity = label("quantity", func.sum(self.sql_model.quantity))
+        stmt_geography_id = label("id", Geography.id)
+        stmt_geography_name = label("name", Geography.name)
+        stmt_geography_postcode = label("postcode", Geography.postcode)
+
+        stmt = (
+            select(
+                stmt_sum_quantity,
+                func.jsonb_build_object(
+                    "id",
+                    stmt_geography_id,
+                    "name",
+                    stmt_geography_name,
+                    "postcode",
+                    stmt_geography_postcode,
+                ).label("geography"),
+            )
+            .join(Machine, Machine.id == self.sql_model.machine_id)
+            .join(Geography, stmt_geography_id == Machine.geography_id)
+            .group_by(Geography.id)
+            .order_by(Geography.id)
+        )
+
+        stmt = self._generate_geography_query(query_filter, stmt)
+        stmt = query_filter.filter(stmt)
+
+        return await paginate(self.session, stmt, unique=False)

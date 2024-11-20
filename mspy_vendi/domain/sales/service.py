@@ -13,6 +13,7 @@ from mspy_vendi.domain.sales.schemas import (
     CategoryTimeFrameSalesSchema,
     DecimalQuantitySchema,
     DecimalTimeFrameSalesSchema,
+    GeographyDecimalQuantitySchema,
     TimeFrameSalesSchema,
     TimePeriodSalesCountSchema,
     UnitsTimeFrameSchema,
@@ -53,3 +54,6 @@ class SaleService(CRUDService):
     async def get_units_sold(self, query_filter: SaleFilter) -> Page[UnitsTimeFrameSchema]:
         time_frame = DateRangeEnum.MONTH
         return await self.manager.get_units_sold(time_frame, query_filter)
+
+    async def get_sales_quantity_per_geography(self, query_filter: SaleFilter) -> Page[GeographyDecimalQuantitySchema]:
+        return await self.manager.get_sales_quantity_per_geography(query_filter)

@@ -6,6 +6,7 @@ from pydantic import NonNegativeInt, PositiveInt
 from mspy_vendi.core.constants import DEFAULT_SOURCE_SYSTEM
 from mspy_vendi.core.schemas import BaseSchema
 from mspy_vendi.core.validators import DecimalFloat
+from mspy_vendi.domain.geographies.schemas import GeographyDetailSchema
 from mspy_vendi.domain.machines.schemas import MachineDetailSchema
 from mspy_vendi.domain.products.schemas import ProductDetailSchema
 
@@ -85,3 +86,7 @@ class TimePeriodSalesCountSchema(BaseSchema):
 class UnitsTimeFrameSchema(BaseSchema):
     units: DecimalFloat
     time_frame: datetime
+
+
+class GeographyDecimalQuantitySchema(DecimalQuantitySchema):
+    geography: GeographyDetailSchema
