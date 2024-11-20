@@ -123,7 +123,7 @@ async def patch__edit_user(
 ) -> UserDetail:
     await user_service.update(user_id, user_obj, raise_error=False)  # type: ignore
 
-    if user_obj.machines:
+    if user_obj.machines is not None:
         await machine_user_service.update_user_machines(user_id, *user_obj.machines)
 
     return await user_service.get(user_id)
