@@ -26,6 +26,7 @@ from mspy_vendi.domain.sales.schemas import (
     TimeFrameSalesSchema,
     TimePeriodEnum,
     TimePeriodSalesCountSchema,
+    UnitsTimeFrameSchema,
 )
 from mspy_vendi.domain.user.models import User
 
@@ -312,7 +313,7 @@ class SaleManager(CRUDManager):
         :param user: Current user.
         :param query_filter: Filter object.
 
-        :return: A list with sales count for each time frame.
+        :return: A list with sales count for each time period.
         """
         time_periods = self._get_time_periods()
 
@@ -333,3 +334,33 @@ class SaleManager(CRUDManager):
                     break
 
         return [{"time_period": period, "sales": count} for period, count in sales_by_period.items()]  # type: ignore
+
+    async def get_units_sold(self, time_frame: DateRangeEnum, query_filter: SaleFilter) -> Page[UnitsTimeFrameSchema]:
+        """
+        Get the units (quantity * price) sold per each time frame.
+
+        :param time_frame: Time frame to group the data.
+        :param query_filter: Filter object.
+
+        :return: Paginated list of units sold per each time frame.
+        """
+        stmt_time_frame = label("time_frame", func.date_trunc(time_frame.value, self.sql_model.sale_date))
+        stmt_units = label("units", func.sum(self.sql_model.quantity * Product.price))
+
+        sales_subquery = (
+            select(stmt_time_frame, stmt_units)
+            .join(Product, Product.id == self.sql_model.product_id)
+            .group_by(stmt_time_frame)
+            .subquery()
+        )
+
+        date_range_cte = self._generate_date_range_cte(time_frame, query_filter)
+
+        final_stmt = (
+            select(date_range_cte.c.time_frame, func.coalesce(sales_subquery.c.units, 0).label("units"))
+            .select_from(date_range_cte)
+            .outerjoin(sales_subquery, sales_subquery.c.time_frame == date_range_cte.c.time_frame)
+            .order_by(date_range_cte.c.time_frame)
+        )
+
+        return await paginate(self.session, final_stmt)

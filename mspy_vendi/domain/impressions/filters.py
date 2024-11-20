@@ -8,8 +8,8 @@ from mspy_vendi.domain.impressions.models import Impression
 
 class ImpressionFilter(BaseFilter):
     id__in: list[PositiveInt] | None = None
-    date_from: datetime.date | None = None
-    date_to: datetime.date | None = None
+    date_from: datetime.datetime | None = None
+    date_to: datetime.datetime | None = None
 
     total_impressions: NonNegativeInt | None = None
     temperature: int | None = None
