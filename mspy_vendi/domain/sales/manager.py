@@ -1,10 +1,10 @@
-from datetime import datetime, time
+from datetime import time
 from typing import Any
 
 from fastapi_filter.contrib.sqlalchemy import Filter
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
-from sqlalchemy import CTE, Date, Select, cast, extract, func, label, select, text
+from sqlalchemy import CTE, Date, Select, cast, func, label, select, text
 from sqlalchemy.orm import joinedload
 
 from mspy_vendi.core.enums.date_range import DateRangeEnum
@@ -89,8 +89,7 @@ class SaleManager(CRUDManager):
         :return: New statement with the filter applied.
         """
         return (
-            stmt
-            .join(Machine, Machine.id == self.sql_model.machine_id)
+            stmt.join(Machine, Machine.id == self.sql_model.machine_id)
             .join(MachineUser, MachineUser.machine_id == Machine.id)
             .where(MachineUser.user_id == user.id)
         )
@@ -110,7 +109,7 @@ class SaleManager(CRUDManager):
             func.generate_series(
                 func.date_trunc(time_frame.value, cast(query_filter.date_from, Date)),
                 cast(query_filter.date_to, Date),
-                text(f"'1 {time_frame}'"),
+                text(f"'{time_frame.interval}'"),
             ).label("time_frame")
         ).cte()
 
