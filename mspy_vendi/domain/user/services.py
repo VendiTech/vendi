@@ -12,6 +12,7 @@ from mspy_vendi.domain.user.enums.enum import FrontendLinkEnum
 from mspy_vendi.domain.user.filters import UserFilter
 from mspy_vendi.domain.user.managers import UserManager
 from mspy_vendi.domain.user.models import User
+from mspy_vendi.domain.user.schemas import UserPermissionsModifySchema, UserDetail
 
 
 # ruff: noqa
@@ -246,3 +247,13 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
 class UserService(CRUDService):
     manager_class = UserManager
     filter_class = UserFilter
+
+    async def add_permission(self, user_id: int, obj: UserPermissionsModifySchema) -> UserDetail:
+        modify_user: User = await self.get(obj_id=user_id)
+
+        return await self.manager.update_permissions(modified_user=modify_user, permissions=obj.permissions)
+
+    async def delete_permissions(self, user_id: int, obj: UserPermissionsModifySchema) -> UserDetail:
+        modify_user: User = await self.get(obj_id=user_id)
+
+        return await self.manager.delete_permissions(modified_user=modify_user, permissions=obj.permissions)

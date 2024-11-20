@@ -1,6 +1,6 @@
 from sqlalchemy import Enum
 
-from .enum import RoleEnum, StatusEnum
+from .enum import PermissionEnum, RoleEnum, StatusEnum
 
 role_db_enum = Enum(
     *[role.value for role in RoleEnum],
@@ -10,4 +10,9 @@ role_db_enum = Enum(
 status_db_enum = Enum(
     *[status.value for status in StatusEnum],
     name="status_db_enum",
+)
+
+permission_db_enum = Enum(
+    *[permission.value for permission in PermissionEnum],
+    name="permission_db_enum",
 )

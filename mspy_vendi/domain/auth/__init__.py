@@ -13,6 +13,7 @@ from mspy_vendi.core.helpers.auth_helpers import check_auth_criteria
 from mspy_vendi.core.helpers.logging_helpers import get_described_user_info
 from mspy_vendi.deps import get_email_service, get_user_db
 from mspy_vendi.domain.auth.routers.auth_router import get_auth_router
+from mspy_vendi.domain.user.enums import PermissionEnum
 from mspy_vendi.domain.user.models import User
 from mspy_vendi.domain.user.services import AuthUserService
 
@@ -67,7 +68,10 @@ async def parse_jwt_token(
 
 
 def get_current_user(
-    is_active: bool = True, is_superuser: bool | None = None, is_verified: bool = True
+    is_active: bool = True,
+    is_verified: bool = True,
+    is_superuser: bool | None = None,
+    permissions: list[PermissionEnum] | None = None,
 ) -> Callable[[Request, User], Coroutine[Any, Any, User]]:
     async def wrapper(request: Request, user: Annotated[User, Depends(parse_jwt_token)]) -> User:
         check_auth_criteria(
@@ -75,6 +79,7 @@ def get_current_user(
             is_active,
             is_superuser,
             is_verified,
+            permissions,
         )
 
         log.info("User is authorized.", info=get_described_user_info(user, request=request))
