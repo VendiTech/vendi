@@ -13,8 +13,8 @@ from mspy_vendi.domain.machine_user.service import MachineUserService
 from mspy_vendi.domain.user.models import User
 from mspy_vendi.domain.user.schemas import (
     UserAdminCreateSchema,
+    UserAdminEditSchema,
     UserDetail,
-    UserListSchema,
     UserPermissionsModifySchema,
     UserUpdate,
 )
@@ -36,7 +36,7 @@ async def get__show_me(
     return await service.get(obj_id=user.id)
 
 
-@router.patch("/edit", tags=[ApiTagEnum.ADMIN_USER])
+@router.patch("/edit", tags=[ApiTagEnum.USER])
 async def update__user(
     updated_obj: UserUpdate,
     user: Annotated[User, Depends(get_current_user())],
@@ -110,28 +110,28 @@ async def post__create_user(
     created_user = await auth_service.create(user_obj)  # type: ignore
     await machine_user_service.update_user_machines(created_user.id, *user_obj.machines)
 
-    return created_user
+    return await auth_service.get(created_user.id)
 
 
-@router.patch("/admin/edit", response_model=UserDetail, tags=[ApiTagEnum.ADMIN_USER])
+@router.patch("/admin/edit/{user_id}", response_model=UserDetail, tags=[ApiTagEnum.ADMIN_USER])
 async def patch__edit_user(
-    user_obj: UserAdminCreateSchema,
+    user_id: PositiveInt,
+    user_obj: UserAdminEditSchema,
     machine_user_service: Annotated[MachineUserService, Depends()],
-    user_service: Annotated[UserService, Depends(get_auth_user_service)],
+    user_service: Annotated[UserService, Depends()],
     _: Annotated[User, Depends(get_current_user(is_superuser=True))],
 ) -> UserDetail:
-    updated_user = await user_service.update(user_obj)  # type: ignore
+    await user_service.update(user_id, user_obj, raise_error=False)  # type: ignore
 
     if user_obj.machines:
-        await machine_user_service.update_user_machines(updated_user.id, *user_obj.machines)
+        await machine_user_service.update_user_machines(user_id, *user_obj.machines)
 
-    return updated_user
+    return await user_service.get(user_id)
 
 
 class UserAPI(CRUDApi):
     service = UserService
-    detailed_schema = UserDetail
-    schema = UserListSchema
+    schema = UserDetail
     get_db_session = Depends(get_db_session)
     current_user_mapping = {
         CRUDEnum.GET: Depends(get_current_user(is_superuser=True)),

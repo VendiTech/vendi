@@ -25,9 +25,6 @@ class UserDetail(UserBase):
     status: StatusEnum
     role: RoleEnum
     permissions: list[PermissionEnum]
-
-
-class UserListSchema(UserDetail):
     machines: list[MachineDetailSchema]
 
 

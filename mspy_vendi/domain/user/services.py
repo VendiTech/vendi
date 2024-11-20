@@ -8,7 +8,7 @@ from mspy_vendi.config import config, log
 from mspy_vendi.core.email import EmailService
 from mspy_vendi.core.exceptions.base_exception import PydanticLikeError, BadRequestError
 from mspy_vendi.core.helpers import get_described_user_info, generate_random_password
-from mspy_vendi.core.service import CRUDService
+from mspy_vendi.core.service import CRUDService, UpdateSchema, Schema
 from mspy_vendi.domain.user.enums.enum import FrontendLinkEnum
 from mspy_vendi.domain.user.filters import UserFilter
 from mspy_vendi.domain.user.managers import UserManager
@@ -260,6 +260,13 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
 class UserService(CRUDService):
     manager_class = UserManager
     filter_class = UserFilter
+
+    async def update(
+        self, obj_id: int, obj: UpdateSchema, *, autocommit: bool = True, raise_error: bool = True, **kwargs: Any
+    ) -> UserDetail:
+        return await self.manager.update(
+            obj_id=obj_id, obj=obj, autocommit=autocommit, raise_error=raise_error, **kwargs
+        )
 
     async def add_permission(self, user_id: int, obj: UserPermissionsModifySchema) -> UserDetail:
         modify_user: User = await self.get(obj_id=user_id)

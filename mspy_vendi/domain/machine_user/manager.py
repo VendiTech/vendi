@@ -25,8 +25,9 @@ class MachineUserManager(CRUDManager):
     async def disassociate_user_with_machine(self, user_id: int, *machine_ids: int) -> None:
         try:
             await self.session.execute(
-                delete(self.sql_model),
-                [dict(user_id=user_id, machine_id=machine_id) for machine_id in set(machine_ids)],
+                delete(self.sql_model).where(
+                    self.sql_model.user_id == user_id, self.sql_model.machine_id.in_(machine_ids)
+                ),
             )
             await self.session.commit()
 
