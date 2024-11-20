@@ -16,10 +16,12 @@ from mspy_vendi.domain.sales.schemas import (
     CategoryTimeFrameSalesSchema,
     DecimalQuantitySchema,
     DecimalTimeFrameSalesSchema,
+    GeographyDecimalQuantitySchema,
     SaleCreateSchema,
     SaleDetailSchema,
     TimeFrameSalesSchema,
     TimePeriodSalesCountSchema,
+    UnitsTimeFrameSchema,
 )
 from mspy_vendi.domain.sales.service import SaleService
 
@@ -82,6 +84,22 @@ async def get__sales_per_time_period(
     sale_service: Annotated[SaleService, Depends()],
 ) -> list[TimePeriodSalesCountSchema]:
     return await sale_service.get_sales_count_per_time_period(query_filter)
+
+
+@router.get("/units-sold", response_model=Page[UnitsTimeFrameSchema])
+async def get__units_sold(
+    query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
+    sale_service: Annotated[SaleService, Depends()],
+) -> Page[UnitsTimeFrameSchema]:
+    return await sale_service.get_units_sold(query_filter)
+
+
+@router.get("/quantity-per-geography", response_model=Page[GeographyDecimalQuantitySchema])
+async def get__quantity_per_geography(
+    query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
+    sale_service: Annotated[SaleService, Depends()],
+) -> Page[GeographyDecimalQuantitySchema]:
+    return await sale_service.get_sales_quantity_per_geography(query_filter)
 
 
 class SaleAPI(CRUDApi):

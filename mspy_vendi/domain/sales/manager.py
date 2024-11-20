@@ -23,9 +23,11 @@ from mspy_vendi.domain.sales.schemas import (
     CategoryTimeFrameSalesSchema,
     DecimalQuantitySchema,
     DecimalTimeFrameSalesSchema,
+    GeographyDecimalQuantitySchema,
     TimeFrameSalesSchema,
     TimePeriodEnum,
     TimePeriodSalesCountSchema,
+    UnitsTimeFrameSchema,
 )
 from mspy_vendi.domain.user.models import User
 
@@ -307,12 +309,12 @@ class SaleManager(CRUDManager):
 
     async def get_sales_count_per_time_period(self, query_filter: SaleFilter) -> list[TimePeriodSalesCountSchema]:
         """
-        Get the sales count for each time frame.
+        Get the sales count for each time period.
 
         :param user: Current user.
         :param query_filter: Filter object.
 
-        :return: A list with sales count for each time frame.
+        :return: A list with sales count for each time period.
         """
         time_periods = self._get_time_periods()
 
@@ -341,3 +343,70 @@ class SaleManager(CRUDManager):
             raise NotFoundError(detail="No sales were found.")
 
         return [{"time_period": period, "sales": count} for period, count in sales_by_period.items()]  # type: ignore
+
+    async def get_units_sold(self, time_frame: DateRangeEnum, query_filter: SaleFilter) -> Page[UnitsTimeFrameSchema]:
+        """
+        Get the units (quantity * price) sold per each time frame.
+
+        :param time_frame: Time frame to group the data.
+        :param query_filter: Filter object.
+
+        :return: Paginated list of units sold per each time frame.
+        """
+        stmt_time_frame = label("time_frame", func.date_trunc(time_frame.value, self.sql_model.sale_date))
+        stmt_units = label("units", func.sum(self.sql_model.quantity * Product.price))
+
+        sales_subquery = (
+            select(stmt_time_frame, stmt_units)
+            .join(Product, Product.id == self.sql_model.product_id)
+            .group_by(stmt_time_frame)
+        )
+
+        sales_subquery = self._generate_geography_query(query_filter, sales_subquery)
+        sales_subquery = query_filter.filter(sales_subquery).subquery()
+
+        date_range_cte = self._generate_date_range_cte(time_frame, query_filter)
+
+        final_stmt = (
+            select(date_range_cte.c.time_frame, func.coalesce(sales_subquery.c.units, 0).label("units"))
+            .select_from(date_range_cte)
+            .outerjoin(sales_subquery, sales_subquery.c.time_frame == date_range_cte.c.time_frame)
+            .order_by(date_range_cte.c.time_frame)
+        )
+
+        return await paginate(self.session, final_stmt)
+
+    async def get_sales_quantity_per_geography(self, query_filter: SaleFilter) -> Page[GeographyDecimalQuantitySchema]:
+        """
+        Get the sales quantity across geography locations.
+
+        :param query_filter: Filter object.
+        :return: Paginated list of sales quantity across geography locations and geography objects.
+        """
+        stmt_sum_quantity = label("quantity", func.sum(self.sql_model.quantity))
+        stmt_geography_id = label("id", Geography.id)
+        stmt_geography_name = label("name", Geography.name)
+        stmt_geography_postcode = label("postcode", Geography.postcode)
+
+        stmt = (
+            select(
+                stmt_sum_quantity,
+                func.jsonb_build_object(
+                    "id",
+                    stmt_geography_id,
+                    "name",
+                    stmt_geography_name,
+                    "postcode",
+                    stmt_geography_postcode,
+                ).label("geography"),
+            )
+            .join(Machine, Machine.id == self.sql_model.machine_id)
+            .join(Geography, stmt_geography_id == Machine.geography_id)
+            .group_by(Geography.id)
+            .order_by(Geography.id)
+        )
+
+        stmt = self._generate_geography_query(query_filter, stmt)
+        stmt = query_filter.filter(stmt)
+
+        return await paginate(self.session, stmt, unique=False)
