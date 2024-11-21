@@ -9,6 +9,7 @@ from mspy_vendi.db.base import Base, CommonMixin
 if TYPE_CHECKING:
     from mspy_vendi.domain.geographies.models import Geography
     from mspy_vendi.domain.sales.models import Sale
+    from mspy_vendi.domain.user.models import User
 
 
 class Machine(CommonMixin, Base):
@@ -26,6 +27,10 @@ class Machine(CommonMixin, Base):
     sales: Mapped["Sale"] = relationship(
         back_populates="machine",
         passive_deletes=ORMRelationshipCascadeTechniqueEnum.all.value,
+    )
+
+    machine_users: Mapped[list["MachineUser"]] = relationship(
+        back_populates="machine", passive_deletes=ORMRelationshipCascadeTechniqueEnum.db_cascade
     )
 
 
@@ -46,5 +51,8 @@ class MachineUser(CommonMixin, Base):
             onupdate=CascadesEnum.CASCADE.value,
         ),
     )
+
+    machine: Mapped["Machine"] = relationship(back_populates="machine_users", uselist=False)
+    user: Mapped["User"] = relationship(back_populates="machine_users", uselist=False)
 
     __table_args__ = (UniqueConstraint("machine_id", "user_id", name="uq_machine_user_machine_id_user_id"),)

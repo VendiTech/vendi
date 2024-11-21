@@ -14,6 +14,7 @@ from mspy_vendi.domain.sales.schemas import (
     BaseQuantitySchema,
     CategoryProductQuantitySchema,
     CategoryTimeFrameSalesSchema,
+    ConversionRateSchema,
     DecimalQuantitySchema,
     DecimalTimeFrameSalesSchema,
     GeographyDecimalQuantitySchema,
@@ -100,6 +101,14 @@ async def get__quantity_per_geography(
     sale_service: Annotated[SaleService, Depends()],
 ) -> Page[GeographyDecimalQuantitySchema]:
     return await sale_service.get_sales_quantity_per_geography(query_filter)
+
+
+@router.get("/conversion-rate", response_model=ConversionRateSchema)
+async def get__conversion_rate(
+    query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
+    sale_service: Annotated[SaleService, Depends()],
+) -> ConversionRateSchema:
+    return await sale_service.get_conversion_rate(query_filter)
 
 
 @router.get("/frequency-of-sales", response_model=list[TimePeriodSalesCountSchema])

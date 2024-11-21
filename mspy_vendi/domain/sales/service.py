@@ -13,6 +13,7 @@ from mspy_vendi.domain.sales.schemas import (
     BaseQuantitySchema,
     CategoryProductQuantitySchema,
     CategoryTimeFrameSalesSchema,
+    ConversionRateSchema,
     DailyTimePeriodEnum,
     DecimalQuantitySchema,
     DecimalTimeFrameSalesSchema,
@@ -61,6 +62,9 @@ class SaleService(CRUDService):
 
     async def get_sales_quantity_per_geography(self, query_filter: SaleFilter) -> Page[GeographyDecimalQuantitySchema]:
         return await self.manager.get_sales_quantity_per_geography(query_filter)
+
+    async def get_conversion_rate(self, query_filter: SaleFilter) -> ConversionRateSchema:
+        return await self.manager.get_conversion_rate(query_filter)
 
     async def get_daily_sales_count_per_time_period(self, query_filter: SaleFilter) -> list[TimePeriodSalesCountSchema]:
         query_filter.date_from = query_filter.date_to = datetime.datetime.now()
