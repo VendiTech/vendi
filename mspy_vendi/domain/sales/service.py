@@ -1,3 +1,5 @@
+import datetime
+
 from mspy_vendi.core.enums.date_range import DateRangeEnum
 from mspy_vendi.core.pagination import Page
 from mspy_vendi.core.service import CRUDService
@@ -11,10 +13,12 @@ from mspy_vendi.domain.sales.schemas import (
     BaseQuantitySchema,
     CategoryProductQuantitySchema,
     CategoryTimeFrameSalesSchema,
+    DailyTimePeriodEnum,
     DecimalQuantitySchema,
     DecimalTimeFrameSalesSchema,
     GeographyDecimalQuantitySchema,
     TimeFrameSalesSchema,
+    TimePeriodEnum,
     TimePeriodSalesCountSchema,
     UnitsTimeFrameSchema,
 )
@@ -49,7 +53,7 @@ class SaleService(CRUDService):
         return await self.manager.get_sales_category_quantity_per_time_frame(query_filter)
 
     async def get_sales_count_per_time_period(self, query_filter: SaleFilter) -> list[TimePeriodSalesCountSchema]:
-        return await self.manager.get_sales_count_per_time_period(query_filter)
+        return await self.manager.get_sales_count_per_time_period(TimePeriodEnum, query_filter)
 
     async def get_units_sold(self, query_filter: SaleFilter) -> Page[UnitsTimeFrameSchema]:
         time_frame = DateRangeEnum.MONTH
@@ -57,3 +61,7 @@ class SaleService(CRUDService):
 
     async def get_sales_quantity_per_geography(self, query_filter: SaleFilter) -> Page[GeographyDecimalQuantitySchema]:
         return await self.manager.get_sales_quantity_per_geography(query_filter)
+
+    async def get_daily_sales_count_per_time_period(self, query_filter: SaleFilter) -> list[TimePeriodSalesCountSchema]:
+        query_filter.date_from = query_filter.date_to = datetime.datetime.now()
+        return await self.manager.get_sales_count_per_time_period(DailyTimePeriodEnum, query_filter)

@@ -102,6 +102,14 @@ async def get__quantity_per_geography(
     return await sale_service.get_sales_quantity_per_geography(query_filter)
 
 
+@router.get("/frequency-of-sales", response_model=list[TimePeriodSalesCountSchema])
+async def get__frequency_of_sales(
+    query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
+    sale_service: Annotated[SaleService, Depends()],
+) -> list[TimePeriodSalesCountSchema]:
+    return await sale_service.get_daily_sales_count_per_time_period(query_filter)
+
+
 class SaleAPI(CRUDApi):
     service = SaleService
     schema = SaleDetailSchema
