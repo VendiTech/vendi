@@ -21,6 +21,7 @@ from mspy_vendi.domain.sales.schemas import (
     BaseQuantitySchema,
     CategoryProductQuantitySchema,
     CategoryTimeFrameSalesSchema,
+    ConversionRateSchema,
     DecimalQuantitySchema,
     DecimalTimeFrameSalesSchema,
     GeographyDecimalQuantitySchema,
@@ -402,3 +403,33 @@ class SaleManager(CRUDManager):
         stmt = query_filter.filter(stmt)
 
         return await paginate(self.session, stmt, unique=False)
+
+    async def get_conversion_rate(self, query_filter: SaleFilter) -> ConversionRateSchema:
+        """
+        Get the conversion rate.
+
+        :param query_filter: Filter object.
+        :return: Count of new costumers (created_at >= date_from) and
+                 count of returning customers (created_at < date_from).
+        """
+        stmt_customers_new = label(
+            "customers_new",
+            func.count(func.distinct(MachineUser.user_id)).filter(MachineUser.created_at >= query_filter.date_from),
+        )
+        stmt_customers_returning = label(
+            "customers_returning",
+            func.count(func.distinct(MachineUser.user_id)).filter(MachineUser.created_at < query_filter.date_from),
+        )
+
+        stmt = (
+            select(stmt_customers_new, stmt_customers_returning)
+            .join(Machine, Machine.id == MachineUser.machine_id)
+            .join(Sale, Sale.machine_id == Machine.id)
+        )
+        stmt = self._generate_geography_query(query_filter, stmt)
+
+        stmt = query_filter.filter(stmt)
+        result = await self.session.execute(stmt)
+        row = result.one()
+
+        return ConversionRateSchema(customers_new=row.customers_new, customers_returning=row.customers_returning)

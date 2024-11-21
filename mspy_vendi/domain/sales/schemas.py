@@ -90,3 +90,8 @@ class UnitsTimeFrameSchema(BaseSchema):
 
 class GeographyDecimalQuantitySchema(DecimalQuantitySchema):
     geography: GeographyDetailSchema
+
+
+class ConversionRateSchema(BaseSchema):
+    customers_new: NonNegativeInt
+    customers_returning: NonNegativeInt
