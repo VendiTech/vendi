@@ -16,7 +16,7 @@ from mspy_vendi.domain.geographies.models import Geography
 from mspy_vendi.domain.machines.models import Machine, MachineUser
 from mspy_vendi.domain.product_category.models import ProductCategory
 from mspy_vendi.domain.products.models import Product
-from mspy_vendi.domain.sales.filter import SaleFilter, StatisticDateRangeFilter
+from mspy_vendi.domain.sales.filter import ExportSaleFilter, SaleFilter, StatisticDateRangeFilter
 from mspy_vendi.domain.sales.schemas import (
     BaseQuantitySchema,
     CategoryProductQuantitySchema,
@@ -433,3 +433,28 @@ class SaleManager(CRUDManager):
         row = result.one()
 
         return ConversionRateSchema(customers_new=row.customers_new, customers_returning=row.customers_returning)
+
+    async def export_sales(self, query_filter: ExportSaleFilter) -> list[Sale]:
+        stmt = (
+            select(
+                label("Sale ID", self.sql_model.id),
+                label("Venue name", self.sql_model.source_system),
+                label("Geography", Geography.name),
+                label("Product sold", Product.name),
+                label("Product ID", self.sql_model.product_id),
+                label("Machine ID", self.sql_model.machine_id),
+                label("Machine Name", Machine.name),
+                label("Date", self.sql_model.sale_date),
+                label("Time", self.sql_model.sale_time),
+            )
+            .join(Product, Product.id == self.sql_model.product_id)
+            .join(Machine, Machine.id == self.sql_model.machine_id)
+            .join(Geography, Geography.id == Machine.geography_id)
+        )
+        if query_filter.geography_id__in:
+            stmt = stmt.where(Geography.id.in_(query_filter.geography_id__in or []))
+            setattr(query_filter, "geography_id__in", None)
+
+        stmt = query_filter.filter(stmt)
+
+        return (await self.session.execute(stmt)).mappings().all()  # type: ignore

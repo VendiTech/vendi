@@ -1,15 +1,15 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
-from fastapi.responses import ORJSONResponse
+from fastapi.responses import ORJSONResponse, StreamingResponse
 from fastapi_filter import FilterDepends
 
 from mspy_vendi.core.api import CRUDApi, basic_endpoints, basic_permissions
-from mspy_vendi.core.enums import ApiTagEnum
+from mspy_vendi.core.enums import ApiTagEnum, ExportTypeEnum
 from mspy_vendi.core.enums.date_range import DateRangeEnum
 from mspy_vendi.core.pagination import Page
 from mspy_vendi.deps import get_db_session
-from mspy_vendi.domain.sales.filter import SaleFilter
+from mspy_vendi.domain.sales.filter import ExportSaleFilter, SaleFilter
 from mspy_vendi.domain.sales.schemas import (
     BaseQuantitySchema,
     CategoryProductQuantitySchema,
@@ -109,6 +109,16 @@ async def get__conversion_rate(
     sale_service: Annotated[SaleService, Depends()],
 ) -> ConversionRateSchema:
     return await sale_service.get_conversion_rate(query_filter)
+
+
+@router.post("/export", response_class=StreamingResponse)
+async def get__export_sales(
+    export_type: ExportTypeEnum,
+    query_filter: Annotated[ExportSaleFilter, FilterDepends(ExportSaleFilter)],
+    sale_service: Annotated[SaleService, Depends()],
+    # user: Annotated[User, Depends(get_current_user())],
+) -> StreamingResponse:
+    return await sale_service.export_sales(query_filter=query_filter, export_type=export_type)
 
 
 class SaleAPI(CRUDApi):

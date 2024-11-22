@@ -23,6 +23,23 @@ class CORSSettings(BaseSettings):
     allow_credentials: bool = True
 
 
+class RedisSettings(BaseSettings):
+    model_config = SettingsConfigDict(extra="allow", env_prefix="REDIS_")
+
+    host: str = "vendi-redis"
+    port: int = 6379
+    db: int = 0
+
+    password: str = str()
+    username: str = str()
+
+    schedule_queue_name: str = "vendi-schedule-queue"
+
+    @property
+    def url(self) -> str:
+        return f"redis://{self.host}:{self.port}/{self.db}"
+
+
 class DBSettings(BaseSettings):
     model_config = SettingsConfigDict(extra="allow", env_prefix="DATABASE_")
 
@@ -139,6 +156,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(extra="allow")
 
     db: DBSettings = DBSettings()
+    redis: RedisSettings = RedisSettings()
     sqs: SQSSettings = SQSSettings()
     web: WebSettings = WebSettings()
     cors: CORSSettings = CORSSettings()

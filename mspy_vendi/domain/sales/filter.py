@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 from pydantic import PositiveInt, model_validator
 
+from mspy_vendi.core.enums.date_range import ScheduleEnum
 from mspy_vendi.core.filter import BaseFilter
 from mspy_vendi.db import Sale
 
@@ -48,6 +49,13 @@ class SaleFilter(StatisticDateRangeFilter, GeographyFilter):
     source_system_id: PositiveInt | None = None
     product_id__in: list[PositiveInt] | None = None
     machine_id__in: list[PositiveInt] | None = None
+
+
+class ExportSaleFilter(StatisticDateRangeFilter, GeographyFilter): ...
+
+
+class ScheduleSaleFilter(ExportSaleFilter):
+    schedule: ScheduleEnum
 
 
 class SaleGetAllFilter(SaleFilter):
