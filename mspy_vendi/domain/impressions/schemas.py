@@ -5,6 +5,8 @@ from pydantic import NonNegativeInt, PositiveInt
 
 from mspy_vendi.core.constants import DEFAULT_SOURCE_SYSTEM
 from mspy_vendi.core.schemas import BaseSchema
+from mspy_vendi.core.validators import DecimalFloat
+from mspy_vendi.domain.geographies.schemas import GeographyDetailSchema
 
 
 class ImpressionBaseSchema(BaseSchema):
@@ -30,3 +32,16 @@ class ImpressionCountBaseSchema(BaseSchema):
 
 class TimeFrameImpressionsSchema(ImpressionCountBaseSchema):
     time_frame: datetime
+
+
+class GeographyImpressionsCountSchema(ImpressionCountBaseSchema):
+    geography: GeographyDetailSchema
+
+
+class GeographyDecimalImpressionsCountSchema(GeographyImpressionsCountSchema):
+    impressions: DecimalFloat
+
+
+class GeographyDecimalImpressionTimeFrameSchema(BaseSchema):
+    time_frame: datetime
+    geographies: list[GeographyDecimalImpressionsCountSchema]
