@@ -22,6 +22,7 @@ from mspy_vendi.domain.sales.schemas import (
     CategoryProductQuantitySchema,
     CategoryTimeFrameSalesSchema,
     ConversionRateSchema,
+    DailyTimePeriodEnum,
     DecimalQuantitySchema,
     DecimalTimeFrameSalesSchema,
     GeographyDecimalQuantitySchema,
@@ -115,11 +116,16 @@ class SaleManager(CRUDManager):
         ).cte()
 
     @staticmethod
-    def _get_time_periods() -> dict[str, tuple[time, time]]:
+    def _get_time_periods(
+        time_period: type[TimePeriodEnum] | type[DailyTimePeriodEnum],
+    ) -> dict[str, tuple[time, time]]:
         """
         Generate a dictionary mapping time period names to start and end times.
+
+        :param time_period: An enum class defining time periods.
+        :return: A dictionary where keys are period names and values are tuples of (start_time, end_time).
         """
-        return {period.name: (period.start, period.end) for period in TimePeriodEnum}
+        return {period.name: (period.start, period.end) for period in time_period}
 
     async def get_sales_quantity_by_product(self, query_filter: SaleFilter) -> BaseQuantitySchema:
         """
@@ -307,17 +313,20 @@ class SaleManager(CRUDManager):
 
         return await paginate(self.session, stmt, unique=False)
 
-    async def get_sales_count_per_time_period(self, query_filter: SaleFilter) -> list[TimePeriodSalesCountSchema]:
+    async def get_sales_count_per_time_period(
+        self, time_period: type[TimePeriodEnum] | type[DailyTimePeriodEnum], query_filter: SaleFilter
+    ) -> list[TimePeriodSalesCountSchema]:
         """
         Get the sales count for each time frame.
-        (6 AM - 6 PM, 6 PM - 8 PM, 8 AM - 10 PM, 10 PM - 12 AM, 12 AM - 2 AM, 2 AM - 6 AM).
+        e.g (6 AM - 6 PM, 6 PM - 8 PM, 8 AM - 10 PM, 10 PM - 12 AM, 12 AM - 2 AM, 2 AM - 6 AM).
 
+        :param time_period: TimePeriod enum object to map sales.
         :param user: Current user.
         :param query_filter: Filter object.
 
         :return: A list with sales count for each time period.
         """
-        time_periods = self._get_time_periods()
+        time_periods = self._get_time_periods(time_period)
 
         stmt = select(self.sql_model.sale_time)
 
