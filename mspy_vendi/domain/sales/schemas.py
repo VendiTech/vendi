@@ -94,6 +94,11 @@ class TimePeriodSalesCountSchema(BaseSchema):
     sales: NonNegativeInt
 
 
+class TimePeriodSalesRevenueSchema(BaseSchema):
+    time_period: str
+    revenue: DecimalFloat
+
+
 class UnitsTimeFrameSchema(BaseSchema):
     units: DecimalFloat
     time_frame: datetime
