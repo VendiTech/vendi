@@ -36,9 +36,17 @@ class RedisSettings(BaseSettings):
 
     schedule_queue_name: str = "vendi-schedule-queue"
 
+    ssl_cert_reqs: str | None = None
+
+    @property
+    def ssl_enabled(self) -> bool:
+        return AppEnvEnum.from_env() not in [AppEnvEnum.LOCAL, AppEnvEnum.TEST]
+
     @property
     def url(self) -> str:
-        return os.getenv("REDIS_URL") or f"redis://{self.host}:{self.port}/{self.db}"
+        return (
+            os.getenv("REDIS_URL") or f"redis://{self.host}:{self.port}/{self.db}"
+        ) + f"?ssl_cert_reqs={str(self.ssl_cert_reqs).lower()}"
 
 
 class DBSettings(BaseSettings):
