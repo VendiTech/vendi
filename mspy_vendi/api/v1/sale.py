@@ -111,6 +111,14 @@ async def get__conversion_rate(
     return await sale_service.get_conversion_rate(query_filter)
 
 
+@router.get("/frequency-of-sales", response_model=list[TimePeriodSalesCountSchema])
+async def get__frequency_of_sales(
+    query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
+    sale_service: Annotated[SaleService, Depends()],
+) -> list[TimePeriodSalesCountSchema]:
+    return await sale_service.get_daily_sales_count_per_time_period(query_filter)
+
+
 @router.post("/export", response_class=StreamingResponse)
 async def get__export_sales(
     export_type: ExportTypeEnum,
