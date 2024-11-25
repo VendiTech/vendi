@@ -31,6 +31,7 @@ from mspy_vendi.domain.sales.schemas import (
     TimePeriodSalesCountSchema,
     TimePeriodSalesRevenueSchema,
     UnitsTimeFrameSchema,
+    VenueSalesQuantitySchema,
 )
 from mspy_vendi.domain.user.models import User
 
@@ -485,3 +486,24 @@ class SaleManager(CRUDManager):
         row = result.one()
 
         return ConversionRateSchema(customers_new=row.customers_new, customers_returning=row.customers_returning)
+
+    async def get_sales_by_venue_over_time(self, query_filter: SaleFilter) -> Page[VenueSalesQuantitySchema]:
+        """
+        Get the sales quantity by venue (source system id) over time.
+
+        :param query_filter: Filter object.
+        :return: Paginated list of sales quantity across venue objects.
+        """
+        stmt_sum_quantity = label("quantity", func.sum(self.sql_model.quantity))
+        stmt_source_system_id = label("venue", self.sql_model.source_system_id)
+
+        stmt = (
+            select(stmt_sum_quantity, stmt_source_system_id)
+            .group_by(stmt_source_system_id)
+            .order_by(stmt_source_system_id)
+        )
+
+        stmt = self._generate_geography_query(query_filter, stmt)
+        stmt = query_filter.filter(stmt)
+
+        return await paginate(self.session, stmt)

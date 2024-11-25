@@ -24,6 +24,7 @@ from mspy_vendi.domain.sales.schemas import (
     TimePeriodSalesCountSchema,
     TimePeriodSalesRevenueSchema,
     UnitsTimeFrameSchema,
+    VenueSalesQuantitySchema,
 )
 from mspy_vendi.domain.sales.service import SaleService
 
@@ -118,6 +119,14 @@ async def get__frequency_of_sales(
     sale_service: Annotated[SaleService, Depends()],
 ) -> list[TimePeriodSalesCountSchema]:
     return await sale_service.get_daily_sales_count_per_time_period(query_filter)
+
+
+@router.get("/sales-quantity-by-venue", response_model=Page[VenueSalesQuantitySchema])
+async def get__sales_quantity_by_venue(
+    query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
+    sale_service: Annotated[SaleService, Depends()],
+) -> Page[VenueSalesQuantitySchema]:
+    return await sale_service.get_sales_by_venue_over_time(query_filter)
 
 
 class SaleAPI(CRUDApi):
