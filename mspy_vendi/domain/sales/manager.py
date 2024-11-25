@@ -459,7 +459,9 @@ class SaleManager(CRUDManager):
             .join(Product, Product.id == self.sql_model.product_id)
             .join(Machine, Machine.id == self.sql_model.machine_id)
             .join(Geography, Geography.id == Machine.geography_id)
+            .order_by(self.sql_model.sale_date)
         )
+
         if query_filter.geography_id__in:
             stmt = stmt.where(Geography.id.in_(query_filter.geography_id__in or []))
             setattr(query_filter, "geography_id__in", None)

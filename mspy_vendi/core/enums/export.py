@@ -1,6 +1,11 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class ExportTypeEnum(Enum):
+class ExportTypeEnum(StrEnum):
     CSV = "CSV"
     EXCEL = "Excel"
+
+
+class ExportEntityTypeEnum(StrEnum):
+    SALE = "Sale"
+    IMPRESSION = "Impression"

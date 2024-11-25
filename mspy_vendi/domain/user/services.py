@@ -1,11 +1,21 @@
-from typing import LiteralString, cast, Optional, Any
+from typing import LiteralString, cast, Optional, Any, Annotated
 
-from fastapi import Request
+from fastapi import Request, Depends
 from fastapi_users import BaseUserManager, IntegerIDMixin, schemas, models, exceptions
 from fastapi_users.schemas import BaseUserCreate
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from mspy_vendi.core.constants import DEFAULT_SCHEDULE_MAPPING, MESSAGE_FOOTER, CSS_STYLE
+from mspy_vendi.core.enums.date_range import ScheduleEnum
+from mspy_vendi.deps import get_db_session, get_email_service
+
+from mspy_vendi.domain.sales.filter import ExportSaleFilter, GeographyFilter
+from taskiq import ScheduledTask
+
+from mspy_vendi.broker import redis_source
 from mspy_vendi.config import config, log
-from mspy_vendi.core.email import EmailService
+from mspy_vendi.core.email import EmailService, MailGunService
+from mspy_vendi.core.enums import ExportTypeEnum
 from mspy_vendi.core.exceptions.base_exception import PydanticLikeError, BadRequestError
 from mspy_vendi.core.helpers import get_described_user_info, generate_random_password
 from mspy_vendi.core.service import CRUDService, UpdateSchema, Schema
@@ -13,7 +23,8 @@ from mspy_vendi.domain.user.enums.enum import FrontendLinkEnum
 from mspy_vendi.domain.user.filters import UserFilter
 from mspy_vendi.domain.user.managers import UserManager
 from mspy_vendi.domain.user.models import User
-from mspy_vendi.domain.user.schemas import UserPermissionsModifySchema, UserDetail, UserAdminCreateSchema
+from mspy_vendi.domain.user.schemas import UserPermissionsModifySchema, UserDetail, UserScheduleSchema
+from mspy_vendi.domain.sales.tasks import export_sale_task
 
 
 # ruff: noqa
@@ -23,73 +34,6 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
 
     def __init__(self, user_db, email_service: EmailService, password_helper=None):
         self.email_service = email_service
-        self.css_style: str = """
-            <head>
-                <style>
-                    body {
-                        font-family: Arial, sans-serif;
-                    }
-                    .email-content {
-                        background-color: white;
-                        margin: 0 auto;
-                        max-width: 600px;
-                        padding: 20px;
-                        border: 1px solid #F6B0B1;
-                        border-radius: 35px;
-                    }
-                    .greeting {
-                        font-size: 20px;
-                        font-weight: bold;
-                        color: #2C3344;
-                    }
-                    .message {
-                        font-size: 16px;
-                        line-height: 1.5;
-                        margin: 10px 0;
-                    }
-
-                    .container-link {
-                        display: flex;
-                        justify-content: center;
-                    }
-
-                    .link {
-                        display: inline-block;
-                        margin: 2px auto;
-                        padding: 17px 25px;
-                        background-color: #E9EEF9;
-                        color: #0050C8 !important;
-                        text-decoration: none;
-                        border-radius: 20px;
-                    }
-
-                    .link:hover{
-                        background-color: #fefefe;
-                    }
-                    .closing {
-                        font-size: 16px;
-                        line-height: 1.5;
-                    }
-                    .closing span {
-                        display: block;
-                        margin-bottom: 20px;
-                    }
-                    .im {
-                        color: black;
-                    }
-                </style>
-            </head>
-        """
-        self.message_footer: str = """
-            <p class="message" style="flex-direction: column">
-                If you have any questions or need assistance, feel free to contact us anytime at contact@vendi-portal.com. We’re here to support you and always available to help!
-            </p>
-            <p class="closing">
-                <span>Thank you, and welcome to Vendi!</span>
-                Warm regards,<br>
-                Vendi Team
-            </p>
-        """
         super().__init__(user_db, password_helper)
 
     async def create(
@@ -141,7 +85,7 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
         html_content: str = f"""
             <!DOCTYPE html>
             <html>
-            {self.css_style}
+            {CSS_STYLE}
             <body>
                 <div class="email-content">
                     <p class="greeting">Hi {user.firstname.capitalize()},</p>
@@ -152,7 +96,7 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
                     <div class="container-link">
                         <a class="link" href="{verification_link}">Confirm Email Address</a>
                     </div>
-                    {self.message_footer}
+                    {MESSAGE_FOOTER}
                 </div>
             </body>
             </html>
@@ -174,7 +118,7 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
         html_content: str = f"""
             <!DOCTYPE html>
             <html>
-            {self.css_style}
+            {CSS_STYLE}
             <body>
                 <div class="email-content">
                     <p class="greeting">Hi {user.firstname.capitalize()},</p>
@@ -185,7 +129,7 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
                     <div class="container-link">
                         <a class="link" href="{reset_link}">Reset Password</a>
                     </div>
-                    {self.message_footer}
+                    {MESSAGE_FOOTER}
                 </div>
             </body>
             </html>
@@ -207,7 +151,7 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
         html_content: str = f"""
             <!DOCTYPE html>
             <html>
-            {self.css_style}
+            {CSS_STYLE}
             <body>
                 <div class="email-content">
                     <p class="greeting">Hi {user.firstname.capitalize()},</p>
@@ -218,7 +162,7 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
                     <div class="container-link">
                         <a class="link" href="{sign_in_link}">Login Link</a>
                     </div>
-                    {self.message_footer}
+                    {MESSAGE_FOOTER}
                 </div>
             </body>
             </html>
@@ -277,3 +221,41 @@ class UserService(CRUDService):
         modify_user: User = await self.get(obj_id=user_id)
 
         return await self.manager.delete_permissions(modified_user=modify_user, permissions=obj.permissions)
+
+    @staticmethod
+    async def check_task_existence(event_type: str) -> bool:
+        tasks: list[ScheduledTask] = await redis_source.get_schedules()
+
+        for task in tasks:
+            if task.labels.get("event_type") == event_type:
+                return True
+
+        return False
+
+    async def schedule_sale_export(
+        self,
+        user: User,
+        export_type: ExportTypeEnum,
+        query_filter: GeographyFilter,
+        schedule: ScheduleEnum,
+    ) -> None:
+        user_event_type: str = f"user_{user.id}_sale_{export_type}"
+
+        if not user.is_verified:
+            raise BadRequestError("User didn't verify email yet.")
+
+        if await self.check_task_existence(user_event_type):
+            raise BadRequestError("Schedule task already exists")
+
+        await (
+            export_sale_task.kicker()
+            .with_labels(event_type=user_event_type)
+            .schedule_by_cron(
+                redis_source,
+                DEFAULT_SCHEDULE_MAPPING[schedule],
+                user=UserScheduleSchema.model_validate(user),
+                schedule=schedule,
+                export_type=export_type,
+                query_filter=query_filter,
+            )
+        )

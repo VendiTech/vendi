@@ -77,3 +77,17 @@ class UserAdminEditSchema(BaseSchema):
     lastname: AlphaString | None = None
     permissions: list[PermissionEnum] | None = None
     machines: list[PositiveInt] | None = None
+
+
+class UserScheduleSchema(BaseSchema):
+    """
+    Schema for scheduling a user.
+
+    Every field is optional due to backward compatibility.
+    If we will add new fields, the existing records will not be affected.
+    """
+
+    id: PositiveInt | None = None
+    email: EmailStr | None = None
+    firstname: AlphaString | None = None
+    lastname: AlphaString | None = None

@@ -1,32 +1,57 @@
+from datetime import datetime
 from typing import Annotated
 
 from taskiq import Context, TaskiqDepends
 
-from mspy_vendi.broker import broker, redis_source
+from mspy_vendi.broker import broker
 from mspy_vendi.config import log
+from mspy_vendi.core.constants import DEFAULT_SCHEDULE_TIMEDELTA
+from mspy_vendi.core.enums import ExportTypeEnum
+from mspy_vendi.core.enums.date_range import ScheduleEnum
+from mspy_vendi.domain.sales.filter import ExportSaleFilter, GeographyFilter
 from mspy_vendi.domain.sales.service import SaleService
-from mspy_vendi.domain.user.services import UserService
+from mspy_vendi.domain.user.schemas import UserScheduleSchema
 
 
-@broker.task
-async def export_task(
+@broker.task(task_name="export_sale_task")
+async def export_sale_task(
     *,
-    user_id: int,
+    user: UserScheduleSchema,
+    schedule: ScheduleEnum,
+    export_type: ExportTypeEnum,
+    query_filter: GeographyFilter,
     context: Annotated[Context, TaskiqDepends()],
-    user_service: Annotated[UserService, TaskiqDepends()],
     sale_service: Annotated[SaleService, TaskiqDepends()],
 ) -> None:
-    log.info("Start the export task", user_id=user_id, context=context.message.labels)
+    current_time: datetime = datetime.now()
 
-    result = await user_service.get(user_id)
+    query_filter: ExportSaleFilter = ExportSaleFilter(
+        geography_id__in=query_filter.geography_id__in,
+        date_from=current_time - DEFAULT_SCHEDULE_TIMEDELTA[schedule],
+        date_to=current_time,
+    )
 
-    log.info("User data", result=result)
+    log.info(
+        "Start the export task",
+        context=context.message.labels,
+        export_type=export_type,
+        query_filter=query_filter.model_dump_json(),
+        schedule=schedule,
+        email=user.email,
+        user_id=user.id,
+    )
 
+    await sale_service.export_sales(
+        query_filter=query_filter,
+        export_type=export_type,
+        user=user,
+        schedule=schedule,
+        sync=False,
+    )
 
-@broker.task
-async def remove_task(context: Annotated[Context, TaskiqDepends()]) -> None:
-    log.info(f"Hello from my_task! Context: {context.message.task_id}")
-    result = await redis_source.get_schedules()
-
-    for task in result:
-        log.info(f"Hello from my_task! " f"Task Labels: {task.labels}. ")
+    log.info(
+        "Export task was finished",
+        schedule=schedule.value,
+        email=user.email,
+        user_id=user.id,
+    )

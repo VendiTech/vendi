@@ -1,3 +1,4 @@
+import io
 from typing import Generic, TypeVar
 
 from starlette import status
@@ -34,8 +35,10 @@ class MailGunService(EmailService[RequestClient]):
         subject: str,
         text: str | None = None,
         html: str | None = None,
+        files: tuple[str, bytes | io.BytesIO, str | None] | None = None,
     ) -> None:
         content_params: dict[str, str | None] = {"html": html} if html else {"text": text}
+        files_params: dict[str, tuple[str, bytes | io.BytesIO, str | None]] = {"attachment": files} if files else None
 
         response = await self.client.send_request(
             method=RequestMethodEnum.POST,
@@ -47,6 +50,7 @@ class MailGunService(EmailService[RequestClient]):
                 "subject": subject,
                 **content_params,
             },
+            files=files_params,
         )
 
         if response.status_code != status.HTTP_200_OK:

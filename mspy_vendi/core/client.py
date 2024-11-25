@@ -101,6 +101,7 @@ class RequestClient(metaclass=RequestMetaClass):
         payload: dict | None = None,
         data: dict | None = None,
         headers: dict | None = None,
+        files: dict | None = None,
         params: QueryParamTypes | None = None,
         auth: httpx.Auth | tuple | None = None,
         with_retry: bool = False,
@@ -114,6 +115,7 @@ class RequestClient(metaclass=RequestMetaClass):
         :param data: The data to include in the request form.
         :param params: The Query Params to include in the request url.
         :param headers: Additional HTTP headers to include in the request.
+        :param files: The files to include in the request.
         :param auth: The authentication credentials to use for the request.
         :param with_retry: if True, request will retry. Default to False.
 
@@ -129,6 +131,7 @@ class RequestClient(metaclass=RequestMetaClass):
             "headers": headers or {},
             "params": params,
             "auth": auth,
+            "files": files,
         }
 
         if payload:

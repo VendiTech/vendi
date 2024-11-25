@@ -1,14 +1,20 @@
 import datetime
 import io
+from typing import Annotated
 
 import pandas as pd
+from fastapi import Depends
 from fastapi.responses import StreamingResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from mspy_vendi.core.constants import DEFAULT_EXPORT_TYPES
+from mspy_vendi.config import log
+from mspy_vendi.core.constants import CSS_STYLE, DEFAULT_EXPORT_TYPES, MESSAGE_FOOTER
+from mspy_vendi.core.email import MailGunService
 from mspy_vendi.core.enums import ExportTypeEnum
-from mspy_vendi.core.enums.date_range import DateRangeEnum
+from mspy_vendi.core.enums.date_range import DateRangeEnum, ScheduleEnum
 from mspy_vendi.core.pagination import Page
 from mspy_vendi.core.service import CRUDService
+from mspy_vendi.deps import get_db_session, get_email_service
 from mspy_vendi.domain.sales.factory import DataExportFactory
 from mspy_vendi.domain.sales.filter import (
     ExportSaleFilter,
@@ -31,11 +37,20 @@ from mspy_vendi.domain.sales.schemas import (
     TimePeriodSalesCountSchema,
     UnitsTimeFrameSchema,
 )
+from mspy_vendi.domain.user.schemas import UserScheduleSchema
 
 
 class SaleService(CRUDService):
     manager_class = SaleManager
     filter_class = SaleGetAllFilter
+
+    def __init__(
+        self,
+        db_session: Annotated[AsyncSession, Depends(get_db_session)],
+        email_service: Annotated[MailGunService, Depends(get_email_service)],
+    ):
+        self.email_service = email_service
+        super().__init__(db_session)
 
     async def get_sales_quantity_by_product(self, query_filter: SaleFilter) -> BaseQuantitySchema:
         return await self.manager.get_sales_quantity_by_product(query_filter)
@@ -74,7 +89,48 @@ class SaleService(CRUDService):
     async def get_conversion_rate(self, query_filter: SaleFilter) -> ConversionRateSchema:
         return await self.manager.get_conversion_rate(query_filter)
 
-    async def export_sales(self, query_filter: ExportSaleFilter, export_type: ExportTypeEnum) -> StreamingResponse:
+    async def send_sales_report(
+        self,
+        query_filter: ExportSaleFilter,
+        content: io.BytesIO,
+        file_name: str,
+        user: UserScheduleSchema,
+        schedule: ScheduleEnum,
+    ) -> None:
+        html_content: str = f"""
+            <!DOCTYPE html>
+            <html>
+            {CSS_STYLE}
+            <body>
+                <div class="email-content">
+                    <p class="message">
+                       Your Scheduled report for the provided range:
+                       {query_filter.date_from.date()} to {query_filter.date_to.date()} is ready.
+                    </p>
+                    {MESSAGE_FOOTER}
+                </div>
+            </body>
+            </html>
+        """
+
+        await self.email_service.send_message(
+            receivers=[user.email],
+            subject=f"{schedule} Sales report for {user.firstname} {user.lastname}",
+            html=html_content,
+            files=(file_name, content, None),
+        )
+        log.info(
+            "Sent export message was completed.",
+        )
+
+    async def export_sales(
+        self,
+        query_filter: ExportSaleFilter,
+        export_type: ExportTypeEnum,
+        sync: bool = True,
+        user: UserScheduleSchema | None = None,
+        schedule: ScheduleEnum | None = None,
+    ) -> StreamingResponse | None:
         sale_data: list[dict] = await self.manager.export_sales(query_filter)
 
         file_extension: str = DEFAULT_EXPORT_TYPES[export_type].get("file_extension")
@@ -89,13 +145,22 @@ class SaleService(CRUDService):
 
         content: io.BytesIO = await DataExportFactory.transform(export_type).extract(df)
 
-        return StreamingResponse(
+        if sync:
+            return StreamingResponse(
+                content=content,
+                headers={
+                    "Access-Control-Expose-Headers": "Content-Disposition",
+                    "Content-Disposition": f"""attachment; {file_name=}""",
+                },
+                media_type=file_content_type,
+            )
+
+        return await self.send_sales_report(
+            query_filter=query_filter,
             content=content,
-            headers={
-                "Access-Control-Expose-Headers": "Content-Disposition",
-                "Content-Disposition": f"""attachment; {file_name=}""",
-            },
-            media_type=file_content_type,
+            file_name=file_name,
+            user=user,
+            schedule=schedule,
         )
 
     async def get_daily_sales_count_per_time_period(self, query_filter: SaleFilter) -> list[TimePeriodSalesCountSchema]:
