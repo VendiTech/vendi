@@ -21,6 +21,7 @@ from mspy_vendi.domain.sales.schemas import (
     TimeFrameSalesSchema,
     TimePeriodEnum,
     TimePeriodSalesCountSchema,
+    TimePeriodSalesRevenueSchema,
     UnitsTimeFrameSchema,
 )
 
@@ -53,8 +54,8 @@ class SaleService(CRUDService):
     ) -> Page[CategoryTimeFrameSalesSchema]:
         return await self.manager.get_sales_category_quantity_per_time_frame(query_filter)
 
-    async def get_sales_count_per_time_period(self, query_filter: SaleFilter) -> list[TimePeriodSalesCountSchema]:
-        return await self.manager.get_sales_count_per_time_period(TimePeriodEnum, query_filter)
+    async def get_sales_revenue_per_time_period(self, query_filter: SaleFilter) -> list[TimePeriodSalesRevenueSchema]:
+        return await self.manager.get_sales_revenue_per_time_period(TimePeriodEnum, query_filter)
 
     async def get_units_sold(self, query_filter: SaleFilter) -> Page[UnitsTimeFrameSchema]:
         time_frame = DateRangeEnum.MONTH

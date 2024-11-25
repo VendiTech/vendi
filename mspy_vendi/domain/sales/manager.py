@@ -29,6 +29,7 @@ from mspy_vendi.domain.sales.schemas import (
     TimeFrameSalesSchema,
     TimePeriodEnum,
     TimePeriodSalesCountSchema,
+    TimePeriodSalesRevenueSchema,
     UnitsTimeFrameSchema,
 )
 from mspy_vendi.domain.user.models import User
@@ -151,7 +152,9 @@ class SaleManager(CRUDManager):
         return result  # type: ignore
 
     async def get_sales_quantity_per_range(
-        self, time_frame: DateRangeEnum, query_filter: SaleFilter
+        self,
+        time_frame: DateRangeEnum,
+        query_filter: SaleFilter,
     ) -> Page[TimeFrameSalesSchema]:
         """
         Get the total quantity of sales per time frame.
@@ -208,7 +211,9 @@ class SaleManager(CRUDManager):
         return result  # type: ignore
 
     async def get_average_sales_per_range(
-        self, time_frame: DateRangeEnum, query_filter: SaleFilter
+        self,
+        time_frame: DateRangeEnum,
+        query_filter: SaleFilter,
     ) -> Page[DecimalTimeFrameSalesSchema]:
         """
         Get the average quantity of sales per time frame.
@@ -268,7 +273,8 @@ class SaleManager(CRUDManager):
         return await paginate(self.session, stmt)
 
     async def get_sales_category_quantity_per_time_frame(
-        self, query_filter: SaleFilter
+        self,
+        query_filter: SaleFilter,
     ) -> Page[CategoryTimeFrameSalesSchema]:
         """
         Get the sales quantity per day for each product category.
@@ -314,13 +320,15 @@ class SaleManager(CRUDManager):
         return await paginate(self.session, stmt, unique=False)
 
     async def get_sales_count_per_time_period(
-        self, time_period: type[TimePeriodEnum] | type[DailyTimePeriodEnum], query_filter: SaleFilter
+        self,
+        time_period: type[DailyTimePeriodEnum],
+        query_filter: SaleFilter,
     ) -> list[TimePeriodSalesCountSchema]:
         """
         Get the sales count for each time frame.
         e.g (6 AM - 6 PM, 6 PM - 8 PM, 8 AM - 10 PM, 10 PM - 12 AM, 12 AM - 2 AM, 2 AM - 6 AM).
 
-        :param time_period: TimePeriod enum object to map sales.
+        :param time_period: Enum object to map sales.
         :param user: Current user.
         :param query_filter: Filter object.
 
@@ -345,6 +353,41 @@ class SaleManager(CRUDManager):
                     break
 
         return [{"time_period": period, "sales": count} for period, count in sales_by_period.items()]  # type: ignore
+
+    async def get_sales_revenue_per_time_period(
+        self,
+        time_period: type[TimePeriodEnum],
+        query_filter: SaleFilter,
+    ) -> list[TimePeriodSalesRevenueSchema]:
+        """
+        Get the total sales revenue (quantity * price) for each time frame.
+
+        :param time_period: Enum object to map sales.
+        :param query_filter: Filter object.
+        :return: A list with sales revenue for each time period.
+        """
+        time_periods = self._get_time_periods(time_period)
+
+        stmt = select(self.sql_model.sale_time, (self.sql_model.quantity * Product.price).label("revenue")).join(
+            Product, Product.id == self.sql_model.product_id
+        )
+
+        stmt = self._generate_geography_query(query_filter, stmt)
+        stmt = query_filter.filter(stmt)
+
+        result = await self.session.execute(stmt)
+        rows = result.fetchall()
+
+        revenue_by_period = {period: 0 for period in time_periods.keys()}
+
+        for row in rows:
+            sale_time, revenue = row.sale_time, row.revenue
+            for period_name, (start, end) in time_periods.items():
+                if start <= sale_time <= end:
+                    revenue_by_period[period_name] += revenue
+                    break
+
+        return [{"time_period": period, "revenue": total} for period, total in revenue_by_period.items()]  # type: ignore
 
     async def get_units_sold(self, time_frame: DateRangeEnum, query_filter: SaleFilter) -> Page[UnitsTimeFrameSchema]:
         """
