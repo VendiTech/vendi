@@ -37,6 +37,7 @@ from mspy_vendi.domain.sales.schemas import (
     TimePeriodSalesCountSchema,
     TimePeriodSalesRevenueSchema,
     UnitsTimeFrameSchema,
+    VenueSalesQuantitySchema,
 )
 from mspy_vendi.domain.user.schemas import UserScheduleSchema
 
@@ -167,3 +168,6 @@ class SaleService(CRUDService):
     async def get_daily_sales_count_per_time_period(self, query_filter: SaleFilter) -> list[TimePeriodSalesCountSchema]:
         query_filter.date_from = query_filter.date_to = datetime.datetime.now()
         return await self.manager.get_sales_count_per_time_period(DailyTimePeriodEnum, query_filter)
+
+    async def get_sales_by_venue_over_time(self, query_filter: SaleFilter) -> Page[VenueSalesQuantitySchema]:
+        return await self.manager.get_sales_by_venue_over_time(query_filter)

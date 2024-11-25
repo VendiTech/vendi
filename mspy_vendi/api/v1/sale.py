@@ -25,6 +25,7 @@ from mspy_vendi.domain.sales.schemas import (
     TimePeriodSalesCountSchema,
     TimePeriodSalesRevenueSchema,
     UnitsTimeFrameSchema,
+    VenueSalesQuantitySchema,
 )
 from mspy_vendi.domain.sales.service import SaleService
 from mspy_vendi.domain.user.models import User
@@ -146,6 +147,14 @@ async def post__schedule_sales(
     )
 
     return Response(status_code=status.HTTP_202_ACCEPTED)
+
+
+@router.get("/sales-quantity-by-venue", response_model=Page[VenueSalesQuantitySchema])
+async def get__sales_quantity_by_venue(
+    query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
+    sale_service: Annotated[SaleService, Depends()],
+) -> Page[VenueSalesQuantitySchema]:
+    return await sale_service.get_sales_by_venue_over_time(query_filter)
 
 
 class SaleAPI(CRUDApi):

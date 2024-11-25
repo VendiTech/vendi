@@ -111,3 +111,7 @@ class GeographyDecimalQuantitySchema(DecimalQuantitySchema):
 class ConversionRateSchema(BaseSchema):
     customers_new: NonNegativeInt
     customers_returning: NonNegativeInt
+
+
+class VenueSalesQuantitySchema(BaseQuantitySchema):
+    venue: PositiveInt
