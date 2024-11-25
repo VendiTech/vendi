@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Any, cast
 
 from fastapi_filter.contrib.sqlalchemy import Filter
@@ -266,3 +266,32 @@ class BaseFilter(Filter, extra="allow"):  # type: ignore
         else:
             self.__dict__[name] = value
             self.__pydantic_fields_set__.add(name)
+
+
+class DateRangeFilter(BaseFilter):
+    """
+    Child class of the BaseFilter for proper validation of the date_range_fields attribute.
+    """
+
+    date_from: datetime | None = None
+    date_to: datetime | None = None
+
+    @model_validator(mode="after")
+    def validate_date_params(self):
+        """
+        Check current date range parameters and set default values if they are not set.
+        Example:
+            - if date_from is not set, it will be set to 30 days ago.
+            - if date_to is not set, it will be set to the current date.
+
+        :return: self
+        """
+        current_datetime = datetime.now()
+
+        if not self.date_from:
+            self.set_without_validation("date_from", current_datetime - timedelta(days=30))
+
+        if not self.date_to:
+            self.set_without_validation("date_to", current_datetime)
+
+        return self

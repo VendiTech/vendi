@@ -22,6 +22,7 @@ from mspy_vendi.domain.sales.schemas import (
     SaleDetailSchema,
     TimeFrameSalesSchema,
     TimePeriodSalesCountSchema,
+    TimePeriodSalesRevenueSchema,
     UnitsTimeFrameSchema,
 )
 from mspy_vendi.domain.sales.service import SaleService
@@ -79,12 +80,12 @@ async def get__quantity_per_product_over_time(
     return await sale_service.get_sales_category_quantity_per_time_frame(query_filter)
 
 
-@router.get("/sales-per-time-period", response_model=list[TimePeriodSalesCountSchema])
-async def get__sales_per_time_period(
+@router.get("/sales-revenue-per-time-period", response_model=list[TimePeriodSalesRevenueSchema])
+async def get__sales_revenue_per_time_period(
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
-) -> list[TimePeriodSalesCountSchema]:
-    return await sale_service.get_sales_count_per_time_period(query_filter)
+) -> list[TimePeriodSalesRevenueSchema]:
+    return await sale_service.get_sales_revenue_per_time_period(query_filter)
 
 
 @router.get("/units-sold", response_model=Page[UnitsTimeFrameSchema])
