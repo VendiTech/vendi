@@ -38,7 +38,7 @@ class RedisSettings(BaseSettings):
 
     @property
     def url(self) -> str:
-        return f"redis://{self.host}:{self.port}/{self.db}"
+        return os.getenv("REDIS_URL") or f"redis://{self.host}:{self.port}/{self.db}"
 
 
 class DBSettings(BaseSettings):
