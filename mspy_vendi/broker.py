@@ -18,10 +18,7 @@ async def shutdown(state: TaskiqState) -> None:
 
 
 # Here's the source that is used to store scheduled tasks
-redis_source = RedisScheduleSource(
-    config.redis.url,
-    ssl_cert_reqs=config.redis.ssl_cert_reqs,
-)
+redis_source = RedisScheduleSource(config.redis.url)
 
 # And here's the scheduler that is used to query scheduled sources
 scheduler = TaskiqScheduler(broker, sources=[redis_source])

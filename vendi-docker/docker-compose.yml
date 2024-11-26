@@ -11,8 +11,6 @@ x-common-service: &common-service
     DATABASE_USER: vendi-user
     DATABASE_PASSWORD: vendi-password
     DATABASE_DB: vendi-db
-
-    ENVIRONMENT: local
   depends_on:
     vendi-db:
       condition: service_healthy

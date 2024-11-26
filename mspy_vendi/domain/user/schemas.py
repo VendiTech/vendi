@@ -20,11 +20,14 @@ class UserBase(BaseSchema):
     phone_number: PhoneNumber | None = None
 
 
-class UserDetail(UserBase):
+class UserBaseDetail(UserBase):
     id: PositiveInt
     status: StatusEnum
     role: RoleEnum
     permissions: list[PermissionEnum]
+
+
+class UserDetail(UserBaseDetail):
     machines: list[MachineDetailSchema]
 
 

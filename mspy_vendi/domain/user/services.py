@@ -1,24 +1,22 @@
 from typing import LiteralString, cast, Optional, Any, Annotated
 
-from fastapi import Request, Depends
-from fastapi_users import BaseUserManager, IntegerIDMixin, schemas, models, exceptions
+from fastapi import Request
+from fastapi_users import BaseUserManager, IntegerIDMixin, schemas, models
 from fastapi_users.schemas import BaseUserCreate
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from mspy_vendi.core.constants import DEFAULT_SCHEDULE_MAPPING, MESSAGE_FOOTER, CSS_STYLE
 from mspy_vendi.core.enums.date_range import ScheduleEnum
-from mspy_vendi.deps import get_db_session, get_email_service
 
-from mspy_vendi.domain.sales.filter import ExportSaleFilter, GeographyFilter
+from mspy_vendi.domain.sales.filter import GeographyFilter
 from taskiq import ScheduledTask
 
 from mspy_vendi.broker import redis_source
 from mspy_vendi.config import config, log
-from mspy_vendi.core.email import EmailService, MailGunService
+from mspy_vendi.core.email import MailGunService
 from mspy_vendi.core.enums import ExportTypeEnum
 from mspy_vendi.core.exceptions.base_exception import PydanticLikeError, BadRequestError
 from mspy_vendi.core.helpers import get_described_user_info, generate_random_password
-from mspy_vendi.core.service import CRUDService, UpdateSchema, Schema
+from mspy_vendi.core.service import CRUDService, UpdateSchema
 from mspy_vendi.domain.user.enums.enum import FrontendLinkEnum
 from mspy_vendi.domain.user.filters import UserFilter
 from mspy_vendi.domain.user.managers import UserManager
@@ -32,7 +30,7 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
     reset_password_token_secret = config.secret_key
     verification_token_secret = config.secret_key
 
-    def __init__(self, user_db, email_service: EmailService, password_helper=None):
+    def __init__(self, user_db, email_service: MailGunService, password_helper=None):
         self.email_service = email_service
         super().__init__(user_db, password_helper)
 
@@ -104,7 +102,7 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
 
         await self.email_service.send_message(
             receivers=[user.email],
-            subject="Email Verification for Vendi admin",
+            subject="Email Verification for Vendi application",
             html=html_content,
         )
         log.info("Sent verify email message", info=get_described_user_info(user, request=request))

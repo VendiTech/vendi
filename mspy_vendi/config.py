@@ -194,9 +194,7 @@ class Settings(BaseSettings):
 
     nayax_consumer_enabled: bool = True
 
-    @property
-    def email_sender(self) -> str:
-        return f"no-reply@{self.frontend_domain}"
+    email_sender: str = "no-reply@vendi.com"
 
     @property
     def environment(self) -> AppEnvEnum:
