@@ -226,11 +226,7 @@ class UserService(CRUDService):
     async def check_task_existence(event_type: str) -> bool:
         tasks: list[ScheduledTask] = await redis_source.get_schedules()
 
-        for task in tasks:
-            if task.labels.get("event_type") == event_type:
-                return True
-
-        return False
+        return any(task.labels.get("event_type") == event_type for task in tasks)
 
     async def schedule_sale_export(
         self,
@@ -239,7 +235,7 @@ class UserService(CRUDService):
         query_filter: GeographyFilter,
         schedule: ScheduleEnum,
     ) -> None:
-        user_event_type: str = f"user_{user.id}_sale_{export_type}"
+        user_event_type: str = f"user_{user.id}_sale_{export_type}_schedule_{schedule.value}_geography_{query_filter.geography_id__in}"
 
         if not user.is_verified:
             raise BadRequestError("User didn't verify email yet.")
