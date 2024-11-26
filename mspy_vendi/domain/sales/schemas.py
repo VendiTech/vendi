@@ -115,3 +115,9 @@ class ConversionRateSchema(BaseSchema):
 
 class VenueSalesQuantitySchema(BaseQuantitySchema):
     venue: str
+
+
+class CategoryProductQuantityDateSchema(CategoryProductQuantitySchema):
+    product_name: str
+    product_id: PositiveInt
+    sale_date: date

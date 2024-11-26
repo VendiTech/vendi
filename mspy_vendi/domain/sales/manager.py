@@ -4,7 +4,7 @@ from typing import Any
 from fastapi_filter.contrib.sqlalchemy import Filter
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
-from sqlalchemy import CTE, Date, Select, cast, func, label, select, text
+from sqlalchemy import CTE, Date, Select, cast, desc, func, label, select, text
 from sqlalchemy.orm import joinedload
 
 from mspy_vendi.core.enums.date_range import DateRangeEnum
@@ -19,6 +19,7 @@ from mspy_vendi.domain.products.models import Product
 from mspy_vendi.domain.sales.filter import SaleFilter, StatisticDateRangeFilter
 from mspy_vendi.domain.sales.schemas import (
     BaseQuantitySchema,
+    CategoryProductQuantityDateSchema,
     CategoryProductQuantitySchema,
     CategoryTimeFrameSalesSchema,
     ConversionRateSchema,
@@ -498,6 +499,40 @@ class SaleManager(CRUDManager):
         stmt_source_system = label("venue", self.sql_model.source_system)
 
         stmt = select(stmt_sum_quantity, stmt_source_system).group_by(stmt_source_system).order_by(stmt_source_system)
+
+        stmt = self._generate_geography_query(query_filter, stmt)
+        stmt = query_filter.filter(stmt)
+
+        return await paginate(self.session, stmt)
+
+    async def get_sales_quantity_by_category(self, query_filter: SaleFilter) -> Page[CategoryProductQuantityDateSchema]:
+        """
+        Get the sales quantity by category.
+
+        :param query_filter: Filter object.
+        :return: Paginated list of sales quantity across category objects.
+        """
+        stmt_sum_quantity = label("quantity", func.sum(self.sql_model.quantity))
+        stmt_category_id = label("category_id", ProductCategory.id)
+        stmt_category_name = label("category_name", ProductCategory.name)
+        stmt_product_id = label("product_id", Product.id)
+        stmt_product_name = label("product_name", Product.name)
+        stmt_sale_date = label("sale_date", func.max(self.sql_model.sale_date))
+
+        stmt = (
+            select(
+                stmt_sum_quantity,
+                stmt_category_id,
+                stmt_category_name,
+                stmt_product_id,
+                stmt_product_name,
+                stmt_sale_date,
+            )
+            .join(Product, Product.id == self.sql_model.product_id)
+            .join(ProductCategory, ProductCategory.id == Product.product_category_id)
+            .group_by(stmt_category_id, stmt_category_name, stmt_product_id, stmt_product_name)
+            .order_by(desc(stmt_sale_date))
+        )
 
         stmt = self._generate_geography_query(query_filter, stmt)
         stmt = query_filter.filter(stmt)

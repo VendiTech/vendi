@@ -11,6 +11,7 @@ from mspy_vendi.domain.sales.filter import (
 from mspy_vendi.domain.sales.manager import SaleManager
 from mspy_vendi.domain.sales.schemas import (
     BaseQuantitySchema,
+    CategoryProductQuantityDateSchema,
     CategoryProductQuantitySchema,
     CategoryTimeFrameSalesSchema,
     ConversionRateSchema,
@@ -74,3 +75,6 @@ class SaleService(CRUDService):
 
     async def get_sales_by_venue_over_time(self, query_filter: SaleFilter) -> Page[VenueSalesQuantitySchema]:
         return await self.manager.get_sales_by_venue_over_time(query_filter)
+
+    async def get_sales_quantity_by_category(self, query_filter: SaleFilter) -> Page[CategoryProductQuantityDateSchema]:
+        return await self.manager.get_sales_quantity_by_category(query_filter)
