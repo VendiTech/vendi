@@ -114,4 +114,4 @@ class ConversionRateSchema(BaseSchema):
 
 
 class VenueSalesQuantitySchema(BaseQuantitySchema):
-    venue: PositiveInt
+    venue: str

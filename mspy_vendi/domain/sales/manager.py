@@ -495,13 +495,9 @@ class SaleManager(CRUDManager):
         :return: Paginated list of sales quantity across venue objects.
         """
         stmt_sum_quantity = label("quantity", func.sum(self.sql_model.quantity))
-        stmt_source_system_id = label("venue", self.sql_model.source_system_id)
+        stmt_source_system = label("venue", self.sql_model.source_system)
 
-        stmt = (
-            select(stmt_sum_quantity, stmt_source_system_id)
-            .group_by(stmt_source_system_id)
-            .order_by(stmt_source_system_id)
-        )
+        stmt = select(stmt_sum_quantity, stmt_source_system).group_by(stmt_source_system).order_by(stmt_source_system)
 
         stmt = self._generate_geography_query(query_filter, stmt)
         stmt = query_filter.filter(stmt)
