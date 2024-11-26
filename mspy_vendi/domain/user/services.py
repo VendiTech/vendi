@@ -21,7 +21,12 @@ from mspy_vendi.domain.user.enums.enum import FrontendLinkEnum
 from mspy_vendi.domain.user.filters import UserFilter
 from mspy_vendi.domain.user.managers import UserManager
 from mspy_vendi.domain.user.models import User
-from mspy_vendi.domain.user.schemas import UserPermissionsModifySchema, UserDetail, UserScheduleSchema
+from mspy_vendi.domain.user.schemas import (
+    UserPermissionsModifySchema,
+    UserDetail,
+    UserScheduleSchema,
+    UserExistingSchedulesSchema,
+)
 from mspy_vendi.domain.sales.tasks import export_sale_task
 
 
@@ -224,11 +229,24 @@ class UserService(CRUDService):
     async def check_task_existence(event_type: str) -> bool:
         tasks: list[ScheduledTask] = await redis_source.get_schedules()
 
-        for task in tasks:
-            if task.labels.get("event_type") == event_type:
-                return True
+        return any(task.labels.get("event_type") == event_type for task in tasks)
 
-        return False
+    @staticmethod
+    async def get_existing_schedules(user_id: int) -> list[UserExistingSchedulesSchema]:
+        user_tasks: list[ScheduledTask] = [
+            task
+            for task in await redis_source.get_schedules()
+            if task.labels.get("event_type").startswith(f"user_{user_id}_sale")
+        ]
+
+        return [
+            UserExistingSchedulesSchema(
+                schedule=user_task.kwargs.get("schedule"),
+                export_type=user_task.kwargs.get("export_type"),
+                geography_ids=user_task.kwargs.get("query_filter", {}).get("geography_id__in"),
+            )
+            for user_task in user_tasks
+        ]
 
     async def schedule_sale_export(
         self,
@@ -237,7 +255,7 @@ class UserService(CRUDService):
         query_filter: GeographyFilter,
         schedule: ScheduleEnum,
     ) -> None:
-        user_event_type: str = f"user_{user.id}_sale_{export_type}"
+        user_event_type: str = f"user_{user.id}_sale_{export_type}_schedule_{schedule.value}_geography_{",".join(map(str, sorted(set(query_filter.geography_id__in or []))))}"
 
         if not user.is_verified:
             raise BadRequestError("User didn't verify email yet.")

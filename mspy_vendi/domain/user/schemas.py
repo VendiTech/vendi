@@ -4,6 +4,8 @@ from pydantic.json_schema import SkipJsonSchema
 from pydantic_extra_types.phone_numbers import PhoneNumber
 
 from mspy_vendi.core.constants import MAX_NUMBER_OF_CHARACTERS
+from mspy_vendi.core.enums import ExportTypeEnum
+from mspy_vendi.core.enums.date_range import ScheduleEnum
 from mspy_vendi.core.schemas import BaseSchema
 from mspy_vendi.core.schemas.base import AlphaString, ConstraintString
 from mspy_vendi.core.validators import validate_password
@@ -29,6 +31,12 @@ class UserBaseDetail(UserBase):
 
 class UserDetail(UserBaseDetail):
     machines: list[MachineDetailSchema]
+
+
+class UserExistingSchedulesSchema(BaseSchema):
+    export_type: ExportTypeEnum
+    schedule: ScheduleEnum
+    geography_ids: list[PositiveInt] | None
 
 
 class UserCreate(UserBase, schemas.BaseUserCreate):

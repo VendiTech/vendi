@@ -29,6 +29,7 @@ from mspy_vendi.domain.sales.schemas import (
 )
 from mspy_vendi.domain.sales.service import SaleService
 from mspy_vendi.domain.user.models import User
+from mspy_vendi.domain.user.schemas import UserExistingSchedulesSchema
 from mspy_vendi.domain.user.services import UserService
 
 router = APIRouter(prefix="/sale", default_response_class=ORJSONResponse, tags=[ApiTagEnum.SALES])
@@ -147,6 +148,14 @@ async def post__schedule_sales(
     )
 
     return Response(status_code=status.HTTP_202_ACCEPTED)
+
+
+@router.get("/schedule/view", tags=[ApiTagEnum.USER])
+async def get__existing_schedules(
+    user: Annotated[User, Depends(get_current_user())],
+    service: Annotated[UserService, Depends()],
+) -> list[UserExistingSchedulesSchema]:
+    return await service.get_existing_schedules(user_id=user.id)
 
 
 @router.get("/sales-quantity-by-venue", response_model=Page[VenueSalesQuantitySchema])

@@ -44,9 +44,9 @@ class RedisSettings(BaseSettings):
 
     @property
     def url(self) -> str:
-        return (
-            os.getenv("REDIS_URL") or f"redis://{self.host}:{self.port}/{self.db}"
-        ) + f"?ssl_cert_reqs={str(self.ssl_cert_reqs).lower()}"
+        return (os.getenv("REDIS_URL") or f"redis://{self.host}:{self.port}/{self.db}") + (
+            f"?ssl_cert_reqs={str(self.ssl_cert_reqs).lower()}" if self.ssl_enabled else ""
+        )
 
 
 class DBSettings(BaseSettings):
