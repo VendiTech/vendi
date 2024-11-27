@@ -313,7 +313,13 @@ class UserService(CRUDService):
         if await self.check_task_existence(user_event_type):
             raise BadRequestError("Schedule task already exists")
 
-        entity_task = getattr(import_module(f"mspy_vendi.domain.{entity_type}s.tasks"), f"export_{entity_type}_task")
+        if not (
+            entity_task := getattr(
+                import_module(f"mspy_vendi.domain.{entity_type}s.tasks"), f"export_{entity_type}_task", None
+            )
+        ):
+            log.warning("Task doesn't exist.", entity_type=entity_type)
+            raise BadRequestError(f"Task for {entity_type} doesn't exist.")
 
         await (
             entity_task.kicker()
