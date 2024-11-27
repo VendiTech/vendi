@@ -5,12 +5,12 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mspy_vendi.core.email import MailGunService
-from mspy_vendi.core.enums.date_range import DateRangeEnum
+from mspy_vendi.core.enums.date_range import DailyTimePeriodEnum, DateRangeEnum, TimePeriodEnum
 from mspy_vendi.core.mixins.export import ExportMixin
 from mspy_vendi.core.pagination import Page
 from mspy_vendi.core.service import CRUDService
 from mspy_vendi.deps import get_db_session, get_email_service
-from mspy_vendi.domain.sales.filter import (
+from mspy_vendi.domain.sales.filters import (
     SaleFilter,
     SaleGetAllFilter,
     StatisticDateRangeFilter,
@@ -22,12 +22,10 @@ from mspy_vendi.domain.sales.schemas import (
     CategoryProductQuantitySchema,
     CategoryTimeFrameSalesSchema,
     ConversionRateSchema,
-    DailyTimePeriodEnum,
     DecimalQuantitySchema,
     DecimalTimeFrameSalesSchema,
     GeographyDecimalQuantitySchema,
     TimeFrameSalesSchema,
-    TimePeriodEnum,
     TimePeriodSalesCountSchema,
     TimePeriodSalesRevenueSchema,
     UnitsTimeFrameSchema,

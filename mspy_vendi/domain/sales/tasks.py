@@ -9,7 +9,7 @@ from mspy_vendi.core.constants import DEFAULT_SCHEDULE_TIMEDELTA
 from mspy_vendi.core.enums import ExportTypeEnum
 from mspy_vendi.core.enums.date_range import ScheduleEnum
 from mspy_vendi.core.enums.export import ExportEntityTypeEnum
-from mspy_vendi.domain.sales.filter import ExportSaleFilter, GeographyFilter
+from mspy_vendi.domain.sales.filters import ExportSaleFilter, GeographyFilter
 from mspy_vendi.domain.sales.service import SaleService
 from mspy_vendi.domain.user.schemas import UserScheduleSchema
 

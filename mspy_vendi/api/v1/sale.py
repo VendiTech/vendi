@@ -11,7 +11,7 @@ from mspy_vendi.core.enums.export import ExportEntityTypeEnum
 from mspy_vendi.core.pagination import Page
 from mspy_vendi.deps import get_db_session
 from mspy_vendi.domain.auth import get_current_user
-from mspy_vendi.domain.sales.filter import ExportSaleFilter, GeographyFilter, SaleFilter
+from mspy_vendi.domain.sales.filters import ExportSaleFilter, GeographyFilter, SaleFilter
 from mspy_vendi.domain.sales.schemas import (
     BaseQuantitySchema,
     CategoryProductQuantityDateSchema,

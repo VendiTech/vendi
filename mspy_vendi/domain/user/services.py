@@ -9,7 +9,7 @@ from mspy_vendi.core.constants import DEFAULT_SCHEDULE_MAPPING, MESSAGE_FOOTER, 
 from mspy_vendi.core.enums.date_range import ScheduleEnum
 from mspy_vendi.core.enums.export import ExportEntityTypeEnum
 
-from mspy_vendi.domain.sales.filter import GeographyFilter
+from mspy_vendi.domain.sales.filters import GeographyFilter
 from taskiq import ScheduledTask
 
 from mspy_vendi.broker import redis_source
