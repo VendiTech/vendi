@@ -69,7 +69,7 @@ async def parse_jwt_token(
 
 def get_current_user(
     is_active: bool = True,
-    is_verified: bool = True,
+    is_verified: bool | None = True,
     is_superuser: bool | None = None,
     permissions: list[PermissionEnum] | None = None,
 ) -> Callable[[Request, User], Coroutine[Any, Any, User]]:

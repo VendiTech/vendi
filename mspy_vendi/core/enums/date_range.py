@@ -15,3 +15,10 @@ class DateRangeEnum(StrEnum):
         :return: The corresponding PostgreSQL interval string.
         """
         return "3 months" if self is DateRangeEnum.QUARTER else f"1 {self.value}"
+
+
+class ScheduleEnum(StrEnum):
+    MONTHLY = "Monthly"
+    QUARTERLY = "Quarterly"
+    BI_ANNUALLY = "Bi-Annually"
+    ANNUALLY = "Annually"
