@@ -46,3 +46,6 @@ upgrade-version:
 
 downgrade-version:
 	docker compose -f ${DOCKER_PATH} run ${SERVICE_NAME} alembic -c ${ALEMBIC_INI_PATH} downgrade ${n}
+
+up-db:
+	docker compose -f ${DOCKER_PATH} up ${SERVICE_DB} --remove-orphans

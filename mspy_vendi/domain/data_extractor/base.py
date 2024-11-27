@@ -14,7 +14,7 @@ class BaseDataExtractorClient(Generic[DataType, ReturnType]):
     :param session: SQLAlchemy AsyncSession instance.
     """
 
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession | None = None):
         self.session = session
 
     async def extract(self, data: DataType) -> ReturnType:

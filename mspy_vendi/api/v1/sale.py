@@ -1,15 +1,16 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
-from fastapi.responses import ORJSONResponse
+from fastapi import APIRouter, Depends, status
+from fastapi.responses import ORJSONResponse, Response, StreamingResponse
 from fastapi_filter import FilterDepends
 
 from mspy_vendi.core.api import CRUDApi, basic_endpoints, basic_permissions
-from mspy_vendi.core.enums import ApiTagEnum
-from mspy_vendi.core.enums.date_range import DateRangeEnum
+from mspy_vendi.core.enums import ApiTagEnum, ExportTypeEnum
+from mspy_vendi.core.enums.date_range import DateRangeEnum, ScheduleEnum
 from mspy_vendi.core.pagination import Page
 from mspy_vendi.deps import get_db_session
-from mspy_vendi.domain.sales.filter import SaleFilter
+from mspy_vendi.domain.auth import get_current_user
+from mspy_vendi.domain.sales.filter import ExportSaleFilter, GeographyFilter, SaleFilter
 from mspy_vendi.domain.sales.schemas import (
     BaseQuantitySchema,
     CategoryProductQuantitySchema,
@@ -27,6 +28,9 @@ from mspy_vendi.domain.sales.schemas import (
     VenueSalesQuantitySchema,
 )
 from mspy_vendi.domain.sales.service import SaleService
+from mspy_vendi.domain.user.models import User
+from mspy_vendi.domain.user.schemas import UserExistingSchedulesSchema
+from mspy_vendi.domain.user.services import UserService
 
 router = APIRouter(prefix="/sale", default_response_class=ORJSONResponse, tags=[ApiTagEnum.SALES])
 
@@ -119,6 +123,39 @@ async def get__frequency_of_sales(
     sale_service: Annotated[SaleService, Depends()],
 ) -> list[TimePeriodSalesCountSchema]:
     return await sale_service.get_daily_sales_count_per_time_period(query_filter)
+
+
+@router.post("/export", response_class=StreamingResponse)
+async def post__export_sales(
+    export_type: ExportTypeEnum,
+    query_filter: Annotated[ExportSaleFilter, FilterDepends(ExportSaleFilter)],
+    sale_service: Annotated[SaleService, Depends()],
+    # user: Annotated[User, Depends(get_current_user())],
+) -> StreamingResponse:
+    return await sale_service.export_sales(query_filter=query_filter, export_type=export_type)
+
+
+@router.post("/schedule", response_class=StreamingResponse)
+async def post__schedule_sales(
+    export_type: ExportTypeEnum,
+    schedule: ScheduleEnum,
+    query_filter: Annotated[GeographyFilter, FilterDepends(GeographyFilter)],
+    user_service: Annotated[UserService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
+) -> Response:
+    await user_service.schedule_sale_export(
+        user=user, export_type=export_type, query_filter=query_filter, schedule=schedule
+    )
+
+    return Response(status_code=status.HTTP_202_ACCEPTED)
+
+
+@router.get("/schedule/view", tags=[ApiTagEnum.USER])
+async def get__existing_schedules(
+    user: Annotated[User, Depends(get_current_user())],
+    service: Annotated[UserService, Depends()],
+) -> list[UserExistingSchedulesSchema]:
+    return await service.get_existing_schedules(user_id=user.id)
 
 
 @router.get("/sales-quantity-by-venue", response_model=Page[VenueSalesQuantitySchema])
