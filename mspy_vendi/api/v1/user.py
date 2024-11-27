@@ -25,7 +25,7 @@ router = APIRouter(prefix="/user", default_response_class=ORJSONResponse)
 
 @router.get("/me", response_model=UserDetail, tags=[ApiTagEnum.USER])
 async def get__show_me(
-    user: Annotated[User, Depends(get_current_user())],
+    user: Annotated[User, Depends(get_current_user(is_verified=None))],
     service: Annotated[UserService, Depends()],
 ) -> UserDetail:
     """

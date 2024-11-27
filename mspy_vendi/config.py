@@ -1,3 +1,4 @@
+import os
 from functools import lru_cache
 from typing import Literal
 from urllib.parse import quote_plus
@@ -21,6 +22,31 @@ class CORSSettings(BaseSettings):
     headers: list[str] = ["*"]
     methods: list[str] = ["*"]
     allow_credentials: bool = True
+
+
+class RedisSettings(BaseSettings):
+    model_config = SettingsConfigDict(extra="allow", env_prefix="REDIS_")
+
+    host: str = "vendi-redis"
+    port: int = 6379
+    db: int = 0
+
+    password: str = str()
+    username: str = str()
+
+    schedule_queue_name: str = "vendi-schedule-queue"
+
+    ssl_cert_reqs: str | None = None
+
+    @property
+    def ssl_enabled(self) -> bool:
+        return AppEnvEnum.from_env() not in [AppEnvEnum.LOCAL, AppEnvEnum.TEST]
+
+    @property
+    def url(self) -> str:
+        return (os.getenv("REDIS_URL") or f"redis://{self.host}:{self.port}/{self.db}") + (
+            f"?ssl_cert_reqs={str(self.ssl_cert_reqs).lower()}" if self.ssl_enabled else ""
+        )
 
 
 class DBSettings(BaseSettings):
@@ -139,6 +165,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(extra="allow")
 
     db: DBSettings = DBSettings()
+    redis: RedisSettings = RedisSettings()
     sqs: SQSSettings = SQSSettings()
     web: WebSettings = WebSettings()
     cors: CORSSettings = CORSSettings()
@@ -167,9 +194,7 @@ class Settings(BaseSettings):
 
     nayax_consumer_enabled: bool = True
 
-    @property
-    def email_sender(self) -> str:
-        return f"no-reply@{self.frontend_domain}"
+    email_sender: str = "no-reply@vendi.com"
 
     @property
     def environment(self) -> AppEnvEnum:
@@ -193,9 +218,12 @@ class Settings(BaseSettings):
 
     @property
     def auth_cookie_secure(self) -> bool:
-        return self.environment not in [AppEnvEnum.LOCAL, AppEnvEnum.TEST]
+        return not self.debug
 
-    auth_cookie_samesite: Literal["strict", "lax", "none"] = "none"
+    @property
+    def auth_cookie_samesite(self) -> Literal["strict", "lax", "none"]:
+        return "lax" if self.debug else os.getenv("AUTH_COOKIE_SAMESITE", "none")
+
     auth_cookie_domain: str | None = None
 
     crontab_twice_a_day: str = "0 0,12 * * *"  # Every day at 00:00 and 12:00

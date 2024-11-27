@@ -1,9 +1,23 @@
 import datetime
+import io
+from typing import Annotated
 
-from mspy_vendi.core.enums.date_range import DateRangeEnum
+import pandas as pd
+from fastapi import Depends
+from fastapi.responses import StreamingResponse
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from mspy_vendi.config import log
+from mspy_vendi.core.constants import CSS_STYLE, DEFAULT_EXPORT_TYPES, MESSAGE_FOOTER
+from mspy_vendi.core.email import MailGunService
+from mspy_vendi.core.enums import ExportTypeEnum
+from mspy_vendi.core.enums.date_range import DateRangeEnum, ScheduleEnum
 from mspy_vendi.core.pagination import Page
 from mspy_vendi.core.service import CRUDService
+from mspy_vendi.deps import get_db_session, get_email_service
+from mspy_vendi.domain.sales.factory import DataExportFactory
 from mspy_vendi.domain.sales.filter import (
+    ExportSaleFilter,
     SaleFilter,
     SaleGetAllFilter,
     StatisticDateRangeFilter,
@@ -25,11 +39,20 @@ from mspy_vendi.domain.sales.schemas import (
     UnitsTimeFrameSchema,
     VenueSalesQuantitySchema,
 )
+from mspy_vendi.domain.user.schemas import UserScheduleSchema
 
 
 class SaleService(CRUDService):
     manager_class = SaleManager
     filter_class = SaleGetAllFilter
+
+    def __init__(
+        self,
+        db_session: Annotated[AsyncSession, Depends(get_db_session)],
+        email_service: Annotated[MailGunService, Depends(get_email_service)] = None,
+    ):
+        self.email_service = email_service
+        super().__init__(db_session)
 
     async def get_sales_quantity_by_product(self, query_filter: SaleFilter) -> BaseQuantitySchema:
         return await self.manager.get_sales_quantity_by_product(query_filter)
@@ -68,9 +91,122 @@ class SaleService(CRUDService):
     async def get_conversion_rate(self, query_filter: SaleFilter) -> ConversionRateSchema:
         return await self.manager.get_conversion_rate(query_filter)
 
+    async def send_sales_report(
+        self,
+        query_filter: ExportSaleFilter,
+        content: io.BytesIO,
+        file_name: str,
+        user: UserScheduleSchema,
+        schedule: ScheduleEnum,
+    ) -> None:
+        """
+        Send the sales report to the user.
+        Attach the report to the email and send it to the user.
+
+        :param query_filter: The filter to use for the export.
+        :param content: The content of the file to send.
+        :param file_name: The name of the file to send.
+        :param user: The user to send the report to.
+        :param schedule: The schedule type of the report.
+        """
+        html_content: str = f"""
+            <!DOCTYPE html>
+            <html>
+            {CSS_STYLE}
+            <body>
+                <div class="email-content">
+                    <p class="message">
+                       Your Scheduled report for the provided range:
+                       {query_filter.date_from.date()} to {query_filter.date_to.date()} is ready.
+                    </p>
+                    {MESSAGE_FOOTER}
+                </div>
+            </body>
+            </html>
+        """
+
+        await self.email_service.send_message(
+            receivers=[user.email],
+            subject=f"{schedule} Sales report for {user.firstname} {user.lastname}",
+            html=html_content,
+            files=(file_name, content, None),
+        )
+        log.info(
+            "Sent export message was completed.",
+        )
+
+    async def export_sales(
+        self,
+        query_filter: ExportSaleFilter,
+        export_type: ExportTypeEnum,
+        sync: bool = True,
+        user: UserScheduleSchema | None = None,
+        schedule: ScheduleEnum | None = None,
+    ) -> StreamingResponse | None:
+        """
+        Export the sales data based on the provided filter and export type.
+
+        There are two ways to export the data, sync and async.
+            - sync: The data will be returned as a response.
+            - async: The data will be sent to the user's email.
+
+        :param query_filter: The filter to use for the export.
+        :param export_type: The type of export to use.
+        :param sync: Whether to export the data sync or async.
+        :param user: The user to send the report to.
+        :param schedule: The schedule type of the report.
+
+        :return: The StreamingResponse or None.
+        """
+        sale_data: list[dict] = await self.manager.export_sales(query_filter)
+
+        file_extension: str = DEFAULT_EXPORT_TYPES[export_type].get("file_extension")
+        file_content_type: str = DEFAULT_EXPORT_TYPES[export_type].get("content_type")
+
+        file_name: str = (
+            f"Sale Report Start-date: {query_filter.date_from.date()}"
+            f" End-date: {query_filter.date_to.date()}.{file_extension}"
+        )
+
+        df = pd.DataFrame(sale_data)
+
+        content: io.BytesIO = await DataExportFactory.transform(export_type).extract(df)
+
+        if sync:
+            return StreamingResponse(
+                content=content,
+                headers={
+                    "Access-Control-Expose-Headers": "Content-Disposition",
+                    "Content-Disposition": f"""attachment; filename={file_name}""",
+                },
+                media_type=file_content_type,
+            )
+
+        return await self.send_sales_report(
+            query_filter=query_filter,
+            content=content,
+            file_name=file_name,
+            user=user,
+            schedule=schedule,
+        )
+
     async def get_daily_sales_count_per_time_period(self, query_filter: SaleFilter) -> list[TimePeriodSalesCountSchema]:
+        """
+        Get the daily sales count per time period.
+
+        :param query_filter: The filter to use for the query.
+
+        :return: The list of TimePeriodSalesCountSchema.
+        """
         query_filter.date_from = query_filter.date_to = datetime.datetime.now()
         return await self.manager.get_sales_count_per_time_period(DailyTimePeriodEnum, query_filter)
 
     async def get_sales_by_venue_over_time(self, query_filter: SaleFilter) -> Page[VenueSalesQuantitySchema]:
+        """
+        Get the sales by venue over time.
+
+        :param query_filter: The filter to use for the query.
+
+        :return: The Page of VenueSalesQuantitySchema.
+        """
         return await self.manager.get_sales_by_venue_over_time(query_filter)

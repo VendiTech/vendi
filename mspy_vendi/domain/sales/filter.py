@@ -25,5 +25,8 @@ class SaleFilter(StatisticDateRangeFilter, GeographyFilter):
     machine_id__in: list[PositiveInt] | None = None
 
 
+class ExportSaleFilter(StatisticDateRangeFilter, GeographyFilter): ...
+
+
 class SaleGetAllFilter(SaleFilter):
     order_by: list[str] | None = ["-id"]

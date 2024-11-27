@@ -3,3 +3,4 @@ build:
     web: Dockerfile
     nayax-consumer: nayax.Dockerfile
     datajam-consumer: datajam.Dockerfile
+    export-scheduler: scheduler.Dockerfile
