@@ -13,6 +13,7 @@ from mspy_vendi.domain.auth import get_current_user
 from mspy_vendi.domain.sales.filter import ExportSaleFilter, GeographyFilter, SaleFilter
 from mspy_vendi.domain.sales.schemas import (
     BaseQuantitySchema,
+    CategoryProductQuantityDateSchema,
     CategoryProductQuantitySchema,
     CategoryTimeFrameSalesSchema,
     ConversionRateSchema,
@@ -164,6 +165,14 @@ async def get__sales_quantity_by_venue(
     sale_service: Annotated[SaleService, Depends()],
 ) -> Page[VenueSalesQuantitySchema]:
     return await sale_service.get_sales_by_venue_over_time(query_filter)
+
+
+@router.get("/sales-quantity-by-category", response_model=Page[CategoryProductQuantityDateSchema])
+async def get__sales_quantity_by_category(
+    query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
+    sale_service: Annotated[SaleService, Depends()],
+) -> Page[CategoryProductQuantityDateSchema]:
+    return await sale_service.get_sales_quantity_by_category(query_filter)
 
 
 class SaleAPI(CRUDApi):
