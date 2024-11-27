@@ -2,7 +2,7 @@ import io
 
 import pandas as pd
 
-from mspy_vendi.domain.data_extractor.base import BaseDataExtractorClient
+from .base import BaseDataExtractorClient
 
 
 class ExcelDataExtractor(BaseDataExtractorClient[pd.DataFrame, io.BytesIO]):

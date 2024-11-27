@@ -35,6 +35,7 @@ class UserDetail(UserBaseDetail):
 
 
 class UserExistingSchedulesSchema(BaseSchema):
+    task_id: str
     export_type: ExportTypeEnum
     schedule: ScheduleEnum
     geography_ids: list[PositiveInt] | None

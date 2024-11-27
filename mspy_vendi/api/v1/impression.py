@@ -1,15 +1,17 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
-from fastapi.responses import ORJSONResponse
+from fastapi import APIRouter, Depends, status
+from fastapi.responses import ORJSONResponse, Response, StreamingResponse
 from fastapi_filter import FilterDepends
 
 from mspy_vendi.core.api import CRUDApi, basic_endpoints, basic_permissions
-from mspy_vendi.core.enums import ApiTagEnum
-from mspy_vendi.core.enums.date_range import DateRangeEnum
+from mspy_vendi.core.enums import ApiTagEnum, ExportTypeEnum
+from mspy_vendi.core.enums.date_range import DateRangeEnum, ScheduleEnum
+from mspy_vendi.core.enums.export import ExportEntityTypeEnum
 from mspy_vendi.core.pagination import Page
 from mspy_vendi.deps import get_db_session
-from mspy_vendi.domain.impressions.filters import ImpressionFilter
+from mspy_vendi.domain.auth import get_current_user
+from mspy_vendi.domain.impressions.filters import ExportImpressionFilter, GeographyFilter, ImpressionFilter
 from mspy_vendi.domain.impressions.schemas import (
     GeographyDecimalImpressionTimeFrameSchema,
     GeographyImpressionsCountSchema,
@@ -17,7 +19,10 @@ from mspy_vendi.domain.impressions.schemas import (
     ImpressionDetailSchema,
     TimeFrameImpressionsSchema,
 )
-from mspy_vendi.domain.impressions.service import ImpressionsService
+from mspy_vendi.domain.impressions.service import ImpressionService
+from mspy_vendi.domain.user.models import User
+from mspy_vendi.domain.user.schemas import UserExistingSchedulesSchema
+from mspy_vendi.domain.user.services import UserService
 
 router = APIRouter(prefix="/impression", default_response_class=ORJSONResponse, tags=[ApiTagEnum.IMPRESSIONS])
 
@@ -25,7 +30,7 @@ router = APIRouter(prefix="/impression", default_response_class=ORJSONResponse, 
 @router.get("/impressions-per-week", response_model=Page[TimeFrameImpressionsSchema])
 async def get__impressions_per_week(
     query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
-    impression_service: Annotated[ImpressionsService, Depends()],
+    impression_service: Annotated[ImpressionService, Depends()],
 ) -> Page[TimeFrameImpressionsSchema]:
     return await impression_service.get_impressions_per_week(query_filter)
 
@@ -33,7 +38,7 @@ async def get__impressions_per_week(
 @router.get("/impressions-per-geography", response_model=Page[GeographyImpressionsCountSchema])
 async def get__impressions_per_geography(
     query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
-    impression_service: Annotated[ImpressionsService, Depends()],
+    impression_service: Annotated[ImpressionService, Depends()],
 ) -> Page[GeographyImpressionsCountSchema]:
     return await impression_service.get_impressions_per_geography(query_filter)
 
@@ -42,13 +47,67 @@ async def get__impressions_per_geography(
 async def get__average_impressions_per_geography(
     time_frame: DateRangeEnum,
     query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
-    impression_service: Annotated[ImpressionsService, Depends()],
+    impression_service: Annotated[ImpressionService, Depends()],
 ) -> Page[GeographyDecimalImpressionTimeFrameSchema]:
     return await impression_service.get_average_impressions_per_geography(time_frame, query_filter)
 
 
+@router.post("/export", response_class=StreamingResponse)
+async def post__export_impressions(
+    export_type: ExportTypeEnum,
+    query_filter: Annotated[ExportImpressionFilter, FilterDepends(ExportImpressionFilter)],
+    impression_service: Annotated[ImpressionService, Depends()],
+    _: Annotated[User, Depends(get_current_user())],
+) -> StreamingResponse:
+    return await impression_service.export(
+        query_filter=query_filter,
+        export_type=export_type,
+        entity=ExportEntityTypeEnum.IMPRESSION,
+    )
+
+
+@router.post("/schedule", response_class=StreamingResponse)
+async def post__schedule_impressions(
+    export_type: ExportTypeEnum,
+    schedule: ScheduleEnum,
+    query_filter: Annotated[GeographyFilter, FilterDepends(GeographyFilter)],
+    user_service: Annotated[UserService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
+) -> Response:
+    await user_service.schedule_export(
+        user=user,
+        export_type=export_type,
+        query_filter=query_filter,
+        schedule=schedule,
+        entity_type=ExportEntityTypeEnum.IMPRESSION,
+    )
+
+    return Response(status_code=status.HTTP_202_ACCEPTED)
+
+
+@router.get("/schedule/view", tags=[ApiTagEnum.USER])
+async def get__existing_schedules(
+    user: Annotated[User, Depends(get_current_user())],
+    service: Annotated[UserService, Depends()],
+) -> list[UserExistingSchedulesSchema]:
+    return await service.get_existing_schedules(user_id=user.id, entity_type=ExportEntityTypeEnum.IMPRESSION)
+
+
+@router.delete("/schedule/{schedule_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete__existing_schedule(
+    schedule_id: str,
+    user: Annotated[User, Depends(get_current_user())],
+    service: Annotated[UserService, Depends()],
+):
+    return await service.delete_existing_schedule(
+        user_id=user.id,
+        schedule_id=schedule_id,
+        entity_type=ExportEntityTypeEnum.IMPRESSION,
+    )
+
+
 class ImpressionAPI(CRUDApi):
-    service = ImpressionsService
+    service = ImpressionService
     schema = ImpressionDetailSchema
     create_schema = ImpressionCreateSchema
     current_user_mapping = basic_permissions

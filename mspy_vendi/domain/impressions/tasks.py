@@ -9,20 +9,20 @@ from mspy_vendi.core.constants import DEFAULT_SCHEDULE_TIMEDELTA
 from mspy_vendi.core.enums import ExportTypeEnum
 from mspy_vendi.core.enums.date_range import ScheduleEnum
 from mspy_vendi.core.enums.export import ExportEntityTypeEnum
-from mspy_vendi.domain.sales.filter import ExportSaleFilter, GeographyFilter
-from mspy_vendi.domain.sales.service import SaleService
+from mspy_vendi.domain.impressions.filters import ExportImpressionFilter, GeographyFilter
+from mspy_vendi.domain.impressions.service import ImpressionService
 from mspy_vendi.domain.user.schemas import UserScheduleSchema
 
 
-@broker.task(task_name="export_sale_task")
-async def export_sale_task(
+@broker.task(task_name="export_impression_task")
+async def export_impression_task(
     *,
     user: UserScheduleSchema,
     schedule: ScheduleEnum,
     export_type: ExportTypeEnum,
     query_filter: GeographyFilter,
     context: Annotated[Context, TaskiqDepends()],
-    sale_service: Annotated[SaleService, TaskiqDepends()],
+    impression_service: Annotated[ImpressionService, TaskiqDepends()],
 ) -> None:
     """
     TaskIQ task to export sales data.
@@ -33,18 +33,18 @@ async def export_sale_task(
     :param export_type: ExportTypeEnum
     :param query_filter: GeographyFilter
     :param context: Taskiq Context
-    :param sale_service: SaleService
+    :param impression_service: ImpressionService
     """
     current_time: datetime = datetime.now()
 
-    query_filter: ExportSaleFilter = ExportSaleFilter(
+    query_filter: ExportImpressionFilter = ExportImpressionFilter(
         geography_id__in=query_filter.geography_id__in,
         date_from=current_time - DEFAULT_SCHEDULE_TIMEDELTA[schedule],
         date_to=current_time,
     )
 
     log.info(
-        "Start the Sale export task",
+        "Start the Impression export task",
         context=context.message.labels,
         export_type=export_type,
         query_filter=query_filter.model_dump_json(),
@@ -53,13 +53,13 @@ async def export_sale_task(
         user_id=user.id,
     )
 
-    await sale_service.export(
+    await impression_service.export(
         query_filter=query_filter,
         export_type=export_type,
         user=user,
         schedule=schedule,
         sync=False,
-        entity=ExportEntityTypeEnum.SALE,
+        entity=ExportEntityTypeEnum.IMPRESSION,
     )
 
     log.info(
