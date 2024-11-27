@@ -27,6 +27,7 @@ class UserBaseDetail(UserBase):
     status: StatusEnum
     role: RoleEnum
     permissions: list[PermissionEnum]
+    is_verified: bool
 
 
 class UserDetail(UserBaseDetail):
