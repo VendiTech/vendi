@@ -509,6 +509,14 @@ class SaleManager(CRUDManager):
         return await paginate(self.session, stmt)
 
     async def export_sales(self, query_filter: ExportSaleFilter) -> list[Sale]:
+        """
+        Export sales data. This method is used to export sales data in different formats.
+        It returns a list of sales objects based on the filter.
+
+        :param query_filter: Filter object.
+
+        :return: List of sales objects.
+        """
         stmt = (
             select(
                 label("Sale ID", self.sql_model.id),

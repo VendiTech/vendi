@@ -227,12 +227,27 @@ class UserService(CRUDService):
 
     @staticmethod
     async def check_task_existence(event_type: str) -> bool:
+        """
+        Check if the task exists in the task queue.
+
+        :param event_type: The event type to check.
+
+        :return: True if the task exists, False otherwise.
+        """
         tasks: list[ScheduledTask] = await redis_source.get_schedules()
 
         return any(task.labels.get("event_type") == event_type for task in tasks)
 
     @staticmethod
     async def get_existing_schedules(user_id: int) -> list[UserExistingSchedulesSchema]:
+        """
+        Get the existing schedules for the user.
+        Return the schedules that are related to the user.
+
+        :param user_id: The user ID to get the schedules for.
+
+        :return: The list of existing schedules for the user.
+        """
         user_tasks: list[ScheduledTask] = [
             task
             for task in await redis_source.get_schedules()
@@ -255,6 +270,15 @@ class UserService(CRUDService):
         query_filter: GeographyFilter,
         schedule: ScheduleEnum,
     ) -> None:
+        """
+        Schedule the sales export task for the user.
+        Before scheduling the task, we check if the user is verified and if the task already exists.
+
+        :param user: The user to schedule the task for.
+        :param export_type: The type of export to schedule.
+        :param query_filter: The filter to use for the export.
+        :param schedule: The schedule type to use for the export.
+        """
         user_event_type: str = f"user_{user.id}_sale_{export_type}_schedule_{schedule.value}_geography_{",".join(map(str, sorted(set(query_filter.geography_id__in or []))))}"
 
         if not user.is_verified:

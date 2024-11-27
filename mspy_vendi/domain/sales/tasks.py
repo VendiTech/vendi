@@ -23,6 +23,17 @@ async def export_sale_task(
     context: Annotated[Context, TaskiqDepends()],
     sale_service: Annotated[SaleService, TaskiqDepends()],
 ) -> None:
+    """
+    TaskIQ task to export sales data.
+    We use this task to export sales data based on the provided schedule.
+
+    :param user: UserScheduleSchema
+    :param schedule: ScheduleEnum
+    :param export_type: ExportTypeEnum
+    :param query_filter: GeographyFilter
+    :param context: Taskiq Context
+    :param sale_service: SaleService
+    """
     current_time: datetime = datetime.now()
 
     query_filter: ExportSaleFilter = ExportSaleFilter(

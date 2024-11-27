@@ -99,6 +99,16 @@ class SaleService(CRUDService):
         user: UserScheduleSchema,
         schedule: ScheduleEnum,
     ) -> None:
+        """
+        Send the sales report to the user.
+        Attach the report to the email and send it to the user.
+
+        :param query_filter: The filter to use for the export.
+        :param content: The content of the file to send.
+        :param file_name: The name of the file to send.
+        :param user: The user to send the report to.
+        :param schedule: The schedule type of the report.
+        """
         html_content: str = f"""
             <!DOCTYPE html>
             <html>
@@ -133,6 +143,21 @@ class SaleService(CRUDService):
         user: UserScheduleSchema | None = None,
         schedule: ScheduleEnum | None = None,
     ) -> StreamingResponse | None:
+        """
+        Export the sales data based on the provided filter and export type.
+
+        There are two ways to export the data, sync and async.
+            - sync: The data will be returned as a response.
+            - async: The data will be sent to the user's email.
+
+        :param query_filter: The filter to use for the export.
+        :param export_type: The type of export to use.
+        :param sync: Whether to export the data sync or async.
+        :param user: The user to send the report to.
+        :param schedule: The schedule type of the report.
+
+        :return: The StreamingResponse or None.
+        """
         sale_data: list[dict] = await self.manager.export_sales(query_filter)
 
         file_extension: str = DEFAULT_EXPORT_TYPES[export_type].get("file_extension")
@@ -166,8 +191,22 @@ class SaleService(CRUDService):
         )
 
     async def get_daily_sales_count_per_time_period(self, query_filter: SaleFilter) -> list[TimePeriodSalesCountSchema]:
+        """
+        Get the daily sales count per time period.
+
+        :param query_filter: The filter to use for the query.
+
+        :return: The list of TimePeriodSalesCountSchema.
+        """
         query_filter.date_from = query_filter.date_to = datetime.datetime.now()
         return await self.manager.get_sales_count_per_time_period(DailyTimePeriodEnum, query_filter)
 
     async def get_sales_by_venue_over_time(self, query_filter: SaleFilter) -> Page[VenueSalesQuantitySchema]:
+        """
+        Get the sales by venue over time.
+
+        :param query_filter: The filter to use for the query.
+
+        :return: The Page of VenueSalesQuantitySchema.
+        """
         return await self.manager.get_sales_by_venue_over_time(query_filter)
