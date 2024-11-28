@@ -77,7 +77,7 @@ def get_auth_router(
             # Get the token from the set-cookie header. Split the header by the semicolon and find the token.
             for header in response.headers.get("set-cookie").split(";"):
                 if config.auth_cookie_name in header:
-                    _, __, token = header.partition("=")
+                    *_, token = header.partition("=")
                     break
 
             # Create the new response with the token.
