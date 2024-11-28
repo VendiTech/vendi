@@ -12,6 +12,7 @@ from mspy_vendi.domain.geographies.models import Geography
 from mspy_vendi.domain.impressions.filters import ImpressionFilter
 from mspy_vendi.domain.impressions.schemas import (
     AdvertPlayoutsBaseSchema,
+    AverageExposureSchema,
     AverageImpressionsSchema,
     ExposurePerRangeSchema,
     GeographyDecimalImpressionTimeFrameSchema,
@@ -253,3 +254,20 @@ class ImpressionManager(CRUDManager):
         row = result.one()
 
         return AdvertPlayoutsBaseSchema(advert_playouts=row.advert_playouts)
+
+    async def get_average_exposure_per_range(self, query_filter: ImpressionFilter) -> AverageExposureSchema:
+        """
+        Get an average time of exposure.
+
+        :param query_filter: Filter object.
+        :return: Average time of exposure (seconds).
+        """
+        stmt_avg_exposure = label("seconds_exposure", func.avg(self.sql_model.temperature))
+
+        stmt = select(stmt_avg_exposure)
+        stmt = query_filter.filter(stmt)
+
+        result = await self.session.execute(stmt)
+        row = result.one()
+
+        return AverageExposureSchema(seconds_exposure=row.seconds_exposure)

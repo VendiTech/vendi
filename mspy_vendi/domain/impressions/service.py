@@ -5,6 +5,7 @@ from mspy_vendi.domain.impressions.filters import ImpressionFilter
 from mspy_vendi.domain.impressions.manager import ImpressionManager
 from mspy_vendi.domain.impressions.schemas import (
     AdvertPlayoutsBaseSchema,
+    AverageExposureSchema,
     AverageImpressionsSchema,
     ExposurePerRangeSchema,
     GeographyDecimalImpressionTimeFrameSchema,
@@ -39,3 +40,6 @@ class ImpressionsService(CRUDService):
 
     async def get_adverts_playout_per_range(self, query_filter: ImpressionFilter) -> AdvertPlayoutsBaseSchema:
         return await self.manager.get_adverts_playout_per_range(query_filter)
+
+    async def get_average_exposure_per_range(self, query_filter: ImpressionFilter) -> AverageExposureSchema:
+        return await self.manager.get_average_exposure_per_range(query_filter)

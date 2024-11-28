@@ -12,6 +12,7 @@ from mspy_vendi.deps import get_db_session
 from mspy_vendi.domain.impressions.filters import ImpressionFilter
 from mspy_vendi.domain.impressions.schemas import (
     AdvertPlayoutsBaseSchema,
+    AverageExposureSchema,
     AverageImpressionsSchema,
     ExposurePerRangeSchema,
     GeographyDecimalImpressionTimeFrameSchema,
@@ -72,6 +73,14 @@ async def get__adverts_playout_per_range(
     impression_service: Annotated[ImpressionsService, Depends()],
 ) -> AdvertPlayoutsBaseSchema:
     return await impression_service.get_adverts_playout_per_range(query_filter)
+
+
+@router.get("/average-exposure-per-range", response_model=AverageExposureSchema)
+async def get__average_exposure_per_range(
+    query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
+    impression_service: Annotated[ImpressionsService, Depends()],
+) -> AverageExposureSchema:
+    return await impression_service.get_average_exposure_per_range(query_filter)
 
 
 class ImpressionAPI(CRUDApi):

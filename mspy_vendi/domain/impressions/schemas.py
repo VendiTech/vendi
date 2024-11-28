@@ -30,6 +30,10 @@ class ImpressionCountBaseSchema(BaseSchema):
     impressions: NonNegativeInt
 
 
+class DifferencePercentageBaseSchema(BaseSchema):
+    difference: DecimalFloat
+
+
 class TimeFrameImpressionsSchema(ImpressionCountBaseSchema):
     time_frame: datetime
 
@@ -49,6 +53,10 @@ class GeographyDecimalImpressionTimeFrameSchema(BaseSchema):
 
 class ExposureBaseSchema(BaseSchema):
     seconds_exposure: NonNegativeInt
+
+
+class AverageExposureSchema(BaseSchema):
+    seconds_exposure: DecimalFloat
 
 
 class AdvertPlayoutsBaseSchema(BaseSchema):
