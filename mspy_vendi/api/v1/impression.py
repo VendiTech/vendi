@@ -26,12 +26,13 @@ from mspy_vendi.domain.impressions.service import ImpressionsService
 router = APIRouter(prefix="/impression", default_response_class=ORJSONResponse, tags=[ApiTagEnum.IMPRESSIONS])
 
 
-@router.get("/impressions-per-week", response_model=Page[TimeFrameImpressionsSchema])
-async def get__impressions_per_week(
+@router.get("/impressions-per-range", response_model=Page[TimeFrameImpressionsSchema])
+async def get__impressions_per_range(
+    time_frame: DateRangeEnum,
     query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
     impression_service: Annotated[ImpressionsService, Depends()],
 ) -> Page[TimeFrameImpressionsSchema]:
-    return await impression_service.get_impressions_per_week(query_filter)
+    return await impression_service.get_impressions_per_range(time_frame, query_filter)
 
 
 @router.get("/impressions-per-geography", response_model=Page[GeographyImpressionsCountSchema])
@@ -51,36 +52,36 @@ async def get__average_impressions_per_geography(
     return await impression_service.get_average_impressions_per_geography(time_frame, query_filter)
 
 
-@router.get("/exposure-per-range", response_model=Page[ExposurePerRangeSchema])
-async def get__exposure_per_range(
+@router.get("/exposure", response_model=Page[ExposurePerRangeSchema])
+async def get__exposure(
     query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
     impression_service: Annotated[ImpressionsService, Depends()],
 ) -> Page[ExposurePerRangeSchema]:
-    return await impression_service.get_exposure_per_range(query_filter)
+    return await impression_service.get_exposure(query_filter)
 
 
-@router.get("/average-impressions-per-range", response_model=AverageImpressionsSchema)
-async def get__average_impressions_per_range(
+@router.get("/average-impressions", response_model=AverageImpressionsSchema)
+async def get__average_impressions(
     query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
     impression_service: Annotated[ImpressionsService, Depends()],
 ) -> AverageImpressionsSchema:
-    return await impression_service.get_average_impressions_count_per_range(query_filter)
+    return await impression_service.get_average_impressions_count(query_filter)
 
 
-@router.get("/adverts-playout-per-range", response_model=AdvertPlayoutsBaseSchema)
-async def get__adverts_playout_per_range(
+@router.get("/adverts-playout", response_model=AdvertPlayoutsBaseSchema)
+async def get__adverts_playout(
     query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
     impression_service: Annotated[ImpressionsService, Depends()],
 ) -> AdvertPlayoutsBaseSchema:
-    return await impression_service.get_adverts_playout_per_range(query_filter)
+    return await impression_service.get_adverts_playout(query_filter)
 
 
-@router.get("/average-exposure-per-range", response_model=AverageExposureSchema)
-async def get__average_exposure_per_range(
+@router.get("/average-exposure", response_model=AverageExposureSchema)
+async def get__average_exposure(
     query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
     impression_service: Annotated[ImpressionsService, Depends()],
 ) -> AverageExposureSchema:
-    return await impression_service.get_average_exposure_per_range(query_filter)
+    return await impression_service.get_average_exposure(query_filter)
 
 
 class ImpressionAPI(CRUDApi):

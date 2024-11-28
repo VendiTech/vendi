@@ -12,8 +12,8 @@ from mspy_vendi.domain.geographies.schemas import GeographyDetailSchema
 class ImpressionBaseSchema(BaseSchema):
     date: date
     total_impressions: Decimal
-    temperature: int
-    rainfall: int
+    seconds_exposure: int
+    advert_playouts: int
     source_system: str = DEFAULT_SOURCE_SYSTEM
     source_system_id: str
     device_number: str

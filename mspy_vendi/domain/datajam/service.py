@@ -166,8 +166,8 @@ class DataJamService:
                             device_number=impression.device,
                             date=(full_date := self.get_full_date_in_range(start_date, end_date, impression.date)),
                             total_impressions=impression.total_impressions,
-                            temperature=impression.temperature,
-                            rainfall=impression.rainfall,
+                            seconds_exposure=impression.seconds_exposure,
+                            advert_playouts=impression.advert_playouts,
                             source_system_id=f"{impression.device}_{full_date}",
                         )
                         for impression in data.device_info

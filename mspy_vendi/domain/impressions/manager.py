@@ -77,7 +77,7 @@ class ImpressionManager(CRUDManager):
             ).label("time_frame")
         ).cte()
 
-    async def get_impressions_per_week(
+    async def get_impressions_per_range(
         self, time_frame: DateRangeEnum, query_filter: ImpressionFilter
     ) -> Page[TimeFrameImpressionsSchema]:
         """
@@ -200,14 +200,14 @@ class ImpressionManager(CRUDManager):
 
         return await paginate(self.session, final_stmt, unique=False)
 
-    async def get_exposure_per_range(self, query_filter: ImpressionFilter) -> Page[ExposurePerRangeSchema]:
+    async def get_exposure(self, query_filter: ImpressionFilter) -> Page[ExposurePerRangeSchema]:
         """
         Get an exposure time and its corresponding date.
 
         :param query_filter: Filter object.
         :return: Paginated list with an exposure time (seconds) and a date.
         """
-        stmt_second_exposure = label("seconds_exposure", func.sum(self.sql_model.temperature))
+        stmt_second_exposure = label("seconds_exposure", func.sum(self.sql_model.seconds_exposure))
         stmt_time_frame = label("time_frame", self.sql_model.date)
 
         stmt = select(stmt_second_exposure, stmt_time_frame).group_by(stmt_time_frame).order_by(stmt_time_frame)
@@ -216,7 +216,7 @@ class ImpressionManager(CRUDManager):
 
         return await paginate(self.session, stmt, unique=False)
 
-    async def get_average_impressions_count_per_range(self, query_filter: ImpressionFilter) -> AverageImpressionsSchema:
+    async def get_average_impressions_count(self, query_filter: ImpressionFilter) -> AverageImpressionsSchema:
         """
         Get average count of impressions per time range.
 
@@ -238,14 +238,14 @@ class ImpressionManager(CRUDManager):
 
         return AverageImpressionsSchema(avg_impressions=row.avg_impressions, total_impressions=row.total_impressions)
 
-    async def get_adverts_playout_per_range(self, query_filter: ImpressionFilter) -> AdvertPlayoutsBaseSchema:
+    async def get_adverts_playout(self, query_filter: ImpressionFilter) -> AdvertPlayoutsBaseSchema:
         """
-        Get total time of advert playouts (rainfall).
+        Get total time of advert playouts.
 
         :param query_filter: Filter object.
         :return: Total time of advert playouts (seconds).
         """
-        stmt_sum_advert_playouts = label("advert_playouts", func.sum(self.sql_model.rainfall))
+        stmt_sum_advert_playouts = label("advert_playouts", func.sum(self.sql_model.advert_playouts))
 
         stmt = select(stmt_sum_advert_playouts)
         stmt = query_filter.filter(stmt)
@@ -255,14 +255,14 @@ class ImpressionManager(CRUDManager):
 
         return AdvertPlayoutsBaseSchema(advert_playouts=row.advert_playouts)
 
-    async def get_average_exposure_per_range(self, query_filter: ImpressionFilter) -> AverageExposureSchema:
+    async def get_average_exposure(self, query_filter: ImpressionFilter) -> AverageExposureSchema:
         """
         Get an average time of exposure.
 
         :param query_filter: Filter object.
         :return: Average time of exposure (seconds).
         """
-        stmt_avg_exposure = label("seconds_exposure", func.avg(self.sql_model.temperature))
+        stmt_avg_exposure = label("seconds_exposure", func.avg(self.sql_model.seconds_exposure))
 
         stmt = select(stmt_avg_exposure)
         stmt = query_filter.filter(stmt)
