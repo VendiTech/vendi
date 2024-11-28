@@ -45,3 +45,20 @@ class GeographyDecimalImpressionsCountSchema(GeographyImpressionsCountSchema):
 class GeographyDecimalImpressionTimeFrameSchema(BaseSchema):
     time_frame: datetime
     geographies: list[GeographyDecimalImpressionsCountSchema]
+
+
+class ExposureBaseSchema(BaseSchema):
+    seconds_exposure: NonNegativeInt
+
+
+class AdvertPlayoutsBaseSchema(BaseSchema):
+    advert_playouts: NonNegativeInt
+
+
+class ExposurePerRangeSchema(ExposureBaseSchema):
+    time_frame: datetime
+
+
+class AverageImpressionsSchema(BaseSchema):
+    avg_impressions: DecimalFloat
+    total_impressions: NonNegativeInt
