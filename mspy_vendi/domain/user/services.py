@@ -102,6 +102,7 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
                 event_type=EventTypeEnum.USER_REGISTER,
                 event_context={
                     "firstname": user.firstname,
+                    "lastname": user.lastname,
                     "email": user.email,
                     "permissions": user.permissions,
                     "role": user.role,
@@ -116,6 +117,7 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
         previous_user_state: User = await self.user_service.get(user_id)
         previous_user_state_dict: dict = {
             "firstname": previous_user_state.firstname,
+            "lastname": previous_user_state.lastname,
             "email": previous_user_state.email,
             "permissions": previous_user_state.permissions,
             "role": previous_user_state.role,
@@ -137,6 +139,7 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
                     "previous_user_state": previous_user_state_dict,
                     "new_user_state": {
                         "firstname": user.firstname,
+                        "lastname": user.lastname,
                         "email": user.email,
                         "permissions": user.permissions,
                         "role": user.role,
