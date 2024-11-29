@@ -12,8 +12,8 @@ from mspy_vendi.domain.geographies.schemas import GeographyDetailSchema
 class ImpressionBaseSchema(BaseSchema):
     date: date
     total_impressions: Decimal
-    temperature: int
-    rainfall: int
+    seconds_exposure: int
+    advert_playouts: int
     source_system: str = DEFAULT_SOURCE_SYSTEM
     source_system_id: str
     device_number: str
@@ -28,6 +28,10 @@ class ImpressionDetailSchema(ImpressionBaseSchema):
 
 class ImpressionCountBaseSchema(BaseSchema):
     impressions: NonNegativeInt
+
+
+class DifferencePercentageBaseSchema(BaseSchema):
+    difference: DecimalFloat
 
 
 class TimeFrameImpressionsSchema(ImpressionCountBaseSchema):
@@ -45,3 +49,24 @@ class GeographyDecimalImpressionsCountSchema(GeographyImpressionsCountSchema):
 class GeographyDecimalImpressionTimeFrameSchema(BaseSchema):
     time_frame: datetime
     geographies: list[GeographyDecimalImpressionsCountSchema]
+
+
+class ExposureBaseSchema(BaseSchema):
+    seconds_exposure: NonNegativeInt
+
+
+class AverageExposureSchema(BaseSchema):
+    seconds_exposure: DecimalFloat
+
+
+class AdvertPlayoutsBaseSchema(BaseSchema):
+    advert_playouts: NonNegativeInt
+
+
+class ExposurePerRangeSchema(ExposureBaseSchema):
+    time_frame: datetime
+
+
+class AverageImpressionsSchema(BaseSchema):
+    avg_impressions: DecimalFloat
+    total_impressions: NonNegativeInt

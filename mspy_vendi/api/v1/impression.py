@@ -13,6 +13,10 @@ from mspy_vendi.deps import get_db_session
 from mspy_vendi.domain.auth import get_current_user
 from mspy_vendi.domain.impressions.filters import ExportImpressionFilter, GeographyFilter, ImpressionFilter
 from mspy_vendi.domain.impressions.schemas import (
+    AdvertPlayoutsBaseSchema,
+    AverageExposureSchema,
+    AverageImpressionsSchema,
+    ExposurePerRangeSchema,
     GeographyDecimalImpressionTimeFrameSchema,
     GeographyImpressionsCountSchema,
     ImpressionCreateSchema,
@@ -27,12 +31,13 @@ from mspy_vendi.domain.user.services import UserService
 router = APIRouter(prefix="/impression", default_response_class=ORJSONResponse, tags=[ApiTagEnum.IMPRESSIONS])
 
 
-@router.get("/impressions-per-week", response_model=Page[TimeFrameImpressionsSchema])
-async def get__impressions_per_week(
+@router.get("/impressions-per-range", response_model=Page[TimeFrameImpressionsSchema])
+async def get__impressions_per_range(
+    time_frame: DateRangeEnum,
     query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
     impression_service: Annotated[ImpressionService, Depends()],
 ) -> Page[TimeFrameImpressionsSchema]:
-    return await impression_service.get_impressions_per_week(query_filter)
+    return await impression_service.get_impressions_per_range(time_frame, query_filter)
 
 
 @router.get("/impressions-per-geography", response_model=Page[GeographyImpressionsCountSchema])
@@ -50,6 +55,38 @@ async def get__average_impressions_per_geography(
     impression_service: Annotated[ImpressionService, Depends()],
 ) -> Page[GeographyDecimalImpressionTimeFrameSchema]:
     return await impression_service.get_average_impressions_per_geography(time_frame, query_filter)
+
+
+@router.get("/exposure", response_model=Page[ExposurePerRangeSchema])
+async def get__exposure(
+    query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
+    impression_service: Annotated[ImpressionService, Depends()],
+) -> Page[ExposurePerRangeSchema]:
+    return await impression_service.get_exposure(query_filter)
+
+
+@router.get("/average-impressions", response_model=AverageImpressionsSchema)
+async def get__average_impressions(
+    query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
+    impression_service: Annotated[ImpressionService, Depends()],
+) -> AverageImpressionsSchema:
+    return await impression_service.get_average_impressions_count(query_filter)
+
+
+@router.get("/adverts-playout", response_model=AdvertPlayoutsBaseSchema)
+async def get__adverts_playout(
+    query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
+    impression_service: Annotated[ImpressionService, Depends()],
+) -> AdvertPlayoutsBaseSchema:
+    return await impression_service.get_adverts_playout(query_filter)
+
+
+@router.get("/average-exposure", response_model=AverageExposureSchema)
+async def get__average_exposure(
+    query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
+    impression_service: Annotated[ImpressionService, Depends()],
+) -> AverageExposureSchema:
+    return await impression_service.get_average_exposure(query_filter)
 
 
 @router.post("/export", response_class=StreamingResponse)

@@ -15,8 +15,8 @@ class ImpressionFilter(DateRangeFilter):
     id__in: list[PositiveInt] | None = None
 
     total_impressions: NonNegativeInt | None = None
-    temperature: int | None = None
-    rainfall: int | None = None
+    seconds_exposure: int | None = None
+    advert_playouts: int | None = None
     source_system: str | None = None
 
     order_by: list[str] | None = ["-id"]

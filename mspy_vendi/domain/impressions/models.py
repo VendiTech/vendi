@@ -1,7 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import DECIMAL, Index, String, UniqueConstraint
+from sqlalchemy import DECIMAL, Index, String, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from mspy_vendi.db.base import Base, CommonMixin
@@ -13,8 +13,8 @@ class Impression(CommonMixin, Base):
     total_impressions: Mapped[Decimal] = mapped_column(
         DECIMAL(precision=10, scale=1), comment="Total number of impressions"
     )
-    temperature: Mapped[int]
-    rainfall: Mapped[int]
+    seconds_exposure: Mapped[int] = mapped_column(server_default=text("0"))
+    advert_playouts: Mapped[int] = mapped_column(server_default=text("0"))
     source_system: Mapped[str] = mapped_column(String(50), comment="Name of the source system")
     source_system_id: Mapped[str] = mapped_column(
         String(),

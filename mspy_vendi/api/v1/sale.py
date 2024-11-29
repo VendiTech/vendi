@@ -97,10 +97,11 @@ async def get__sales_revenue_per_time_period(
 
 @router.get("/units-sold", response_model=Page[UnitsTimeFrameSchema])
 async def get__units_sold(
+    time_frame: DateRangeEnum,
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
 ) -> Page[UnitsTimeFrameSchema]:
-    return await sale_service.get_units_sold(query_filter)
+    return await sale_service.get_units_sold(time_frame, query_filter)
 
 
 @router.get("/quantity-per-geography", response_model=Page[GeographyDecimalQuantitySchema])
