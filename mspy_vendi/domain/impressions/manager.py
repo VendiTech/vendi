@@ -10,7 +10,7 @@ from mspy_vendi.core.manager import CRUDManager
 from mspy_vendi.core.pagination import Page
 from mspy_vendi.db import Impression
 from mspy_vendi.domain.geographies.models import Geography
-from mspy_vendi.domain.impressions.filters import ImpressionFilter
+from mspy_vendi.domain.impressions.filters import ExportImpressionFilter, ImpressionFilter
 from mspy_vendi.domain.impressions.schemas import (
     AdvertPlayoutsBaseSchema,
     AverageExposureSchema,
