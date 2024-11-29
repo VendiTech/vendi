@@ -174,6 +174,41 @@ class ImpressionManager(CRUDManager):
 
         return await paginate(self.session, stmt, unique=False)
 
+    async def export(self, query_filter: ExportImpressionFilter) -> list[Impression]:
+        """
+        Export impression data. This method is used to export sales data in different formats.
+        It returns a list of sales objects based on the filter.
+
+        :param query_filter: Filter object.
+
+        :return: List of sales objects.
+        """
+        stmt = (
+            select(
+                label("Impression ID", self.sql_model.id),
+                label("Device Number", self.sql_model.device_number),
+                label("Venue name", self.sql_model.source_system),
+                label("Geography", Geography.name),
+                label("Total Impressions", self.sql_model.total_impressions),
+                label("Machine ID", Machine.id),
+                label("Machine Name", Machine.name),
+                label("Date", self.sql_model.date),
+            )
+            .select_from(self.sql_model)
+            .outerjoin(MachineImpression, MachineImpression.impression_device_number == self.sql_model.device_number)
+            .outerjoin(Machine, Machine.id == MachineImpression.machine_id)
+            .outerjoin(Geography, Geography.id == Machine.geography_id)
+            .order_by(self.sql_model.date)
+        )
+
+        if query_filter.geography_id__in:
+            stmt = stmt.where(Geography.id.in_(query_filter.geography_id__in or []))
+            setattr(query_filter, "geography_id__in", None)
+
+        stmt = query_filter.filter(stmt)
+
+        return (await self.session.execute(stmt)).mappings().all()  # type: ignore
+
     async def get_exposure(self, query_filter: ImpressionFilter) -> Page[ExposurePerRangeSchema]:
         """
         Get an exposure time and its corresponding date.
