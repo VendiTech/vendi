@@ -358,21 +358,32 @@ class UserService(CRUDService):
             for user_task in user_tasks
         ]
 
-    async def delete_existing_schedule(self, user_id: int, entity_type: ExportEntityTypeEnum, schedule_id: str):
+    async def delete_existing_schedule(self, user: User, entity_type: ExportEntityTypeEnum, schedule_id: str):
         """
         Delete the existing schedule for the user with the provided task_id.
         If the task_id doesn't exist for the user, raise an error.
 
-        :param user_id: The user ID to delete the schedule for.
+        :param user: The User to delete the schedule for.
         :param entity_type: The entity type to delete the schedule for.
         :param schedule_id: The task ID to delete.
         """
         if schedule_id not in [
             user_task.task_id
-            for user_task in await self.get_existing_schedules(user_id=user_id, entity_type=entity_type)
+            for user_task in await self.get_existing_schedules(user_id=user.id, entity_type=entity_type)
         ]:
             raise BadRequestError(f"Provided schedule_id={schedule_id} doesn't exist for the user.")
 
+        await ActivityLogManager(self.db_session).create(
+            ActivityLogBaseSchema(
+                user_id=user.id,
+                event_type=EventTypeEnum.USER_SCHEDULE_DELETION,
+                event_context={
+                    "firstname": user.firstname,
+                    "email": user.email,
+                    "entity_type": entity_type,
+                },
+            )
+        )
         await redis_source.delete_schedule(schedule_id)
 
     async def schedule_export(
@@ -410,6 +421,19 @@ class UserService(CRUDService):
             log.warning("Task doesn't exist.", entity_type=entity_type)
             raise BadRequestError(f"Task for {entity_type} doesn't exist.")
 
+        await ActivityLogManager(self.db_session).create(
+            ActivityLogBaseSchema(
+                user_id=user.id,
+                event_type=EventTypeEnum.USER_SCHEDULE_CREATION,
+                event_context={
+                    "firstname": user.firstname,
+                    "email": user.email,
+                    "entity_type": entity_type,
+                    "schedule": schedule,
+                    "export_type": export_type,
+                },
+            )
+        )
         await (
             entity_task.kicker()
             .with_labels(event_type=user_event_type)
