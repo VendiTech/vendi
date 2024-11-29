@@ -22,7 +22,7 @@ class ActivityLog(CommonMixin, Base):
         ),
     )
     event_type: Mapped[Enum] = mapped_column(event_type_enum)
-    event_context: Mapped[dict[str, Any]]
+    event_context: Mapped[dict[str, Any]] = mapped_column(default={})
 
     user: Mapped["User"] = relationship(back_populates="activity_logs", lazy="joined", uselist=False)
 

@@ -31,7 +31,7 @@ def upgrade() -> None:
                     "user_email_verified",
                     "user_forgot_password",
                     "user_reset_password",
-                    "user_deactivated",
+                    "user_deleted",
                     "user_edited",
                     "user_schedule_creation",
                     "user_schedule_deletion",
@@ -39,7 +39,12 @@ def upgrade() -> None:
                 ),
                 nullable=False,
             ),
-            sa.Column("event_context", postgresql.JSONB(none_as_null=True, astext_type=sa.Text()), nullable=False),
+            sa.Column(
+                "event_context",
+                postgresql.JSONB(none_as_null=True, astext_type=sa.Text()),
+                nullable=False,
+                server_default=sa.text("'{}'::jsonb"),
+            ),
             sa.Column("id", sa.BigInteger(), sa.Identity(always=False, start=1, cycle=True), nullable=False),
             sa.Column(
                 "created_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False

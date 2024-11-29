@@ -8,6 +8,10 @@ from fastapi_users.schemas import BaseUserCreate
 from mspy_vendi.core.constants import DEFAULT_SCHEDULE_MAPPING, MESSAGE_FOOTER, CSS_STYLE
 from mspy_vendi.core.enums.date_range import ScheduleEnum
 from mspy_vendi.core.enums.export import ExportEntityTypeEnum
+from mspy_vendi.domain.activity_log.enums import EventTypeEnum
+from mspy_vendi.domain.activity_log.manager import ActivityLogManager
+from mspy_vendi.domain.activity_log.models import ActivityLog
+from mspy_vendi.domain.activity_log.schemas import ActivityLogBaseSchema
 
 from mspy_vendi.domain.sales.filters import GeographyFilter
 from taskiq import ScheduledTask
@@ -78,6 +82,13 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
         created_user = await UserManager(self.user_db.session).create(user_dict, is_unique=True)  # type: ignore
 
         await self.request_verify(created_user, request)
+        await ActivityLogManager(self.user_db.session).create(  # type: ignore
+            ActivityLogBaseSchema(
+                user_id=created_user.id,
+                event_type=EventTypeEnum.USER_REGISTER,
+                event_context={"firstname": created_user.firstname, "email": created_user.email},
+            )
+        )
 
         return created_user
 
@@ -114,7 +125,56 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
         )
         log.info("Sent verify email message", info=get_described_user_info(user, request=request))
 
+    async def on_after_verify(self, user: models.UP, request: Optional[Request] = None) -> None:
+        await ActivityLogManager(self.user_db.session).create(  # type: ignore
+            ActivityLogBaseSchema(
+                user_id=user.id,
+                event_type=EventTypeEnum.USER_EMAIL_VERIFIED,
+                event_context={"firstname": user.firstname, "email": user.email},
+            )
+        )
+
+        if config.debug:
+            return None
+
+        sign_in_link: str = f"https://{config.frontend_domain}/{FrontendLinkEnum.LOG_IN}"
+
+        html_content: str = f"""
+            <!DOCTYPE html>
+            <html>
+            {CSS_STYLE}
+            <body>
+                <div class="email-content">
+                    <p class="greeting">Hi {user.firstname.capitalize()},</p>
+                    <p class="message">
+                        Your email has been successfully verified.
+                        You can now log in to Vendi Platform using your created password.
+                    </p>
+                    <div class="container-link">
+                        <a class="link" href="{sign_in_link}">Login Link</a>
+                    </div>
+                    {MESSAGE_FOOTER}
+                </div>
+            </body>
+            </html>
+        """
+
+        await self.email_service.send_message(
+            receivers=[user.email],
+            subject="Email Verification Successfully Completed",
+            html=html_content,
+        )
+        log.info("Sent verify email message", info=get_described_user_info(user, request=request))
+
     async def on_after_forgot_password(self, user: User, token: str, request: Request | None = None) -> None:
+        await ActivityLogManager(self.user_db.session).create(  # type: ignore
+            ActivityLogBaseSchema(
+                user_id=user.id,
+                event_type=EventTypeEnum.USER_FORGOT_PASSWORD,
+                event_context={"firstname": user.firstname, "email": user.email},
+            )
+        )
+
         if config.debug:
             return None
 
@@ -148,6 +208,14 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
         log.info("Sent forgot password email message", info=get_described_user_info(user, request=request))
 
     async def on_after_reset_password(self, user: User, request: Request | None = None) -> None:
+        await ActivityLogManager(self.user_db.session).create(  # type: ignore
+            ActivityLogBaseSchema(
+                user_id=user.id,
+                event_type=EventTypeEnum.USER_RESET_PASSWORD,
+                event_context={"firstname": user.firstname, "email": user.email},
+            )
+        )
+
         if config.debug:
             return None
 
@@ -209,6 +277,27 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
 class UserService(CRUDService):
     manager_class = UserManager
     filter_class = UserFilter
+
+    async def delete(self, obj_id: int, *, autocommit: bool = True, **kwargs: Any) -> None:
+        """
+        Deletes an entity from the database.
+
+        :param obj_id: Object ID.
+        :param autocommit: If True, commits changes to a database, if False - flushes them.
+        :param kwargs: Additional keyword arguments.
+
+        :return: None.
+        """
+        user: User = await self.get(obj_id=obj_id)
+
+        await ActivityLogManager(self.db_session).create(
+            ActivityLogBaseSchema(
+                user_id=obj_id,
+                event_type=EventTypeEnum.USER_DELETED,
+                event_context={"firstname": user.firstname, "email": user.email},
+            )
+        )
+        await super().delete(obj_id=obj_id, autocommit=autocommit, **kwargs)
 
     async def update(
         self, obj_id: int, obj: UpdateSchema, *, autocommit: bool = True, raise_error: bool = True, **kwargs: Any
