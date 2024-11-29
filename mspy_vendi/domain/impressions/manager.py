@@ -11,6 +11,10 @@ from mspy_vendi.db import Impression
 from mspy_vendi.domain.geographies.models import Geography
 from mspy_vendi.domain.impressions.filters import ImpressionFilter
 from mspy_vendi.domain.impressions.schemas import (
+    AdvertPlayoutsBaseSchema,
+    AverageExposureSchema,
+    AverageImpressionsSchema,
+    ExposurePerRangeSchema,
     GeographyDecimalImpressionTimeFrameSchema,
     GeographyImpressionsCountSchema,
     ImpressionCreateSchema,
@@ -73,7 +77,7 @@ class ImpressionManager(CRUDManager):
             ).label("time_frame")
         ).cte()
 
-    async def get_impressions_per_week(
+    async def get_impressions_per_range(
         self, time_frame: DateRangeEnum, query_filter: ImpressionFilter
     ) -> Page[TimeFrameImpressionsSchema]:
         """
@@ -195,3 +199,75 @@ class ImpressionManager(CRUDManager):
         )
 
         return await paginate(self.session, final_stmt, unique=False)
+
+    async def get_exposure(self, query_filter: ImpressionFilter) -> Page[ExposurePerRangeSchema]:
+        """
+        Get an exposure time and its corresponding date.
+
+        :param query_filter: Filter object.
+        :return: Paginated list with an exposure time (seconds) and a date.
+        """
+        stmt_second_exposure = label("seconds_exposure", func.sum(self.sql_model.seconds_exposure))
+        stmt_time_frame = label("time_frame", self.sql_model.date)
+
+        stmt = select(stmt_second_exposure, stmt_time_frame).group_by(stmt_time_frame).order_by(stmt_time_frame)
+
+        stmt = query_filter.filter(stmt)
+
+        return await paginate(self.session, stmt, unique=False)
+
+    async def get_average_impressions_count(self, query_filter: ImpressionFilter) -> AverageImpressionsSchema:
+        """
+        Get average count of impressions per time range.
+
+        :param query_filter: Filter object.
+        :return: Average count of impressions and count of total impression for all time.
+        """
+        stmt_avg_impressions = label("avg_impressions", func.avg(self.sql_model.total_impressions))
+        stmt_total_impressions = label("total_impressions", func.sum(self.sql_model.total_impressions))
+
+        stmt = select(stmt_avg_impressions)
+
+        stmt = query_filter.filter(stmt)
+        stmt = stmt.subquery()
+
+        final_stmt = select(stmt.c.avg_impressions, stmt_total_impressions).group_by(stmt.c.avg_impressions)
+
+        result = await self.session.execute(final_stmt)
+        row = result.one()
+
+        return AverageImpressionsSchema(avg_impressions=row.avg_impressions, total_impressions=row.total_impressions)
+
+    async def get_adverts_playout(self, query_filter: ImpressionFilter) -> AdvertPlayoutsBaseSchema:
+        """
+        Get total time of advert playouts.
+
+        :param query_filter: Filter object.
+        :return: Total time of advert playouts (seconds).
+        """
+        stmt_sum_advert_playouts = label("advert_playouts", func.sum(self.sql_model.advert_playouts))
+
+        stmt = select(stmt_sum_advert_playouts)
+        stmt = query_filter.filter(stmt)
+
+        result = await self.session.execute(stmt)
+        row = result.one()
+
+        return AdvertPlayoutsBaseSchema(advert_playouts=row.advert_playouts)
+
+    async def get_average_exposure(self, query_filter: ImpressionFilter) -> AverageExposureSchema:
+        """
+        Get an average time of exposure.
+
+        :param query_filter: Filter object.
+        :return: Average time of exposure (seconds).
+        """
+        stmt_avg_exposure = label("seconds_exposure", func.avg(self.sql_model.seconds_exposure))
+
+        stmt = select(stmt_avg_exposure)
+        stmt = query_filter.filter(stmt)
+
+        result = await self.session.execute(stmt)
+        row = result.one()
+
+        return AverageExposureSchema(seconds_exposure=row.seconds_exposure)

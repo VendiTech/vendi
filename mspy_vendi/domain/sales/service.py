@@ -82,8 +82,7 @@ class SaleService(CRUDService):
     async def get_sales_revenue_per_time_period(self, query_filter: SaleFilter) -> list[TimePeriodSalesRevenueSchema]:
         return await self.manager.get_sales_revenue_per_time_period(TimePeriodEnum, query_filter)
 
-    async def get_units_sold(self, query_filter: SaleFilter) -> Page[UnitsTimeFrameSchema]:
-        time_frame = DateRangeEnum.MONTH
+    async def get_units_sold(self, time_frame: DateRangeEnum, query_filter: SaleFilter) -> Page[UnitsTimeFrameSchema]:
         return await self.manager.get_units_sold(time_frame, query_filter)
 
     async def get_sales_quantity_per_geography(self, query_filter: SaleFilter) -> Page[GeographyDecimalQuantitySchema]:

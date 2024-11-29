@@ -96,10 +96,11 @@ async def get__sales_revenue_per_time_period(
 
 @router.get("/units-sold", response_model=Page[UnitsTimeFrameSchema])
 async def get__units_sold(
+    time_frame: DateRangeEnum,
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
 ) -> Page[UnitsTimeFrameSchema]:
-    return await sale_service.get_units_sold(query_filter)
+    return await sale_service.get_units_sold(time_frame, query_filter)
 
 
 @router.get("/quantity-per-geography", response_model=Page[GeographyDecimalQuantitySchema])
@@ -126,6 +127,30 @@ async def get__frequency_of_sales(
     return await sale_service.get_daily_sales_count_per_time_period(query_filter)
 
 
+@router.get("/sales-quantity-by-venue", response_model=Page[VenueSalesQuantitySchema])
+async def get__sales_quantity_by_venue(
+    query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
+    sale_service: Annotated[SaleService, Depends()],
+) -> Page[VenueSalesQuantitySchema]:
+    return await sale_service.get_sales_by_venue_over_time(query_filter)
+
+
+@router.get("/sales-quantity-by-category", response_model=Page[CategoryProductQuantityDateSchema])
+async def get__sales_quantity_by_category(
+    query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
+    sale_service: Annotated[SaleService, Depends()],
+) -> Page[CategoryProductQuantityDateSchema]:
+    return await sale_service.get_sales_quantity_by_category(query_filter)
+
+
+@router.get("/schedule/view", tags=[ApiTagEnum.USER])
+async def get__existing_schedules(
+    user: Annotated[User, Depends(get_current_user())],
+    service: Annotated[UserService, Depends()],
+) -> list[UserExistingSchedulesSchema]:
+    return await service.get_existing_schedules(user_id=user.id)
+
+
 @router.post("/export", response_class=StreamingResponse)
 async def post__export_sales(
     export_type: ExportTypeEnum,
@@ -149,30 +174,6 @@ async def post__schedule_sales(
     )
 
     return Response(status_code=status.HTTP_202_ACCEPTED)
-
-
-@router.get("/schedule/view", tags=[ApiTagEnum.USER])
-async def get__existing_schedules(
-    user: Annotated[User, Depends(get_current_user())],
-    service: Annotated[UserService, Depends()],
-) -> list[UserExistingSchedulesSchema]:
-    return await service.get_existing_schedules(user_id=user.id)
-
-
-@router.get("/sales-quantity-by-venue", response_model=Page[VenueSalesQuantitySchema])
-async def get__sales_quantity_by_venue(
-    query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
-    sale_service: Annotated[SaleService, Depends()],
-) -> Page[VenueSalesQuantitySchema]:
-    return await sale_service.get_sales_by_venue_over_time(query_filter)
-
-
-@router.get("/sales-quantity-by-category", response_model=Page[CategoryProductQuantityDateSchema])
-async def get__sales_quantity_by_category(
-    query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
-    sale_service: Annotated[SaleService, Depends()],
-) -> Page[CategoryProductQuantityDateSchema]:
-    return await sale_service.get_sales_quantity_by_category(query_filter)
 
 
 class SaleAPI(CRUDApi):
