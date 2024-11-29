@@ -1,6 +1,14 @@
+from typing import Annotated
+
+from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from mspy_vendi.core.email import MailGunService
 from mspy_vendi.core.enums.date_range import DateRangeEnum
+from mspy_vendi.core.mixins.export import ExportMixin
 from mspy_vendi.core.pagination import Page
 from mspy_vendi.core.service import CRUDService
+from mspy_vendi.deps import get_db_session, get_email_service
 from mspy_vendi.domain.impressions.filters import ImpressionFilter
 from mspy_vendi.domain.impressions.manager import ImpressionManager
 from mspy_vendi.domain.impressions.schemas import (
@@ -14,9 +22,17 @@ from mspy_vendi.domain.impressions.schemas import (
 )
 
 
-class ImpressionsService(CRUDService):
+class ImpressionService(CRUDService, ExportMixin):
     manager_class = ImpressionManager
     filter_class = ImpressionFilter
+
+    def __init__(
+        self,
+        db_session: Annotated[AsyncSession, Depends(get_db_session)],
+        email_service: Annotated[MailGunService, Depends(get_email_service)] = None,
+    ):
+        self.email_service = email_service
+        super().__init__(db_session)
 
     async def get_impressions_per_range(
         self, time_frame: DateRangeEnum, query_filter: ImpressionFilter

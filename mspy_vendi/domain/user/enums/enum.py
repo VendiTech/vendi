@@ -27,4 +27,4 @@ class StatusEnum(StrEnum):
 class FrontendLinkEnum(StrEnum):
     EMAIL_VERIFY = "registration-confirmation"
     PASSWORD_RESET = "reset-password"
-    LOG_IN = "login"
+    LOG_IN = "sign-in"

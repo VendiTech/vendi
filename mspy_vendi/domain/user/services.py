@@ -1,4 +1,5 @@
-from typing import LiteralString, cast, Optional, Any, Annotated
+from importlib import import_module
+from typing import LiteralString, cast, Optional, Any
 
 from fastapi import Request
 from fastapi_users import BaseUserManager, IntegerIDMixin, schemas, models
@@ -6,8 +7,9 @@ from fastapi_users.schemas import BaseUserCreate
 
 from mspy_vendi.core.constants import DEFAULT_SCHEDULE_MAPPING, MESSAGE_FOOTER, CSS_STYLE
 from mspy_vendi.core.enums.date_range import ScheduleEnum
+from mspy_vendi.core.enums.export import ExportEntityTypeEnum
 
-from mspy_vendi.domain.sales.filter import GeographyFilter
+from mspy_vendi.domain.sales.filters import GeographyFilter
 from taskiq import ScheduledTask
 
 from mspy_vendi.broker import redis_source
@@ -239,23 +241,27 @@ class UserService(CRUDService):
         return any(task.labels.get("event_type") == event_type for task in tasks)
 
     @staticmethod
-    async def get_existing_schedules(user_id: int) -> list[UserExistingSchedulesSchema]:
+    async def get_existing_schedules(
+        user_id: int, entity_type: ExportEntityTypeEnum
+    ) -> list[UserExistingSchedulesSchema]:
         """
         Get the existing schedules for the user.
         Return the schedules that are related to the user.
 
         :param user_id: The user ID to get the schedules for.
+        :param entity_type: The entity type to get the schedules for.
 
         :return: The list of existing schedules for the user.
         """
         user_tasks: list[ScheduledTask] = [
             task
             for task in await redis_source.get_schedules()
-            if task.labels.get("event_type").startswith(f"user_{user_id}_sale")
+            if task.labels.get("event_type").startswith(f"user_{user_id}_{entity_type}")
         ]
 
         return [
             UserExistingSchedulesSchema(
+                task_id=user_task.schedule_id,
                 schedule=user_task.kwargs.get("schedule"),
                 export_type=user_task.kwargs.get("export_type"),
                 geography_ids=user_task.kwargs.get("query_filter", {}).get("geography_id__in"),
@@ -263,23 +269,43 @@ class UserService(CRUDService):
             for user_task in user_tasks
         ]
 
-    async def schedule_sale_export(
+    async def delete_existing_schedule(self, user_id: int, entity_type: ExportEntityTypeEnum, schedule_id: str):
+        """
+        Delete the existing schedule for the user with the provided task_id.
+        If the task_id doesn't exist for the user, raise an error.
+
+        :param user_id: The user ID to delete the schedule for.
+        :param entity_type: The entity type to delete the schedule for.
+        :param schedule_id: The task ID to delete.
+        """
+        if schedule_id not in [
+            user_task.task_id
+            for user_task in await self.get_existing_schedules(user_id=user_id, entity_type=entity_type)
+        ]:
+            raise BadRequestError(f"Provided schedule_id={schedule_id} doesn't exist for the user.")
+
+        await redis_source.delete_schedule(schedule_id)
+
+    async def schedule_export(
         self,
         user: User,
         export_type: ExportTypeEnum,
         query_filter: GeographyFilter,
         schedule: ScheduleEnum,
+        *,
+        entity_type: ExportEntityTypeEnum,
     ) -> None:
         """
-        Schedule the sales export task for the user.
+        Schedule the export task for the user with provided entity_type attribute.
         Before scheduling the task, we check if the user is verified and if the task already exists.
 
         :param user: The user to schedule the task for.
         :param export_type: The type of export to schedule.
         :param query_filter: The filter to use for the export.
         :param schedule: The schedule type to use for the export.
+        :param entity_type: The entity type to use for the export.
         """
-        user_event_type: str = f"user_{user.id}_sale_{export_type}_schedule_{schedule.value}_geography_{",".join(map(str, sorted(set(query_filter.geography_id__in or []))))}"
+        user_event_type: str = f"user_{user.id}_{entity_type}_{export_type}_schedule_{schedule.value}_geography_{",".join(map(str, sorted(set(query_filter.geography_id__in or []))))}"
 
         if not user.is_verified:
             raise BadRequestError("User didn't verify email yet.")
@@ -287,8 +313,16 @@ class UserService(CRUDService):
         if await self.check_task_existence(user_event_type):
             raise BadRequestError("Schedule task already exists")
 
+        if not (
+            entity_task := getattr(
+                import_module(f"mspy_vendi.domain.{entity_type}s.tasks"), f"export_{entity_type}_task", None
+            )
+        ):
+            log.warning("Task doesn't exist.", entity_type=entity_type)
+            raise BadRequestError(f"Task for {entity_type} doesn't exist.")
+
         await (
-            export_sale_task.kicker()
+            entity_task.kicker()
             .with_labels(event_type=user_event_type)
             .schedule_by_cron(
                 redis_source,

@@ -1,12 +1,14 @@
 from typing import Tuple
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import ORJSONResponse
 from fastapi_users import models
 from fastapi_users.authentication import AuthenticationBackend, Authenticator, Strategy
 from fastapi_users.manager import BaseUserManager, UserManagerDependency
 from fastapi_users.openapi import OpenAPIResponseType
 from fastapi_users.router.common import ErrorCode, ErrorModel
 
+from mspy_vendi.config import config
 from mspy_vendi.domain.user.schemas import UserLoginSchema
 
 
@@ -49,6 +51,7 @@ def get_auth_router(
     async def login(
         request: Request,
         credentials: UserLoginSchema,
+        token_in_response: bool = False,
         user_manager: BaseUserManager[models.UP, models.ID] = Depends(get_user_manager),
         strategy: Strategy[models.UP, models.ID] = Depends(backend.get_strategy),
     ):
@@ -66,6 +69,26 @@ def get_auth_router(
             )
         response = await backend.login(strategy, user)
         await user_manager.on_after_login(user, request, response)
+
+        # Add the token to the response if needed.
+        if token_in_response:
+            token: str | None = None
+
+            # Get the token from the set-cookie header. Split the header by the semicolon and find the token.
+            for header in response.headers.get("set-cookie").split(";"):
+                if config.auth_cookie_name in header:
+                    *_, token = header.partition("=")
+                    break
+
+            # Create the new response with the token.
+            new_response = ORJSONResponse({"access_token": token})
+
+            # Copy the headers from the original response to the new response.
+            for key, value in response.headers.items():
+                new_response.headers[key] = value
+
+            return new_response
+
         return response
 
     logout_responses: OpenAPIResponseType = {

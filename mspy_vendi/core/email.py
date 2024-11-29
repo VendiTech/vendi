@@ -24,6 +24,7 @@ class EmailService(Generic[Client]):
         subject: str,
         text: str | None = None,
         html: str | None = None,
+        files: tuple | None = None,
     ) -> None:
         raise NotImplementedError
 
