@@ -15,10 +15,10 @@ from mspy_vendi.domain.impressions.schemas import (
     AverageExposureSchema,
     AverageImpressionsSchema,
     ExposurePerRangeSchema,
-    GeographyDecimalImpressionTimeFrameSchema,
     GeographyImpressionsCountSchema,
     ImpressionCreateSchema,
     ImpressionDetailSchema,
+    ImpressionsSalesPlayoutsConvertions,
     TimeFrameImpressionsByVenueSchema,
     TimeFrameImpressionsSchema,
 )
@@ -42,15 +42,6 @@ async def get__impressions_per_geography(
     impression_service: Annotated[ImpressionsService, Depends()],
 ) -> Page[GeographyImpressionsCountSchema]:
     return await impression_service.get_impressions_per_geography(query_filter)
-
-
-@router.get("/average-impressions-per-geography", response_model=Page[GeographyDecimalImpressionTimeFrameSchema])
-async def get__average_impressions_per_geography(
-    time_frame: DateRangeEnum,
-    query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
-    impression_service: Annotated[ImpressionsService, Depends()],
-) -> Page[GeographyDecimalImpressionTimeFrameSchema]:
-    return await impression_service.get_average_impressions_per_geography(time_frame, query_filter)
 
 
 @router.get("/exposure", response_model=Page[ExposurePerRangeSchema])
@@ -92,6 +83,15 @@ async def get__impressions_by_venue_per_range(
     impression_service: Annotated[ImpressionsService, Depends()],
 ) -> Page[TimeFrameImpressionsByVenueSchema]:
     return await impression_service.get_impressions_by_venue_per_range(time_frame, query_filter)
+
+
+@router.get("/month-on-month-summary", response_model=Page[ImpressionsSalesPlayoutsConvertions])
+async def get__months_on_month_summary(
+    time_frame: DateRangeEnum,
+    query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
+    impression_service: Annotated[ImpressionsService, Depends()],
+) -> Page[ImpressionsSalesPlayoutsConvertions]:
+    return await impression_service.get_impressions_sales_playouts_convertion_per_range(time_frame, query_filter)
 
 
 class ImpressionAPI(CRUDApi):

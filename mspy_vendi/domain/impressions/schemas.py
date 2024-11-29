@@ -7,6 +7,7 @@ from mspy_vendi.core.constants import DEFAULT_SOURCE_SYSTEM
 from mspy_vendi.core.schemas import BaseSchema
 from mspy_vendi.core.validators import DecimalFloat
 from mspy_vendi.domain.geographies.schemas import GeographyDetailSchema
+from mspy_vendi.domain.sales.schemas import BaseQuantitySchema, ConversionRateSchema
 
 
 class ImpressionBaseSchema(BaseSchema):
@@ -27,7 +28,7 @@ class ImpressionDetailSchema(ImpressionBaseSchema):
 
 
 class ImpressionCountBaseSchema(BaseSchema):
-    impressions: NonNegativeInt
+    impressions: DecimalFloat
 
 
 class DifferencePercentageBaseSchema(BaseSchema):
@@ -39,16 +40,8 @@ class TimeFrameImpressionsSchema(ImpressionCountBaseSchema):
 
 
 class GeographyImpressionsCountSchema(ImpressionCountBaseSchema):
+    avg_impressions: DecimalFloat
     geography: GeographyDetailSchema
-
-
-class GeographyDecimalImpressionsCountSchema(GeographyImpressionsCountSchema):
-    impressions: DecimalFloat
-
-
-class GeographyDecimalImpressionTimeFrameSchema(BaseSchema):
-    time_frame: datetime
-    geographies: list[GeographyDecimalImpressionsCountSchema]
 
 
 class ExposureBaseSchema(BaseSchema):
@@ -67,10 +60,29 @@ class ExposurePerRangeSchema(ExposureBaseSchema):
     time_frame: datetime
 
 
-class AverageImpressionsSchema(BaseSchema):
+class AverageImpressionsSchema(ImpressionCountBaseSchema):
     avg_impressions: DecimalFloat
-    total_impressions: NonNegativeInt
+    total_impressions: DecimalFloat
 
 
 class TimeFrameImpressionsByVenueSchema(TimeFrameImpressionsSchema):
     venue: str
+
+
+class ImpressionsSalesPlayoutsConvertions(
+    BaseQuantitySchema,
+    TimeFrameImpressionsSchema,
+    AdvertPlayoutsBaseSchema,
+    ConversionRateSchema,
+):
+    """
+    Example of item:
+        {
+          "customers_new": 0,
+          "customers_returning": 0,
+          "advert_playouts": 0,
+          "impressions": 0,
+          "time_frame": "2024-11-29T14:13:19.666Z",
+          "quantity": 0
+        }
+    """

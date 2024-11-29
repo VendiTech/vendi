@@ -1,10 +1,17 @@
 from pydantic import NonNegativeInt, PositiveInt
 
-from mspy_vendi.core.filter import DateRangeFilter
+from mspy_vendi.core.filter import BaseFilter, DateRangeFilter
 from mspy_vendi.domain.impressions.models import Impression
 
 
-class ImpressionFilter(DateRangeFilter):
+class GeographyFilter(BaseFilter):
+    geography_id__in: list[PositiveInt] | None = None
+
+    class Constants(BaseFilter.Constants):
+        model = Impression
+
+
+class ImpressionFilter(DateRangeFilter, GeographyFilter):
     id__in: list[PositiveInt] | None = None
 
     total_impressions: NonNegativeInt | None = None

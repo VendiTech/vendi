@@ -1,10 +1,11 @@
 from datetime import date
 
 from fastapi_pagination.ext.sqlalchemy import paginate
-from sqlalchemy import CTE, Date, cast, func, label, select, text
+from sqlalchemy import CTE, Date, Select, cast, func, label, select, text
 from sqlalchemy.dialects.postgresql import insert
 
 from mspy_vendi.core.enums.date_range import DateRangeEnum
+from mspy_vendi.core.filter import BaseFilter
 from mspy_vendi.core.manager import CRUDManager
 from mspy_vendi.core.pagination import Page
 from mspy_vendi.db import Impression
@@ -15,14 +16,15 @@ from mspy_vendi.domain.impressions.schemas import (
     AverageExposureSchema,
     AverageImpressionsSchema,
     ExposurePerRangeSchema,
-    GeographyDecimalImpressionTimeFrameSchema,
     GeographyImpressionsCountSchema,
     ImpressionCreateSchema,
+    ImpressionsSalesPlayoutsConvertions,
     TimeFrameImpressionsByVenueSchema,
     TimeFrameImpressionsSchema,
 )
 from mspy_vendi.domain.machine_impression.models import MachineImpression
 from mspy_vendi.domain.machines.models import Machine
+from mspy_vendi.domain.sales.models import Sale
 
 
 class ImpressionManager(CRUDManager):
@@ -59,6 +61,28 @@ class ImpressionManager(CRUDManager):
             await self.session.rollback()
             raise ex
 
+    def _generate_geography_query(self, query_filter: BaseFilter, stmt: Select) -> Select:
+        """
+        Generate query to filter by geography_id field.
+        It makes a join with Machine and Geography tables to filter by geography_id field.
+
+        :param query_filter: Filter object.
+        :param stmt: Current statement.
+
+        :return: New statement with the filter applied.
+        """
+        if query_filter.geography_id__in:
+            stmt = (
+                stmt.join(MachineImpression, MachineImpression.impression_device_number == self.sql_model.device_number)
+                .join(Machine, Machine.id == MachineImpression.machine_id)
+                .join(Geography, Geography.id == Machine.geography_id)
+                .where(Geography.id.in_(query_filter.geography_id__in))
+            )
+            # We do it to ignore the field inside the filter block
+            setattr(query_filter, "geography_id__in", None)
+
+        return stmt
+
     @staticmethod
     def _generate_date_range_cte(time_frame: DateRangeEnum, query_filter: ImpressionFilter) -> CTE:
         """
@@ -94,6 +118,7 @@ class ImpressionManager(CRUDManager):
 
         stmt = select(stmt_time_frame, stmt_sum_impressions).group_by(stmt_time_frame).order_by(stmt_time_frame)
 
+        stmt = self._generate_geography_query(query_filter, stmt)
         stmt = query_filter.filter(stmt)
         stmt = stmt.subquery()
 
@@ -109,15 +134,17 @@ class ImpressionManager(CRUDManager):
         return await paginate(self.session, final_stmt)
 
     async def get_impressions_per_geography(
-        self, query_filter: ImpressionFilter
+        self,
+        query_filter: ImpressionFilter,
     ) -> Page[GeographyImpressionsCountSchema]:
         """
-        Get count of total impressions for each geography.
+        Get count of total and average impressions for each geography.
 
         :param query_filter: Filter object.
         :return: Total count of impressions per geography.
         """
         stmt_sum_total_impressions = label("impressions", func.sum(self.sql_model.total_impressions))
+        stmt_avg_total_impressions = label("avg_impressions", func.avg(self.sql_model.total_impressions))
         stmt_geography_id = label("id", Geography.id)
         stmt_geography_name = label("name", Geography.name)
         stmt_geography_postcode = label("postcode", Geography.postcode)
@@ -125,6 +152,7 @@ class ImpressionManager(CRUDManager):
         stmt = (
             select(
                 stmt_sum_total_impressions,
+                stmt_avg_total_impressions,
                 func.jsonb_build_object(
                     "id",
                     stmt_geography_id,
@@ -141,65 +169,10 @@ class ImpressionManager(CRUDManager):
             .order_by(Geography.id)
         )
 
+        stmt = self._generate_geography_query(query_filter, stmt)
         stmt = query_filter.filter(stmt)
 
         return await paginate(self.session, stmt, unique=False)
-
-    async def get_average_impressions_per_geography(
-        self, time_frame: DateRangeEnum, query_filter: ImpressionFilter
-    ) -> Page[GeographyDecimalImpressionTimeFrameSchema]:
-        """
-        Get the average count of total impressions for each geography.
-
-        :param time_frame: Time frame to group the data.
-        :param query_filter: Filter object.
-        :return: Average count of impressions per geography.
-        """
-        stmt_time_frame = label("time_frame", func.date_trunc(time_frame.value, self.sql_model.date))
-        stmt_avg_total_impressions = label("impressions", func.avg(self.sql_model.total_impressions))
-        stmt_geography_object = func.jsonb_build_object(
-            "id", Geography.id, "name", Geography.name, "postcode", Geography.postcode
-        ).label("geography")
-
-        stmt = (
-            select(
-                stmt_time_frame,
-                stmt_avg_total_impressions,
-                stmt_geography_object,
-            )
-            .join(MachineImpression, MachineImpression.impression_device_number == self.sql_model.device_number)
-            .join(Machine, Machine.id == MachineImpression.machine_id)
-            .join(Geography, Geography.id == Machine.geography_id)
-            .group_by(stmt_time_frame, Geography.id)
-            .order_by(stmt_time_frame)
-        )
-
-        stmt = query_filter.filter(stmt)
-        stmt = stmt.subquery()
-
-        date_range_cte = self._generate_date_range_cte(time_frame, query_filter)
-
-        final_stmt = (
-            select(
-                func.jsonb_build_object(
-                    "time_frame",
-                    date_range_cte.c.time_frame,
-                    "geographies",
-                    func.array_agg(
-                        func.jsonb_build_object(
-                            "geography", stmt.c.geography, "impressions", func.coalesce(stmt.c.impressions, 0)
-                        )
-                    ),
-                )
-            )
-            .select_from(date_range_cte)
-            .outerjoin(stmt, stmt.c.time_frame == date_range_cte.c.time_frame)
-            .where(stmt.c.geography.isnot(None))
-            .group_by(date_range_cte.c.time_frame)
-            .order_by(date_range_cte.c.time_frame)
-        )
-
-        return await paginate(self.session, final_stmt, unique=False)
 
     async def get_exposure(self, query_filter: ImpressionFilter) -> Page[ExposurePerRangeSchema]:
         """
@@ -213,6 +186,7 @@ class ImpressionManager(CRUDManager):
 
         stmt = select(stmt_second_exposure, stmt_time_frame).group_by(stmt_time_frame).order_by(stmt_time_frame)
 
+        stmt = self._generate_geography_query(query_filter, stmt)
         stmt = query_filter.filter(stmt)
 
         return await paginate(self.session, stmt, unique=False)
@@ -225,10 +199,12 @@ class ImpressionManager(CRUDManager):
         :return: Average count of impressions and count of total impression for all time.
         """
         stmt_avg_impressions = label("avg_impressions", func.avg(self.sql_model.total_impressions))
+        stmt_sum_impression = label("impressions", func.sum(self.sql_model.total_impressions))
         stmt_total_impressions = label("total_impressions", func.sum(self.sql_model.total_impressions))
 
-        stmt = select(stmt_avg_impressions)
+        stmt = select(stmt_avg_impressions, stmt_sum_impression)
 
+        stmt = self._generate_geography_query(query_filter, stmt)
         stmt = query_filter.filter(stmt)
         stmt = stmt.subquery()
 
@@ -249,6 +225,7 @@ class ImpressionManager(CRUDManager):
         stmt_sum_advert_playouts = label("advert_playouts", func.sum(self.sql_model.advert_playouts))
 
         stmt = select(stmt_sum_advert_playouts)
+        stmt = self._generate_geography_query(query_filter, stmt)
         stmt = query_filter.filter(stmt)
 
         result = await self.session.execute(stmt)
@@ -266,6 +243,7 @@ class ImpressionManager(CRUDManager):
         stmt_avg_exposure = label("seconds_exposure", func.avg(self.sql_model.seconds_exposure))
 
         stmt = select(stmt_avg_exposure)
+        stmt = self._generate_geography_query(query_filter, stmt)
         stmt = query_filter.filter(stmt)
 
         result = await self.session.execute(stmt)
@@ -293,6 +271,7 @@ class ImpressionManager(CRUDManager):
             .order_by(stmt_time_frame)
         )
 
+        stmt = self._generate_geography_query(query_filter, stmt)
         stmt = query_filter.filter(stmt)
         stmt = stmt.subquery()
 
@@ -303,6 +282,58 @@ class ImpressionManager(CRUDManager):
             .select_from(date_range_cte)
             .outerjoin(stmt, stmt.c.time_frame == date_range_cte.c.time_frame)
             .where(stmt.c.venue.isnot(None))
+            .order_by(date_range_cte.c.time_frame)
+        )
+
+        return await paginate(self.session, final_stmt)
+
+    async def get_impressions_sales_playouts_convertion_per_range(
+        self,
+        time_frame: DateRangeEnum,
+        query_filter: ImpressionFilter,
+    ) -> Page[ImpressionsSalesPlayoutsConvertions]:
+        """
+        Get total count of impressions, sales, advert playouts and average montly converion.
+
+        :param time_frame: Time frame object to group the data.
+        :param query_filter: Filter object.
+        :return: Paginated list of items with impressions count, sales quantity, advert playouts time,
+        average monthly convertion of users.
+        """
+        stmt_time_frame = label("time_frame", func.date_trunc(time_frame.value, self.sql_model.date))
+        stmt_sum_impressions = label("impressions", func.sum(self.sql_model.total_impressions))
+        stmt_sum_sales_quantity = label("quantity", func.sum(Sale.quantity))
+        stmt_advert_playouts = label("advert_playouts", func.sum(self.sql_model.advert_playouts))
+
+        stmt = (
+            select(
+                stmt_time_frame,
+                stmt_sum_impressions,
+                stmt_sum_sales_quantity,
+                stmt_advert_playouts,
+            )
+            .join(MachineImpression, MachineImpression.impression_device_number == self.sql_model.device_number)
+            .join(Machine, Machine.id == MachineImpression.machine_id)
+            .join(Sale, Sale.machine_id == Machine.id)
+            .group_by(stmt_time_frame)
+            .order_by(stmt_time_frame)
+        )
+
+        stmt = self._generate_geography_query(query_filter, stmt)
+        stmt = query_filter.filter(stmt)
+        stmt = stmt.subquery()
+
+        date_range_cte = self._generate_date_range_cte(time_frame, query_filter)
+
+        final_stmt = (
+            select(
+                date_range_cte.c.time_frame,
+                func.coalesce(stmt.c.impressions, 0).label("impressions"),
+                func.coalesce(stmt.c.advert_playouts, 0).label("advert_playouts"),
+                func.coalesce(stmt.c.quantity, 0).label("quantity"),
+            )
+            .select_from(date_range_cte)
+            .outerjoin(stmt, stmt.c.time_frame == date_range_cte.c.time_frame)
             .order_by(date_range_cte.c.time_frame)
         )
 
