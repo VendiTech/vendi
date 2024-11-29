@@ -18,6 +18,7 @@ from mspy_vendi.domain.impressions.schemas import (
     GeographyDecimalImpressionTimeFrameSchema,
     GeographyImpressionsCountSchema,
     ImpressionCreateSchema,
+    TimeFrameImpressionsByVenueSchema,
     TimeFrameImpressionsSchema,
 )
 from mspy_vendi.domain.machine_impression.models import MachineImpression
@@ -271,3 +272,38 @@ class ImpressionManager(CRUDManager):
         row = result.one()
 
         return AverageExposureSchema(seconds_exposure=row.seconds_exposure)
+
+    async def get_impressions_by_venue_per_range(
+        self, time_frame: DateRangeEnum, query_filter: ImpressionFilter
+    ) -> Page[TimeFrameImpressionsByVenueSchema]:
+        """
+        Get the total count of impressions per venue and time frame.
+
+        :param time_frame: Time frame object to group the data.
+        :param query_filter: Filter object.
+        :return: Paginated list of items with total impressions per venue grouped by time frame.
+        """
+        stmt_time_frame = label("time_frame", func.date_trunc(time_frame.value, self.sql_model.date))
+        stmt_sum_impressions = label("impressions", func.sum(self.sql_model.total_impressions))
+        stmt_venue = label("venue", self.sql_model.source_system)
+
+        stmt = (
+            select(stmt_time_frame, stmt_sum_impressions, stmt_venue)
+            .group_by(stmt_time_frame, stmt_venue)
+            .order_by(stmt_time_frame)
+        )
+
+        stmt = query_filter.filter(stmt)
+        stmt = stmt.subquery()
+
+        date_range_cte = self._generate_date_range_cte(time_frame, query_filter)
+
+        final_stmt = (
+            select(date_range_cte.c.time_frame, func.coalesce(stmt.c.impressions, 0).label("impressions"), stmt.c.venue)
+            .select_from(date_range_cte)
+            .outerjoin(stmt, stmt.c.time_frame == date_range_cte.c.time_frame)
+            .where(stmt.c.venue.isnot(None))
+            .order_by(date_range_cte.c.time_frame)
+        )
+
+        return await paginate(self.session, final_stmt)

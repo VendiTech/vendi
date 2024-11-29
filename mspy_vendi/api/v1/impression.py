@@ -19,6 +19,7 @@ from mspy_vendi.domain.impressions.schemas import (
     GeographyImpressionsCountSchema,
     ImpressionCreateSchema,
     ImpressionDetailSchema,
+    TimeFrameImpressionsByVenueSchema,
     TimeFrameImpressionsSchema,
 )
 from mspy_vendi.domain.impressions.service import ImpressionsService
@@ -82,6 +83,15 @@ async def get__average_exposure(
     impression_service: Annotated[ImpressionsService, Depends()],
 ) -> AverageExposureSchema:
     return await impression_service.get_average_exposure(query_filter)
+
+
+@router.get("/impressions-by-venue-per-range", response_model=Page[TimeFrameImpressionsByVenueSchema])
+async def get__impressions_by_venue_per_range(
+    time_frame: DateRangeEnum,
+    query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
+    impression_service: Annotated[ImpressionsService, Depends()],
+) -> Page[TimeFrameImpressionsByVenueSchema]:
+    return await impression_service.get_impressions_by_venue_per_range(time_frame, query_filter)
 
 
 class ImpressionAPI(CRUDApi):

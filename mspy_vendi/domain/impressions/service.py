@@ -10,6 +10,7 @@ from mspy_vendi.domain.impressions.schemas import (
     ExposurePerRangeSchema,
     GeographyDecimalImpressionTimeFrameSchema,
     GeographyImpressionsCountSchema,
+    TimeFrameImpressionsByVenueSchema,
     TimeFrameImpressionsSchema,
 )
 
@@ -19,17 +20,22 @@ class ImpressionsService(CRUDService):
     filter_class = ImpressionFilter
 
     async def get_impressions_per_range(
-        self, time_frame: DateRangeEnum, query_filter: ImpressionFilter
+        self,
+        time_frame: DateRangeEnum,
+        query_filter: ImpressionFilter,
     ) -> Page[TimeFrameImpressionsSchema]:
         return await self.manager.get_impressions_per_range(time_frame, query_filter)
 
     async def get_impressions_per_geography(
-        self, query_filter: ImpressionFilter
+        self,
+        query_filter: ImpressionFilter,
     ) -> Page[GeographyImpressionsCountSchema]:
         return await self.manager.get_impressions_per_geography(query_filter)
 
     async def get_average_impressions_per_geography(
-        self, time_frame: DateRangeEnum, query_filter: ImpressionFilter
+        self,
+        time_frame: DateRangeEnum,
+        query_filter: ImpressionFilter,
     ) -> Page[GeographyDecimalImpressionTimeFrameSchema]:
         return await self.manager.get_average_impressions_per_geography(time_frame, query_filter)
 
@@ -44,3 +50,8 @@ class ImpressionsService(CRUDService):
 
     async def get_average_exposure(self, query_filter: ImpressionFilter) -> AverageExposureSchema:
         return await self.manager.get_average_exposure(query_filter)
+
+    async def get_impressions_by_venue_per_range(
+        self, time_frame: DateRangeEnum, query_filter: ImpressionFilter
+    ) -> Page[TimeFrameImpressionsByVenueSchema]:
+        return await self.manager.get_impressions_by_venue_per_range(time_frame, query_filter)

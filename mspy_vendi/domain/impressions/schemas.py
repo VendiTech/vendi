@@ -70,3 +70,7 @@ class ExposurePerRangeSchema(ExposureBaseSchema):
 class AverageImpressionsSchema(BaseSchema):
     avg_impressions: DecimalFloat
     total_impressions: NonNegativeInt
+
+
+class TimeFrameImpressionsByVenueSchema(TimeFrameImpressionsSchema):
+    venue: str
