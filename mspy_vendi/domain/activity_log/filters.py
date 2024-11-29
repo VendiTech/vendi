@@ -1,4 +1,4 @@
-from pydantic.v1 import PositiveInt
+from pydantic import PositiveInt
 
 from mspy_vendi.core.filter import BaseFilter, DateRangeFilter
 from mspy_vendi.domain.activity_log.enums import EventTypeEnum

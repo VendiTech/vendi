@@ -10,8 +10,8 @@ from mspy_vendi.core.enums.date_range import ScheduleEnum
 from mspy_vendi.core.enums.export import ExportEntityTypeEnum
 from mspy_vendi.domain.activity_log.enums import EventTypeEnum
 from mspy_vendi.domain.activity_log.manager import ActivityLogManager
-from mspy_vendi.domain.activity_log.models import ActivityLog
 from mspy_vendi.domain.activity_log.schemas import ActivityLogBaseSchema
+from mspy_vendi.domain.machine_user.service import MachineUserService
 
 from mspy_vendi.domain.sales.filters import GeographyFilter
 from taskiq import ScheduledTask
@@ -32,6 +32,8 @@ from mspy_vendi.domain.user.schemas import (
     UserDetail,
     UserScheduleSchema,
     UserExistingSchedulesSchema,
+    UserAdminCreateSchema,
+    UserAdminEditSchema,
 )
 from mspy_vendi.domain.sales.tasks import export_sale_task
 
@@ -43,6 +45,9 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
 
     def __init__(self, user_db, email_service: MailGunService, password_helper=None):
         self.email_service = email_service
+        self.machine_user_service = MachineUserService(user_db.session)  # type: ignore
+        self.activity_log_manager = ActivityLogManager(user_db.session)  # type: ignore
+        self.user_service = UserService(user_db.session)  # type: ignore
         super().__init__(user_db, password_helper)
 
     async def create(
@@ -82,15 +87,66 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
         created_user = await UserManager(self.user_db.session).create(user_dict, is_unique=True)  # type: ignore
 
         await self.request_verify(created_user, request)
-        await ActivityLogManager(self.user_db.session).create(  # type: ignore
+
+        return created_user
+
+    async def create_flow(self, user_obj: UserAdminCreateSchema) -> UserDetail:
+        created_user = await self.create(user_obj)  # type: ignore
+        await self.machine_user_service.update_user_machines(created_user.id, *user_obj.machines)
+
+        user = await self.user_service.get(created_user.id)
+
+        await self.activity_log_manager.create(
             ActivityLogBaseSchema(
                 user_id=created_user.id,
                 event_type=EventTypeEnum.USER_REGISTER,
-                event_context={"firstname": created_user.firstname, "email": created_user.email},
+                event_context={
+                    "firstname": user.firstname,
+                    "email": user.email,
+                    "permissions": user.permissions,
+                    "role": user.role,
+                    "machine_ids": user_obj.machines,
+                },
             )
         )
 
-        return created_user
+        return user
+
+    async def edit_flow(self, user_id: int, user_obj: UserAdminEditSchema) -> UserDetail:
+        previous_user_state: User = await self.user_service.get(user_id)
+        previous_user_state_dict: dict = {
+            "firstname": previous_user_state.firstname,
+            "email": previous_user_state.email,
+            "permissions": previous_user_state.permissions,
+            "role": previous_user_state.role,
+            "machine_ids": list(map(lambda item: item.id, previous_user_state.machines)),
+        }
+
+        await self.user_service.update(user_id, user_obj, raise_error=False)  # type: ignore
+
+        if user_obj.machines is not None:
+            await self.machine_user_service.update_user_machines(user_id, *user_obj.machines)
+
+        user = await self.user_service.get(user_id)
+
+        await self.activity_log_manager.create(
+            ActivityLogBaseSchema(
+                user_id=user_id,
+                event_type=EventTypeEnum.USER_REGISTER,
+                event_context={
+                    "previous_user_state": previous_user_state_dict,
+                    "new_user_state": {
+                        "firstname": user.firstname,
+                        "email": user.email,
+                        "permissions": user.permissions,
+                        "role": user.role,
+                        "machine_ids": list(map(lambda item: item.id, user.machines)),
+                    },
+                },
+            )
+        )
+
+        return user
 
     async def on_after_request_verify(self, user: User, token: str, request: Request | None = None) -> None:
         if config.debug:
@@ -126,7 +182,7 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
         log.info("Sent verify email message", info=get_described_user_info(user, request=request))
 
     async def on_after_verify(self, user: models.UP, request: Optional[Request] = None) -> None:
-        await ActivityLogManager(self.user_db.session).create(  # type: ignore
+        await self.activity_log_manager.create(
             ActivityLogBaseSchema(
                 user_id=user.id,
                 event_type=EventTypeEnum.USER_EMAIL_VERIFIED,
@@ -167,7 +223,7 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
         log.info("Sent verify email message", info=get_described_user_info(user, request=request))
 
     async def on_after_forgot_password(self, user: User, token: str, request: Request | None = None) -> None:
-        await ActivityLogManager(self.user_db.session).create(  # type: ignore
+        await self.activity_log_manager.create(
             ActivityLogBaseSchema(
                 user_id=user.id,
                 event_type=EventTypeEnum.USER_FORGOT_PASSWORD,
@@ -208,7 +264,7 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
         log.info("Sent forgot password email message", info=get_described_user_info(user, request=request))
 
     async def on_after_reset_password(self, user: User, request: Request | None = None) -> None:
-        await ActivityLogManager(self.user_db.session).create(  # type: ignore
+        await self.activity_log_manager.create(
             ActivityLogBaseSchema(
                 user_id=user.id,
                 event_type=EventTypeEnum.USER_RESET_PASSWORD,
