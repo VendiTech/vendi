@@ -22,7 +22,7 @@ class ActivityLogExportSchema(ActivityLogBasicEventSchema):
 class ActivityLogStateDetailSchema(ActivityLogBasicEventSchema):
     permissions: list[str]
     role: str
-    machine_ids: list[int]
+    machine_names: list[str]
 
 
 class ActivityLogStateSchema(BaseSchema):

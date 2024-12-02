@@ -113,7 +113,7 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
                         "email": user.email,
                         "permissions": user.permissions,
                         "role": user.role,
-                        "machine_ids": user_obj.machines,
+                        "machine_names": list(map(lambda item: item.name, user.machines)),
                     }
                 ),
             )
@@ -130,7 +130,7 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
                 "email": previous_user_state.email,
                 "permissions": previous_user_state.permissions,
                 "role": previous_user_state.role,
-                "machine_ids": list(map(lambda item: item.id, previous_user_state.machines)),
+                "machine_names": list(map(lambda item: item.name, previous_user_state.machines)),
             }
         )
 
@@ -153,7 +153,7 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
                         "email": user.email,
                         "permissions": user.permissions,
                         "role": user.role,
-                        "machine_ids": list(map(lambda item: item.id, user.machines)),
+                        "machine_names": list(map(lambda item: item.name, user.machines)),
                     },
                 ),
             )
