@@ -8,7 +8,6 @@ from sqlalchemy import CTE, Date, Select, cast, desc, func, label, select, text
 from sqlalchemy.orm import joinedload
 
 from mspy_vendi.core.enums.date_range import DailyTimePeriodEnum, DateRangeEnum, TimePeriodEnum
-from mspy_vendi.core.exceptions.base_exception import NotFoundError
 from mspy_vendi.core.filter import BaseFilter
 from mspy_vendi.core.manager import CRUDManager, Model, Schema
 from mspy_vendi.db import Sale
@@ -18,15 +17,15 @@ from mspy_vendi.domain.product_category.models import ProductCategory
 from mspy_vendi.domain.products.models import Product
 from mspy_vendi.domain.sales.filters import ExportSaleFilter, SaleFilter, StatisticDateRangeFilter
 from mspy_vendi.domain.sales.schemas import (
-    BaseQuantitySchema,
     CategoryProductQuantityDateSchema,
     CategoryProductQuantitySchema,
     CategoryTimeFrameSalesSchema,
     ConversionRateSchema,
-    DecimalQuantitySchema,
+    DecimalQuantityStatisticSchema,
     DecimalTimeFrameSalesSchema,
     GeographyDecimalQuantitySchema,
     ProductsCountGeographySchema,
+    QuantityStatisticSchema,
     TimeFrameSalesSchema,
     TimePeriodSalesCountSchema,
     TimePeriodSalesRevenueSchema,
@@ -149,7 +148,7 @@ class SaleManager(CRUDManager):
         """
         return {period.name: (period.start, period.end) for period in time_period}
 
-    async def get_sales_quantity_by_product(self, query_filter: SaleFilter) -> BaseQuantitySchema:
+    async def get_sales_quantity_by_product(self, query_filter: SaleFilter) -> QuantityStatisticSchema:
         """
         Get the total quantity of sales by product|s.
         Calculate the sum of the quantity field. If no sales are found, raise a NotFoundError.
@@ -164,13 +163,19 @@ class SaleManager(CRUDManager):
         stmt = self._generate_geography_query(query_filter, stmt)
         stmt = query_filter.filter(stmt)
 
-        if (
-            not (result := (await self.session.execute(stmt)).mappings().one_or_none())
-            or result.get("quantity") is None
-        ):
-            raise NotFoundError(detail="No sales were find.")
+        stmt_previous_month_stat = select(func.sum(self.sql_model.quantity).label("previous_month_statistic"))
+        query_filter = self._generate_previous_month_filter(query_filter)
+        stmt_previous_month_stat = self._generate_geography_query(query_filter, stmt_previous_month_stat)
 
-        return result  # type: ignore
+        stmt_previous_month_stat = query_filter.filter(stmt_previous_month_stat)
+
+        current_month_result = await self.session.scalar(stmt) or 0
+        previous_month_result = await self.session.scalar(stmt_previous_month_stat) or 0
+
+        return QuantityStatisticSchema(
+            quantity=current_month_result,
+            previous_month_statistic=previous_month_result,
+        )
 
     async def get_sales_quantity_per_range(
         self,
@@ -208,7 +213,7 @@ class SaleManager(CRUDManager):
 
         return await paginate(self.session, final_stmt)
 
-    async def get_average_sales_across_machines(self, query_filter: SaleFilter) -> DecimalQuantitySchema:
+    async def get_average_sales_across_machines(self, query_filter: SaleFilter) -> DecimalQuantityStatisticSchema:
         """
         Get the average quantity of sales across machines.
         Calculate the average of the quantity field. If no sales are found, raise a NotFoundError.
@@ -229,12 +234,10 @@ class SaleManager(CRUDManager):
 
         stmt_previous_month_stat = query_filter.filter(stmt_previous_month_stat)
 
-        current_month_result = ((await self.session.execute(stmt)).mappings().one()).get("quantity") or 0
-        previous_month_result = ((await self.session.execute(stmt_previous_month_stat)).mappings().one()).get(
-            "previous_month_statistic"
-        ) or 0
+        current_month_result = await self.session.scalar(stmt) or 0
+        previous_month_result = await self.session.scalar(stmt_previous_month_stat) or 0
 
-        return DecimalQuantitySchema(
+        return DecimalQuantityStatisticSchema(
             quantity=current_month_result,
             previous_month_statistic=previous_month_result,
         )

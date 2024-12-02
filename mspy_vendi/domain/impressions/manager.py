@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import CTE, Date, Select, cast, func, label, select, text
@@ -16,6 +16,7 @@ from mspy_vendi.domain.impressions.schemas import (
     AverageExposureSchema,
     AverageImpressionsSchema,
     ExposurePerRangeSchema,
+    ExposureStatisticSchema,
     GeographyImpressionsCountSchema,
     ImpressionCreateSchema,
     ImpressionsSalesPlayoutsConvertions,
@@ -82,6 +83,26 @@ class ImpressionManager(CRUDManager):
             setattr(query_filter, "geography_id__in", None)
 
         return stmt
+
+    @staticmethod
+    def _generate_previous_month_filter(query_filter: ImpressionFilter) -> ImpressionFilter:
+        """
+        Modify the given SaleFilter to focus only on the previous month
+        based on query_filter.date_from.
+
+        :param query_filter: The original SaleFilter instance.
+        :return: Modified SaleFilter with date_from and date_to set to the previous month's range.
+        """
+        current_date = query_filter.date_from
+        first_day_of_current_month = current_date.replace(day=1)
+
+        last_day_of_previous_month = first_day_of_current_month - timedelta(days=1)
+        first_day_of_previous_month = last_day_of_previous_month.replace(day=1)
+
+        query_filter.date_from = first_day_of_previous_month
+        query_filter.date_to = last_day_of_previous_month
+
+        return query_filter
 
     @staticmethod
     def _generate_date_range_cte(time_frame: DateRangeEnum, query_filter: ImpressionFilter) -> CTE:
@@ -208,6 +229,33 @@ class ImpressionManager(CRUDManager):
         stmt = query_filter.filter(stmt)
 
         return (await self.session.execute(stmt)).mappings().all()  # type: ignore
+
+    async def get_exposure(self, query_filter) -> ExposureStatisticSchema:
+        """
+        Get total seconds of exposure filtered by dates and statistic for previous month.
+
+        :param query_filter: Filter object.
+        :return: Exposure statistic.
+        """
+        stmt_seconds_exposure = label("seconds_exposure", func.sum(self.sql_model.seconds_exposure))
+
+        stmt = select(stmt_seconds_exposure)
+        stmt = self._generate_geography_query(query_filter, stmt)
+        stmt = query_filter.filter(stmt)
+
+        stmt_previous_month_stat = select(func.sum(self.sql_model.seconds_exposure).label("previous_month_statistic"))
+        query_filter = self._generate_previous_month_filter(query_filter)
+        stmt_previous_month_stat = self._generate_geography_query(query_filter, stmt_previous_month_stat)
+
+        stmt_previous_month_stat = query_filter.filter(stmt_previous_month_stat)
+
+        current_month_result = await self.session.scalar(stmt) or 0
+        previous_month_result = await self.session.scalar(stmt_previous_month_stat) or 0
+
+        return ExposureStatisticSchema(
+            seconds_exposure=current_month_result,
+            previous_month_statistic=previous_month_result,
+        )
 
     async def get_exposure_per_range(
         self,
