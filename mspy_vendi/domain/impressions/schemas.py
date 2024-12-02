@@ -61,7 +61,7 @@ class ExposurePerRangeSchema(ExposureBaseSchema):
     time_frame: datetime
 
 
-class AverageImpressionsSchema(ImpressionCountBaseSchema):
+class AverageImpressionsSchema(BaseSchema):
     avg_impressions: DecimalFloat
     total_impressions: DecimalFloat
 
@@ -73,7 +73,7 @@ class TimeFrameImpressionsByVenueSchema(TimeFrameImpressionsSchema):
 class ImpressionsSalesPlayoutsConvertions(
     BaseQuantitySchema,
     TimeFrameImpressionsSchema,
-    AdvertPlayoutsBaseSchema,
+    AdvertPlayoutsTimeFrameSchema,
     ConversionRateSchema,
 ):
     """

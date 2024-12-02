@@ -17,7 +17,6 @@ from mspy_vendi.domain.impressions.schemas import (
     AverageExposureSchema,
     AverageImpressionsSchema,
     ExposurePerRangeSchema,
-    GeographyDecimalImpressionTimeFrameSchema,
     GeographyImpressionsCountSchema,
     ImpressionCreateSchema,
     ImpressionDetailSchema,
@@ -48,15 +47,6 @@ async def get__impressions_per_geography(
     impression_service: Annotated[ImpressionService, Depends()],
 ) -> Page[GeographyImpressionsCountSchema]:
     return await impression_service.get_impressions_per_geography(query_filter)
-
-
-@router.get("/average-impressions-per-geography", response_model=Page[GeographyDecimalImpressionTimeFrameSchema])
-async def get__average_impressions_per_geography(
-    time_frame: DateRangeEnum,
-    query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
-    impression_service: Annotated[ImpressionService, Depends()],
-) -> Page[GeographyDecimalImpressionTimeFrameSchema]:
-    return await impression_service.get_average_impressions_per_geography(time_frame, query_filter)
 
 
 @router.get("/exposure-per-range", response_model=Page[ExposurePerRangeSchema])

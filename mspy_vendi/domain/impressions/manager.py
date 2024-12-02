@@ -243,16 +243,15 @@ class ImpressionManager(CRUDManager):
 
     async def get_average_impressions_count(self, query_filter: ImpressionFilter) -> AverageImpressionsSchema:
         """
-        Get average count of impressions per time range.
+        Get average count of impressions per time range and total count of impressions for all time.
 
         :param query_filter: Filter object.
         :return: Average count of impressions and count of total impression for all time.
         """
         stmt_avg_impressions = label("avg_impressions", func.avg(self.sql_model.total_impressions))
-        stmt_sum_impression = label("impressions", func.sum(self.sql_model.total_impressions))
         stmt_total_impressions = label("total_impressions", func.sum(self.sql_model.total_impressions))
 
-        stmt = select(stmt_avg_impressions, stmt_sum_impression)
+        stmt = select(stmt_avg_impressions)
 
         stmt = self._generate_geography_query(query_filter, stmt)
         stmt = query_filter.filter(stmt)
@@ -302,7 +301,7 @@ class ImpressionManager(CRUDManager):
         :param query_filter: Filter object.
         :return: Average time of exposure (seconds).
         """
-        stmt_avg_exposure = label("seconds_exposure", func.avg(self.sql_model.seconds_exposure))
+        stmt_avg_exposure = label("seconds_exposure", func.coalesce(func.avg(self.sql_model.seconds_exposure), 0))
 
         stmt = select(stmt_avg_exposure)
         stmt = self._generate_geography_query(query_filter, stmt)

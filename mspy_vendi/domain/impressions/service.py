@@ -48,11 +48,6 @@ class ImpressionService(CRUDService, ExportMixin):
     ) -> Page[GeographyImpressionsCountSchema]:
         return await self.manager.get_impressions_per_geography(query_filter)
 
-    async def get_average_impressions_per_geography(
-        self, time_frame: DateRangeEnum, query_filter: ImpressionFilter
-    ) -> Page[GeographyDecimalImpressionTimeFrameSchema]:
-        return await self.manager.get_average_impressions_per_geography(time_frame, query_filter)
-
     async def get_exposure_per_range(
         self,
         time_frame: DateRangeEnum,

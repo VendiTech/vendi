@@ -11,7 +11,14 @@ class StatisticDateRangeFilter(DateRangeFilter):
         default_date_range_db_field = "date"
 
 
-class ImpressionFilter(DateRangeFilter):
+class GeographyFilter(BaseFilter):
+    geography_id__in: list[PositiveInt] | None = None
+
+    class Constants(BaseFilter.Constants):
+        model = Impression
+
+
+class ImpressionFilter(DateRangeFilter, GeographyFilter):
     id__in: list[PositiveInt] | None = None
 
     total_impressions: NonNegativeInt | None = None
@@ -25,13 +32,6 @@ class ImpressionFilter(DateRangeFilter):
         model = Impression
         date_range_fields = ["date_from", "date_to"]
         default_date_range_db_field = "date"
-
-
-class GeographyFilter(BaseFilter):
-    geography_id__in: list[PositiveInt] | None = None
-
-    class Constants(BaseFilter.Constants):
-        model = Impression
 
 
 class ExportImpressionFilter(StatisticDateRangeFilter, GeographyFilter): ...
