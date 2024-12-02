@@ -147,8 +147,8 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
                 event_type=EventTypeEnum.USER_REGISTER,
                 event_context=ActivityLogStateSchema.model_validate(
                     {
-                        "previous_user_state": previous_user_state_dict,
-                        "new_user_state": {
+                        "previous_state": previous_user_state_dict,
+                        "new_state": {
                             "firstname": user.firstname,
                             "lastname": user.lastname,
                             "email": user.email,
