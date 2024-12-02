@@ -29,11 +29,19 @@ class SaleDetailSchema(SaleBaseSchema):
     machine: MachineDetailSchema
 
 
+class MonthlyTotalEntityCountBaseSchema(BaseSchema):
+    previous_month_statistic: NonNegativeInt
+
+
+class DecimalMonthlyTotalEntityCountBaseSchema(BaseSchema):
+    previous_month_statistic: DecimalFloat
+
+
 class BaseQuantitySchema(BaseSchema):
     quantity: NonNegativeInt
 
 
-class DecimalQuantitySchema(BaseSchema):
+class DecimalQuantitySchema(DecimalMonthlyTotalEntityCountBaseSchema):
     quantity: DecimalFloat
 
 
