@@ -4,6 +4,7 @@ from enum import StrEnum
 class ApiTagEnum(StrEnum):
     HEALTH_CHECK = "Health Check"
     USER = "User"
+    ACTIVITY_LOG = "[Admin] Activity Log"
     ADMIN_USER = "[Admin] User"
     AUTH_LOGIN = "[Auth] Login"
     AUTH_RESISTER = "[Auth] Register"

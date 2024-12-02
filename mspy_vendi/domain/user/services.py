@@ -8,6 +8,16 @@ from fastapi_users.schemas import BaseUserCreate
 from mspy_vendi.core.constants import DEFAULT_SCHEDULE_MAPPING, MESSAGE_FOOTER, CSS_STYLE
 from mspy_vendi.core.enums.date_range import ScheduleEnum
 from mspy_vendi.core.enums.export import ExportEntityTypeEnum
+from mspy_vendi.domain.activity_log.enums import EventTypeEnum
+from mspy_vendi.domain.activity_log.manager import ActivityLogManager
+from mspy_vendi.domain.activity_log.schemas import (
+    ActivityLogBaseSchema,
+    ActivityLogStateSchema,
+    ActivityLogStateDetailSchema,
+    ActivityLogBasicEventSchema,
+    ActivityLogExportSchema,
+)
+from mspy_vendi.domain.machine_user.service import MachineUserService
 
 from mspy_vendi.domain.sales.filters import GeographyFilter
 from taskiq import ScheduledTask
@@ -28,6 +38,8 @@ from mspy_vendi.domain.user.schemas import (
     UserDetail,
     UserScheduleSchema,
     UserExistingSchedulesSchema,
+    UserAdminCreateSchema,
+    UserAdminEditSchema,
 )
 from mspy_vendi.domain.sales.tasks import export_sale_task
 
@@ -39,6 +51,9 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
 
     def __init__(self, user_db, email_service: MailGunService, password_helper=None):
         self.email_service = email_service
+        self.machine_user_service = MachineUserService(user_db.session)  # type: ignore
+        self.activity_log_manager = ActivityLogManager(user_db.session)  # type: ignore
+        self.user_service = UserService(user_db.session)  # type: ignore
         super().__init__(user_db, password_helper)
 
     async def create(
@@ -81,6 +96,72 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
 
         return created_user
 
+    async def create_flow(self, user_obj: UserAdminCreateSchema) -> UserDetail:
+        created_user = await self.create(user_obj)  # type: ignore
+        await self.machine_user_service.update_user_machines(created_user.id, *user_obj.machines)
+
+        user = await self.user_service.get(created_user.id)
+
+        await self.activity_log_manager.create(
+            ActivityLogBaseSchema(
+                user_id=created_user.id,
+                event_type=EventTypeEnum.USER_REGISTER,
+                event_context=ActivityLogStateDetailSchema.model_validate(
+                    {
+                        "firstname": user.firstname,
+                        "lastname": user.lastname,
+                        "email": user.email,
+                        "permissions": user.permissions,
+                        "role": user.role,
+                        "machine_names": list(map(lambda item: item.name, user.machines)),
+                    }
+                ),
+            )
+        )
+
+        return user
+
+    async def edit_flow(self, user_id: int, user_obj: UserAdminEditSchema) -> UserDetail:
+        previous_user_state: User = await self.user_service.get(user_id)
+        previous_user_state_dict: ActivityLogStateDetailSchema = ActivityLogStateDetailSchema.model_validate(
+            {
+                "firstname": previous_user_state.firstname,
+                "lastname": previous_user_state.lastname,
+                "email": previous_user_state.email,
+                "permissions": previous_user_state.permissions,
+                "role": previous_user_state.role,
+                "machine_names": list(map(lambda item: item.name, previous_user_state.machines)),
+            }
+        )
+
+        await self.user_service.update(user_id, user_obj, raise_error=False)  # type: ignore
+
+        if user_obj.machines is not None:
+            await self.machine_user_service.update_user_machines(user_id, *user_obj.machines)
+
+        self.user_db.session.expire_all()  # type: ignore
+        user = await self.user_service.get(user_id)
+
+        await self.activity_log_manager.create(
+            ActivityLogBaseSchema(
+                user_id=user_id,
+                event_type=EventTypeEnum.USER_EDITED,
+                event_context=ActivityLogStateSchema(
+                    previous_state=previous_user_state_dict,
+                    current_state={
+                        "firstname": user.firstname,
+                        "lastname": user.lastname,
+                        "email": user.email,
+                        "permissions": user.permissions,
+                        "role": user.role,
+                        "machine_names": list(map(lambda item: item.name, user.machines)),
+                    },
+                ),
+            )
+        )
+
+        return user
+
     async def on_after_request_verify(self, user: User, token: str, request: Request | None = None) -> None:
         if config.debug:
             return None
@@ -114,7 +195,60 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
         )
         log.info("Sent verify email message", info=get_described_user_info(user, request=request))
 
+    async def on_after_verify(self, user: models.UP, request: Optional[Request] = None) -> None:
+        await self.activity_log_manager.create(
+            ActivityLogBaseSchema(
+                user_id=user.id,
+                event_type=EventTypeEnum.USER_EMAIL_VERIFIED,
+                event_context=ActivityLogBasicEventSchema.model_validate(
+                    {"firstname": user.firstname, "lastname": user.lastname, "email": user.email}
+                ),
+            )
+        )
+
+        if config.debug:
+            return None
+
+        sign_in_link: str = f"https://{config.frontend_domain}/{FrontendLinkEnum.LOG_IN}"
+
+        html_content: str = f"""
+            <!DOCTYPE html>
+            <html>
+            {CSS_STYLE}
+            <body>
+                <div class="email-content">
+                    <p class="greeting">Hi {user.firstname.capitalize()},</p>
+                    <p class="message">
+                        Your email has been successfully verified.
+                        You can now log in to Vendi Platform using your created password.
+                    </p>
+                    <div class="container-link">
+                        <a class="link" href="{sign_in_link}">Login Link</a>
+                    </div>
+                    {MESSAGE_FOOTER}
+                </div>
+            </body>
+            </html>
+        """
+
+        await self.email_service.send_message(
+            receivers=[user.email],
+            subject="Email Verification Successfully Completed",
+            html=html_content,
+        )
+        log.info("Sent verify email message", info=get_described_user_info(user, request=request))
+
     async def on_after_forgot_password(self, user: User, token: str, request: Request | None = None) -> None:
+        await self.activity_log_manager.create(
+            ActivityLogBaseSchema(
+                user_id=user.id,
+                event_type=EventTypeEnum.USER_FORGOT_PASSWORD,
+                event_context=ActivityLogBasicEventSchema.model_validate(
+                    {"firstname": user.firstname, "lastname": user.lastname, "email": user.email}
+                ),
+            )
+        )
+
         if config.debug:
             return None
 
@@ -148,6 +282,16 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
         log.info("Sent forgot password email message", info=get_described_user_info(user, request=request))
 
     async def on_after_reset_password(self, user: User, request: Request | None = None) -> None:
+        await self.activity_log_manager.create(
+            ActivityLogBaseSchema(
+                user_id=user.id,
+                event_type=EventTypeEnum.USER_RESET_PASSWORD,
+                event_context=ActivityLogBasicEventSchema.model_validate(
+                    {"firstname": user.firstname, "lastname": user.lastname, "email": user.email}
+                ),
+            )
+        )
+
         if config.debug:
             return None
 
@@ -210,6 +354,29 @@ class UserService(CRUDService):
     manager_class = UserManager
     filter_class = UserFilter
 
+    async def delete(self, obj_id: int, *, autocommit: bool = True, **kwargs: Any) -> None:
+        """
+        Deletes an entity from the database.
+
+        :param obj_id: Object ID.
+        :param autocommit: If True, commits changes to a database, if False - flushes them.
+        :param kwargs: Additional keyword arguments.
+
+        :return: None.
+        """
+        user: User = await self.get(obj_id=obj_id)
+
+        await ActivityLogManager(self.db_session).create(
+            ActivityLogBaseSchema(
+                user_id=obj_id,
+                event_type=EventTypeEnum.USER_DELETED,
+                event_context=ActivityLogBasicEventSchema.model_validate(
+                    {"firstname": user.firstname, "lastname": user.lastname, "email": user.email}
+                ),
+            )
+        )
+        await super().delete(obj_id=obj_id, autocommit=autocommit, **kwargs)
+
     async def update(
         self, obj_id: int, obj: UpdateSchema, *, autocommit: bool = True, raise_error: bool = True, **kwargs: Any
     ) -> UserDetail:
@@ -269,21 +436,39 @@ class UserService(CRUDService):
             for user_task in user_tasks
         ]
 
-    async def delete_existing_schedule(self, user_id: int, entity_type: ExportEntityTypeEnum, schedule_id: str):
+    async def delete_existing_schedule(self, user: User, entity_type: ExportEntityTypeEnum, schedule_id: str):
         """
         Delete the existing schedule for the user with the provided task_id.
         If the task_id doesn't exist for the user, raise an error.
 
-        :param user_id: The user ID to delete the schedule for.
+        :param user: The User to delete the schedule for.
         :param entity_type: The entity type to delete the schedule for.
         :param schedule_id: The task ID to delete.
         """
-        if schedule_id not in [
-            user_task.task_id
-            for user_task in await self.get_existing_schedules(user_id=user_id, entity_type=entity_type)
-        ]:
+        existing_schedule_mapping: dict[str, UserExistingSchedulesSchema] = {
+            user_task.task_id: user_task
+            for user_task in await self.get_existing_schedules(user_id=user.id, entity_type=entity_type)
+        }
+
+        if not (schedule := existing_schedule_mapping.get(schedule_id)):
             raise BadRequestError(f"Provided schedule_id={schedule_id} doesn't exist for the user.")
 
+        await ActivityLogManager(self.db_session).create(
+            ActivityLogBaseSchema(
+                user_id=user.id,
+                event_type=EventTypeEnum.USER_SCHEDULE_DELETION,
+                event_context=ActivityLogExportSchema.model_validate(
+                    {
+                        "firstname": user.firstname,
+                        "lastname": user.lastname,
+                        "email": user.email,
+                        "entity_type": entity_type,
+                        "schedule": schedule.schedule,
+                        "export_type": schedule.export_type,
+                    }
+                ),
+            )
+        )
         await redis_source.delete_schedule(schedule_id)
 
     async def schedule_export(
@@ -321,6 +506,22 @@ class UserService(CRUDService):
             log.warning("Task doesn't exist.", entity_type=entity_type)
             raise BadRequestError(f"Task for {entity_type} doesn't exist.")
 
+        await ActivityLogManager(self.db_session).create(
+            ActivityLogBaseSchema(
+                user_id=user.id,
+                event_type=EventTypeEnum.USER_SCHEDULE_CREATION,
+                event_context=ActivityLogExportSchema.model_validate(
+                    {
+                        "firstname": user.firstname,
+                        "lastname": user.lastname,
+                        "email": user.email,
+                        "entity_type": entity_type,
+                        "schedule": schedule,
+                        "export_type": export_type,
+                    }
+                ),
+            )
+        )
         await (
             entity_task.kicker()
             .with_labels(event_type=user_event_type)

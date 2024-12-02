@@ -176,7 +176,7 @@ async def delete__existing_schedule(
     service: Annotated[UserService, Depends()],
 ):
     return await service.delete_existing_schedule(
-        user_id=user.id,
+        user=user,
         schedule_id=schedule_id,
         entity_type=ExportEntityTypeEnum.SALE,
     )
