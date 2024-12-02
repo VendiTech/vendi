@@ -26,6 +26,7 @@ from mspy_vendi.domain.sales.schemas import (
     DecimalQuantitySchema,
     DecimalTimeFrameSalesSchema,
     GeographyDecimalQuantitySchema,
+    ProductsCountGeographySchema,
     TimeFrameSalesSchema,
     TimePeriodSalesCountSchema,
     TimePeriodSalesRevenueSchema,
@@ -423,7 +424,7 @@ class SaleManager(CRUDManager):
 
     async def get_sales_quantity_per_geography(self, query_filter: SaleFilter) -> Page[GeographyDecimalQuantitySchema]:
         """
-        Get the sales quantity across geography locations.
+        Get the total and average sales quantity across geography locations.
 
         :param query_filter: Filter object.
         :return: Paginated list of sales quantity across geography locations and geography objects.
@@ -571,3 +572,43 @@ class SaleManager(CRUDManager):
         stmt = query_filter.filter(stmt)
 
         return (await self.session.execute(stmt)).mappings().all()  # type: ignore
+
+    async def get_average_products_count_per_geography(
+        self, query_filter: SaleFilter
+    ) -> Page[ProductsCountGeographySchema]:
+        """
+        Get the average count of products purchased per geography.
+
+        :param query_filter: Filter object.
+        :return: Paginated list with average count of products purchased per each geography location.
+        """
+        stmt_products_count = label("products", func.count(Product.id))
+        stmt_geography_object = func.jsonb_build_object(
+            "id",
+            Geography.id,
+            "name",
+            Geography.name,
+            "postcode",
+            Geography.postcode,
+        ).label("geography")
+
+        stmt = (
+            select(stmt_products_count, stmt_geography_object)
+            .join(Product, Product.id == self.sql_model.product_id)
+            .join(Machine, Machine.id == self.sql_model.machine_id)
+            .join(Geography, Geography.id == Machine.geography_id)
+            .select_from(self.sql_model)
+            .group_by(Geography.id)
+            .order_by(Geography.id)
+        ).subquery()
+
+        final_stmt = (
+            select(func.avg(stmt.c.products).label("products"), stmt.c.geography.label("geography"))
+            .select_from(stmt)
+            .group_by(stmt.c.geography)
+        )
+
+        final_stmt = self._generate_geography_query(query_filter, final_stmt)
+        final_stmt = query_filter.filter(final_stmt)
+
+        return await paginate(self.session, final_stmt, unique=False)

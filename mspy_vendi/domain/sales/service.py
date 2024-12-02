@@ -25,6 +25,7 @@ from mspy_vendi.domain.sales.schemas import (
     DecimalQuantitySchema,
     DecimalTimeFrameSalesSchema,
     GeographyDecimalQuantitySchema,
+    ProductsCountGeographySchema,
     TimeFrameSalesSchema,
     TimePeriodSalesCountSchema,
     TimePeriodSalesRevenueSchema,
@@ -82,25 +83,16 @@ class SaleService(CRUDService, ExportMixin):
         return await self.manager.get_conversion_rate(query_filter)
 
     async def get_daily_sales_count_per_time_period(self, query_filter: SaleFilter) -> list[TimePeriodSalesCountSchema]:
-        """
-        Get the daily sales count per time period.
-
-        :param query_filter: The filter to use for the query.
-
-        :return: The list of TimePeriodSalesCountSchema.
-        """
         query_filter.date_from = query_filter.date_to = datetime.datetime.now()
         return await self.manager.get_sales_count_per_time_period(DailyTimePeriodEnum, query_filter)
 
     async def get_sales_by_venue_over_time(self, query_filter: SaleFilter) -> Page[VenueSalesQuantitySchema]:
-        """
-        Get the sales by venue over time.
-
-        :param query_filter: The filter to use for the query.
-
-        :return: The Page of VenueSalesQuantitySchema.
-        """
         return await self.manager.get_sales_by_venue_over_time(query_filter)
 
     async def get_sales_quantity_by_category(self, query_filter: SaleFilter) -> Page[CategoryProductQuantityDateSchema]:
         return await self.manager.get_sales_quantity_by_category(query_filter)
+
+    async def get_average_products_count_per_geography(
+        self, query_filter: SaleFilter
+    ) -> Page[ProductsCountGeographySchema]:
+        return await self.manager.get_average_products_count_per_geography(query_filter)

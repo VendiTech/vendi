@@ -21,6 +21,7 @@ from mspy_vendi.domain.sales.schemas import (
     DecimalQuantitySchema,
     DecimalTimeFrameSalesSchema,
     GeographyDecimalQuantitySchema,
+    ProductsCountGeographySchema,
     SaleCreateSchema,
     SaleDetailSchema,
     TimeFrameSalesSchema,
@@ -196,6 +197,14 @@ async def get__sales_quantity_by_category(
     sale_service: Annotated[SaleService, Depends()],
 ) -> Page[CategoryProductQuantityDateSchema]:
     return await sale_service.get_sales_quantity_by_category(query_filter)
+
+
+@router.get("/average-products-per-geography", response_model=Page[ProductsCountGeographySchema])
+async def get__average_products_count_per_geography(
+    query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
+    sale_service: Annotated[SaleService, Depends()],
+) -> Page[ProductsCountGeographySchema]:
+    return await sale_service.get_average_products_count_per_geography(query_filter)
 
 
 class SaleAPI(CRUDApi):

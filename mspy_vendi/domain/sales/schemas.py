@@ -88,3 +88,8 @@ class CategoryProductQuantityDateSchema(CategoryProductQuantitySchema):
     product_name: str
     product_id: PositiveInt
     sale_date: date
+
+
+class ProductsCountGeographySchema(BaseSchema):
+    products: DecimalFloat
+    geography: GeographyDetailSchema
