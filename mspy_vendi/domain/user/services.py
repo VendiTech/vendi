@@ -10,7 +10,13 @@ from mspy_vendi.core.enums.date_range import ScheduleEnum
 from mspy_vendi.core.enums.export import ExportEntityTypeEnum
 from mspy_vendi.domain.activity_log.enums import EventTypeEnum
 from mspy_vendi.domain.activity_log.manager import ActivityLogManager
-from mspy_vendi.domain.activity_log.schemas import ActivityLogBaseSchema
+from mspy_vendi.domain.activity_log.schemas import (
+    ActivityLogBaseSchema,
+    ActivityLogStateSchema,
+    ActivityLogStateDetailSchema,
+    ActivityLogBasicEventSchema,
+    ActivityLogExportSchema,
+)
 from mspy_vendi.domain.machine_user.service import MachineUserService
 
 from mspy_vendi.domain.sales.filters import GeographyFilter
@@ -100,14 +106,16 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
             ActivityLogBaseSchema(
                 user_id=created_user.id,
                 event_type=EventTypeEnum.USER_REGISTER,
-                event_context={
-                    "firstname": user.firstname,
-                    "lastname": user.lastname,
-                    "email": user.email,
-                    "permissions": user.permissions,
-                    "role": user.role,
-                    "machine_ids": user_obj.machines,
-                },
+                event_context=ActivityLogStateDetailSchema.model_validate(
+                    {
+                        "firstname": user.firstname,
+                        "lastname": user.lastname,
+                        "email": user.email,
+                        "permissions": user.permissions,
+                        "role": user.role,
+                        "machine_ids": user_obj.machines,
+                    }
+                ),
             )
         )
 
@@ -115,14 +123,16 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
 
     async def edit_flow(self, user_id: int, user_obj: UserAdminEditSchema) -> UserDetail:
         previous_user_state: User = await self.user_service.get(user_id)
-        previous_user_state_dict: dict = {
-            "firstname": previous_user_state.firstname,
-            "lastname": previous_user_state.lastname,
-            "email": previous_user_state.email,
-            "permissions": previous_user_state.permissions,
-            "role": previous_user_state.role,
-            "machine_ids": list(map(lambda item: item.id, previous_user_state.machines)),
-        }
+        previous_user_state_dict: ActivityLogStateDetailSchema = ActivityLogStateDetailSchema.model_validate(
+            {
+                "firstname": previous_user_state.firstname,
+                "lastname": previous_user_state.lastname,
+                "email": previous_user_state.email,
+                "permissions": previous_user_state.permissions,
+                "role": previous_user_state.role,
+                "machine_ids": list(map(lambda item: item.id, previous_user_state.machines)),
+            }
+        )
 
         await self.user_service.update(user_id, user_obj, raise_error=False)  # type: ignore
 
@@ -135,17 +145,19 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
             ActivityLogBaseSchema(
                 user_id=user_id,
                 event_type=EventTypeEnum.USER_REGISTER,
-                event_context={
-                    "previous_user_state": previous_user_state_dict,
-                    "new_user_state": {
-                        "firstname": user.firstname,
-                        "lastname": user.lastname,
-                        "email": user.email,
-                        "permissions": user.permissions,
-                        "role": user.role,
-                        "machine_ids": list(map(lambda item: item.id, user.machines)),
-                    },
-                },
+                event_context=ActivityLogStateSchema.model_validate(
+                    {
+                        "previous_user_state": previous_user_state_dict,
+                        "new_user_state": {
+                            "firstname": user.firstname,
+                            "lastname": user.lastname,
+                            "email": user.email,
+                            "permissions": user.permissions,
+                            "role": user.role,
+                            "machine_ids": list(map(lambda item: item.id, user.machines)),
+                        },
+                    }
+                ),
             )
         )
 
@@ -189,7 +201,9 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
             ActivityLogBaseSchema(
                 user_id=user.id,
                 event_type=EventTypeEnum.USER_EMAIL_VERIFIED,
-                event_context={"firstname": user.firstname, "email": user.email},
+                event_context=ActivityLogBasicEventSchema.model_validate(
+                    {"firstname": user.firstname, "lastname": user.lastname, "email": user.email}
+                ),
             )
         )
 
@@ -230,7 +244,9 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
             ActivityLogBaseSchema(
                 user_id=user.id,
                 event_type=EventTypeEnum.USER_FORGOT_PASSWORD,
-                event_context={"firstname": user.firstname, "email": user.email},
+                event_context=ActivityLogBasicEventSchema.model_validate(
+                    {"firstname": user.firstname, "lastname": user.lastname, "email": user.email}
+                ),
             )
         )
 
@@ -271,7 +287,9 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
             ActivityLogBaseSchema(
                 user_id=user.id,
                 event_type=EventTypeEnum.USER_RESET_PASSWORD,
-                event_context={"firstname": user.firstname, "email": user.email},
+                event_context=ActivityLogBasicEventSchema.model_validate(
+                    {"firstname": user.firstname, "lastname": user.lastname, "email": user.email}
+                ),
             )
         )
 
@@ -353,7 +371,9 @@ class UserService(CRUDService):
             ActivityLogBaseSchema(
                 user_id=obj_id,
                 event_type=EventTypeEnum.USER_DELETED,
-                event_context={"firstname": user.firstname, "email": user.email},
+                event_context=ActivityLogBasicEventSchema.model_validate(
+                    {"firstname": user.firstname, "lastname": user.lastname, "email": user.email}
+                ),
             )
         )
         await super().delete(obj_id=obj_id, autocommit=autocommit, **kwargs)
@@ -426,21 +446,28 @@ class UserService(CRUDService):
         :param entity_type: The entity type to delete the schedule for.
         :param schedule_id: The task ID to delete.
         """
-        if schedule_id not in [
-            user_task.task_id
+        existing_schedule_mapping: dict[str, UserExistingSchedulesSchema] = {
+            user_task.task_id: user_task
             for user_task in await self.get_existing_schedules(user_id=user.id, entity_type=entity_type)
-        ]:
+        }
+
+        if not (schedule := existing_schedule_mapping.get(schedule_id)):
             raise BadRequestError(f"Provided schedule_id={schedule_id} doesn't exist for the user.")
 
         await ActivityLogManager(self.db_session).create(
             ActivityLogBaseSchema(
                 user_id=user.id,
                 event_type=EventTypeEnum.USER_SCHEDULE_DELETION,
-                event_context={
-                    "firstname": user.firstname,
-                    "email": user.email,
-                    "entity_type": entity_type,
-                },
+                event_context=ActivityLogExportSchema.model_validate(
+                    {
+                        "firstname": user.firstname,
+                        "lastname": user.lastname,
+                        "email": user.email,
+                        "entity_type": entity_type,
+                        "schedule": schedule.schedule,
+                        "export_type": schedule.export_type,
+                    }
+                ),
             )
         )
         await redis_source.delete_schedule(schedule_id)
@@ -484,13 +511,16 @@ class UserService(CRUDService):
             ActivityLogBaseSchema(
                 user_id=user.id,
                 event_type=EventTypeEnum.USER_SCHEDULE_CREATION,
-                event_context={
-                    "firstname": user.firstname,
-                    "email": user.email,
-                    "entity_type": entity_type,
-                    "schedule": schedule,
-                    "export_type": export_type,
-                },
+                event_context=ActivityLogExportSchema.model_validate(
+                    {
+                        "firstname": user.firstname,
+                        "lastname": user.lastname,
+                        "email": user.email,
+                        "entity_type": entity_type,
+                        "schedule": schedule,
+                        "export_type": export_type,
+                    }
+                ),
             )
         )
         await (
