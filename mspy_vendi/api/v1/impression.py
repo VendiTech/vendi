@@ -13,7 +13,7 @@ from mspy_vendi.deps import get_db_session
 from mspy_vendi.domain.auth import get_current_user
 from mspy_vendi.domain.impressions.filters import ExportImpressionFilter, GeographyFilter, ImpressionFilter
 from mspy_vendi.domain.impressions.schemas import (
-    AdvertPlayoutsBaseSchema,
+    AdvertPlayoutsTimeFrameSchema,
     AverageExposureSchema,
     AverageImpressionsSchema,
     ExposurePerRangeSchema,
@@ -49,12 +49,13 @@ async def get__impressions_per_geography(
     return await impression_service.get_impressions_per_geography(query_filter)
 
 
-@router.get("/exposure", response_model=Page[ExposurePerRangeSchema])
-async def get__exposure(
+@router.get("/exposure-per-range", response_model=Page[ExposurePerRangeSchema])
+async def get__exposure_per_range(
+    time_frame: DateRangeEnum,
     query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
     impression_service: Annotated[ImpressionService, Depends()],
 ) -> Page[ExposurePerRangeSchema]:
-    return await impression_service.get_exposure(query_filter)
+    return await impression_service.get_exposure_per_range(time_frame, query_filter)
 
 
 @router.get("/average-impressions", response_model=AverageImpressionsSchema)
@@ -65,12 +66,13 @@ async def get__average_impressions(
     return await impression_service.get_average_impressions_count(query_filter)
 
 
-@router.get("/adverts-playout", response_model=AdvertPlayoutsBaseSchema)
-async def get__adverts_playout(
+@router.get("/advert-playouts-per-range", response_model=Page[AdvertPlayoutsTimeFrameSchema])
+async def get__advert_playouts_per_range(
+    time_frame: DateRangeEnum,
     query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
     impression_service: Annotated[ImpressionService, Depends()],
-) -> AdvertPlayoutsBaseSchema:
-    return await impression_service.get_adverts_playout(query_filter)
+) -> Page[AdvertPlayoutsTimeFrameSchema]:
+    return await impression_service.get_advert_playouts_per_range(time_frame, query_filter)
 
 
 @router.get("/average-exposure", response_model=AverageExposureSchema)
