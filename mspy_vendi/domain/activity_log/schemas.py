@@ -33,7 +33,9 @@ class ActivityLogStateSchema(BaseSchema):
 class ActivityLogBaseSchema(BaseSchema):
     user_id: PositiveInt | None
     event_type: EventTypeEnum
-    event_context: ActivityLogStateDetailSchema | ActivityLogStateSchema | ActivityLogBasicEventSchema = {}
+    event_context: (
+        ActivityLogStateDetailSchema | ActivityLogStateSchema | ActivityLogBasicEventSchema | ActivityLogExportSchema
+    ) = {}
 
 
 class ActivityLogDetailSchema(ActivityLogBaseSchema):
