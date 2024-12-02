@@ -97,7 +97,7 @@ async def get__average_exposure(
 async def get__impressions_by_venue_per_range(
     time_frame: DateRangeEnum,
     query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
-    impression_service: Annotated[ImpressionsService, Depends()],
+    impression_service: Annotated[ImpressionService, Depends()],
 ) -> Page[TimeFrameImpressionsByVenueSchema]:
     return await impression_service.get_impressions_by_venue_per_range(time_frame, query_filter)
 
@@ -106,7 +106,7 @@ async def get__impressions_by_venue_per_range(
 async def get__months_on_month_summary(
     time_frame: DateRangeEnum,
     query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
-    impression_service: Annotated[ImpressionsService, Depends()],
+    impression_service: Annotated[ImpressionService, Depends()],
 ) -> Page[ImpressionsSalesPlayoutsConvertions]:
     return await impression_service.get_impressions_sales_playouts_convertion_per_range(time_frame, query_filter)
 
