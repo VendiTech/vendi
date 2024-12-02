@@ -11,7 +11,7 @@ from mspy_vendi.db import Impression
 from mspy_vendi.domain.geographies.models import Geography
 from mspy_vendi.domain.impressions.filters import ExportImpressionFilter, ImpressionFilter
 from mspy_vendi.domain.impressions.schemas import (
-    AdvertPlayoutsBaseSchema,
+    AdvertPlayoutsTimeFrameSchema,
     AverageExposureSchema,
     AverageImpressionsSchema,
     ExposurePerRangeSchema,
@@ -235,21 +235,36 @@ class ImpressionManager(CRUDManager):
 
         return (await self.session.execute(stmt)).mappings().all()  # type: ignore
 
-    async def get_exposure(self, query_filter: ImpressionFilter) -> Page[ExposurePerRangeSchema]:
+    async def get_exposure_per_range(
+        self,
+        time_frame: DateRangeEnum,
+        query_filter: ImpressionFilter,
+    ) -> Page[ExposurePerRangeSchema]:
         """
         Get an exposure time and its corresponding date.
 
+        :param time_frame: Time frame to group the data.
         :param query_filter: Filter object.
         :return: Paginated list with an exposure time (seconds) and a date.
         """
+        stmt_time_frame = label("time_frame", func.date_trunc(time_frame.value, self.sql_model.date))
         stmt_second_exposure = label("seconds_exposure", func.sum(self.sql_model.seconds_exposure))
-        stmt_time_frame = label("time_frame", self.sql_model.date)
 
-        stmt = select(stmt_second_exposure, stmt_time_frame).group_by(stmt_time_frame).order_by(stmt_time_frame)
+        stmt = select(stmt_second_exposure, stmt_time_frame).group_by(stmt_time_frame)
 
         stmt = query_filter.filter(stmt)
+        stmt = stmt.subquery()
 
-        return await paginate(self.session, stmt, unique=False)
+        date_range_cte = self._generate_date_range_cte(time_frame, query_filter)
+
+        final_stmt = (
+            select(date_range_cte.c.time_frame, func.coalesce(stmt.c.seconds_exposure, 0).label("seconds_exposure"))
+            .select_from(date_range_cte)
+            .outerjoin(stmt, stmt.c.time_frame == date_range_cte.c.time_frame)
+            .order_by(date_range_cte.c.time_frame)
+        )
+
+        return await paginate(self.session, final_stmt)
 
     async def get_average_impressions_count(self, query_filter: ImpressionFilter) -> AverageImpressionsSchema:
         """
@@ -273,22 +288,35 @@ class ImpressionManager(CRUDManager):
 
         return AverageImpressionsSchema(avg_impressions=row.avg_impressions, total_impressions=row.total_impressions)
 
-    async def get_adverts_playout(self, query_filter: ImpressionFilter) -> AdvertPlayoutsBaseSchema:
+    async def get_advert_playouts_per_range(
+        self,
+        time_frame: DateRangeEnum,
+        query_filter: ImpressionFilter,
+    ) -> Page[AdvertPlayoutsTimeFrameSchema]:
         """
         Get total time of advert playouts.
 
+        :param time_frame: Time frame to group the data.
         :param query_filter: Filter object.
         :return: Total time of advert playouts (seconds).
         """
+        stmt_time_frame = label("time_frame", func.date_trunc(time_frame.value, self.sql_model.date))
         stmt_sum_advert_playouts = label("advert_playouts", func.sum(self.sql_model.advert_playouts))
 
-        stmt = select(stmt_sum_advert_playouts)
+        stmt = select(stmt_time_frame, stmt_sum_advert_playouts).group_by(stmt_time_frame)
         stmt = query_filter.filter(stmt)
+        stmt = stmt.subquery()
 
-        result = await self.session.execute(stmt)
-        row = result.one()
+        date_range_cte = self._generate_date_range_cte(time_frame, query_filter)
 
-        return AdvertPlayoutsBaseSchema(advert_playouts=row.advert_playouts)
+        final_stmt = (
+            select(date_range_cte.c.time_frame, func.coalesce(stmt.c.advert_playouts, 0).label("advert_playouts"))
+            .select_from(date_range_cte)
+            .outerjoin(stmt, stmt.c.time_frame == date_range_cte.c.time_frame)
+            .order_by(date_range_cte.c.time_frame)
+        )
+
+        return await paginate(self.session, final_stmt)
 
     async def get_average_exposure(self, query_filter: ImpressionFilter) -> AverageExposureSchema:
         """

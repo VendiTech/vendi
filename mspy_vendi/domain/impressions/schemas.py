@@ -59,8 +59,9 @@ class AverageExposureSchema(BaseSchema):
     seconds_exposure: DecimalFloat
 
 
-class AdvertPlayoutsBaseSchema(BaseSchema):
+class AdvertPlayoutsTimeFrameSchema(BaseSchema):
     advert_playouts: NonNegativeInt
+    time_frame: datetime
 
 
 class ExposurePerRangeSchema(ExposureBaseSchema):
