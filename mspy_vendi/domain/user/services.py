@@ -145,18 +145,16 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
             ActivityLogBaseSchema(
                 user_id=user_id,
                 event_type=EventTypeEnum.USER_REGISTER,
-                event_context=ActivityLogStateSchema.model_validate(
-                    {
-                        "previous_state": previous_user_state_dict,
-                        "new_state": {
-                            "firstname": user.firstname,
-                            "lastname": user.lastname,
-                            "email": user.email,
-                            "permissions": user.permissions,
-                            "role": user.role,
-                            "machine_ids": list(map(lambda item: item.id, user.machines)),
-                        },
-                    }
+                event_context=ActivityLogStateSchema(
+                    previous_state=previous_user_state_dict,
+                    current_state={
+                        "firstname": user.firstname,
+                        "lastname": user.lastname,
+                        "email": user.email,
+                        "permissions": user.permissions,
+                        "role": user.role,
+                        "machine_ids": list(map(lambda item: item.id, user.machines)),
+                    },
                 ),
             )
         )
