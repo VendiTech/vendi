@@ -1,3 +1,4 @@
+from mspy_vendi.domain.activity_log.models import ActivityLog
 from mspy_vendi.domain.geographies.models import Geography
 from mspy_vendi.domain.impressions.models import Impression
 from mspy_vendi.domain.machine_impression.models import MachineImpression
@@ -8,6 +9,7 @@ from mspy_vendi.domain.sales.models import Sale
 from mspy_vendi.domain.user.models import User
 
 __all__ = (
+    "ActivityLog",
     "User",
     "MachineUser",
     "Machine",

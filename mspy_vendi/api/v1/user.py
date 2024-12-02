@@ -9,7 +9,6 @@ from mspy_vendi.core.enums import ApiTagEnum, CRUDEnum
 from mspy_vendi.core.pagination import Page
 from mspy_vendi.deps import get_db_session
 from mspy_vendi.domain.auth import get_auth_user_service, get_current_user
-from mspy_vendi.domain.machine_user.service import MachineUserService
 from mspy_vendi.domain.user.models import User
 from mspy_vendi.domain.user.schemas import (
     UserAdminCreateSchema,
@@ -103,30 +102,20 @@ async def post__reset_password(
 @router.post("/admin/create", response_model=UserDetail, tags=[ApiTagEnum.ADMIN_USER])
 async def post__create_user(
     user_obj: UserAdminCreateSchema,
-    machine_user_service: Annotated[MachineUserService, Depends()],
     auth_service: Annotated[AuthUserService, Depends(get_auth_user_service)],
     _: Annotated[User, Depends(get_current_user(is_superuser=True))],
 ) -> UserDetail:
-    created_user = await auth_service.create(user_obj)  # type: ignore
-    await machine_user_service.update_user_machines(created_user.id, *user_obj.machines)
-
-    return await auth_service.get(created_user.id)
+    return await auth_service.create_flow(user_obj)
 
 
 @router.patch("/admin/edit/{user_id}", response_model=UserDetail, tags=[ApiTagEnum.ADMIN_USER])
 async def patch__edit_user(
     user_id: PositiveInt,
     user_obj: UserAdminEditSchema,
-    machine_user_service: Annotated[MachineUserService, Depends()],
-    user_service: Annotated[UserService, Depends()],
+    auth_service: Annotated[AuthUserService, Depends(get_auth_user_service)],
     _: Annotated[User, Depends(get_current_user(is_superuser=True))],
 ) -> UserDetail:
-    await user_service.update(user_id, user_obj, raise_error=False)  # type: ignore
-
-    if user_obj.machines is not None:
-        await machine_user_service.update_user_machines(user_id, *user_obj.machines)
-
-    return await user_service.get(user_id)
+    return await auth_service.edit_flow(user_id, user_obj=user_obj)
 
 
 class UserAPI(CRUDApi):

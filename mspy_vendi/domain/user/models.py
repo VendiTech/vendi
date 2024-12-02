@@ -18,7 +18,7 @@ from mspy_vendi.domain.user.enums import (
 )
 
 if TYPE_CHECKING:
-    from mspy_vendi.db import Machine, MachineUser
+    from mspy_vendi.db import ActivityLog, Machine, MachineUser
 
 
 class User(CommonMixin, SQLAlchemyBaseUserTable[int], Base):
@@ -48,3 +48,7 @@ class User(CommonMixin, SQLAlchemyBaseUserTable[int], Base):
         back_populates="user", passive_deletes=ORMRelationshipCascadeTechniqueEnum.db_cascade
     )
     machines: AssociationProxy[list["Machine"]] = association_proxy("machine_users", "machine")
+
+    activity_logs: Mapped[list["ActivityLog"]] = relationship(
+        back_populates="user", passive_deletes=ORMRelationshipCascadeTechniqueEnum.db_cascade
+    )

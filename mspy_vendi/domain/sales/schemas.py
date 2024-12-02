@@ -1,6 +1,6 @@
 from datetime import date, datetime, time
 
-from pydantic import NonNegativeInt, PositiveInt
+from pydantic import Field, NonNegativeInt, PositiveInt
 
 from mspy_vendi.core.constants import DEFAULT_SOURCE_SYSTEM
 from mspy_vendi.core.schemas import BaseSchema
@@ -76,8 +76,8 @@ class GeographyDecimalQuantitySchema(DecimalQuantitySchema):
 
 
 class ConversionRateSchema(BaseSchema):
-    customers_new: NonNegativeInt
-    customers_returning: NonNegativeInt
+    customers_new: NonNegativeInt = Field(0)
+    customers_returning: NonNegativeInt = Field(0)
 
 
 class VenueSalesQuantitySchema(BaseQuantitySchema):
@@ -88,3 +88,8 @@ class CategoryProductQuantityDateSchema(CategoryProductQuantitySchema):
     product_name: str
     product_id: PositiveInt
     sale_date: date
+
+
+class ProductsCountGeographySchema(BaseSchema):
+    products: DecimalFloat
+    geography: GeographyDetailSchema
