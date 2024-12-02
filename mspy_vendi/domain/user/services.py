@@ -144,7 +144,7 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
         await self.activity_log_manager.create(
             ActivityLogBaseSchema(
                 user_id=user_id,
-                event_type=EventTypeEnum.USER_REGISTER,
+                event_type=EventTypeEnum.USER_EDITED,
                 event_context=ActivityLogStateSchema(
                     previous_state=previous_user_state_dict,
                     current_state={
