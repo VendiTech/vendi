@@ -139,6 +139,7 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
         if user_obj.machines is not None:
             await self.machine_user_service.update_user_machines(user_id, *user_obj.machines)
 
+        self.user_db.session.expire_all()  # type: ignore
         user = await self.user_service.get(user_id)
 
         await self.activity_log_manager.create(
