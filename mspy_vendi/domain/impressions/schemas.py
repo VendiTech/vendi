@@ -52,15 +52,16 @@ class AverageExposureSchema(BaseSchema):
     seconds_exposure: DecimalFloat
 
 
-class AdvertPlayoutsBaseSchema(BaseSchema):
+class AdvertPlayoutsTimeFrameSchema(BaseSchema):
     advert_playouts: NonNegativeInt
+    time_frame: datetime
 
 
 class ExposurePerRangeSchema(ExposureBaseSchema):
     time_frame: datetime
 
 
-class AverageImpressionsSchema(ImpressionCountBaseSchema):
+class AverageImpressionsSchema(BaseSchema):
     avg_impressions: DecimalFloat
     total_impressions: DecimalFloat
 
@@ -72,7 +73,7 @@ class TimeFrameImpressionsByVenueSchema(TimeFrameImpressionsSchema):
 class ImpressionsSalesPlayoutsConvertions(
     BaseQuantitySchema,
     TimeFrameImpressionsSchema,
-    AdvertPlayoutsBaseSchema,
+    AdvertPlayoutsTimeFrameSchema,
     ConversionRateSchema,
 ):
     """
