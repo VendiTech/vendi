@@ -13,15 +13,15 @@ from mspy_vendi.deps import get_db_session
 from mspy_vendi.domain.auth import get_current_user
 from mspy_vendi.domain.sales.filters import ExportSaleFilter, GeographyFilter, SaleFilter
 from mspy_vendi.domain.sales.schemas import (
-    BaseQuantitySchema,
     CategoryProductQuantityDateSchema,
     CategoryProductQuantitySchema,
     CategoryTimeFrameSalesSchema,
     ConversionRateSchema,
-    DecimalQuantitySchema,
+    DecimalQuantityStatisticSchema,
     DecimalTimeFrameSalesSchema,
     GeographyDecimalQuantitySchema,
     ProductsCountGeographySchema,
+    QuantityStatisticSchema,
     SaleCreateSchema,
     SaleDetailSchema,
     TimeFrameSalesSchema,
@@ -38,11 +38,11 @@ from mspy_vendi.domain.user.services import UserService
 router = APIRouter(prefix="/sale", default_response_class=ORJSONResponse, tags=[ApiTagEnum.SALES])
 
 
-@router.get("/quantity-by-products", response_model=BaseQuantitySchema)
+@router.get("/quantity-by-products", response_model=QuantityStatisticSchema)
 async def get__quantity_by_product(
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
-) -> BaseQuantitySchema:
+) -> QuantityStatisticSchema:
     return await sale_service.get_sales_quantity_by_product(query_filter)
 
 
@@ -55,11 +55,11 @@ async def get__sales_per_range(
     return await sale_service.get_sales_quantity_per_range(time_frame, query_filter)
 
 
-@router.get("/average-sales", response_model=DecimalQuantitySchema)
+@router.get("/average-sales", response_model=DecimalQuantityStatisticSchema)
 async def get__average_sales_across_machines(
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
-) -> DecimalQuantitySchema:
+) -> DecimalQuantityStatisticSchema:
     return await sale_service.get_average_sales_across_machines(query_filter)
 
 

@@ -17,15 +17,15 @@ from mspy_vendi.domain.sales.filters import (
 )
 from mspy_vendi.domain.sales.manager import SaleManager
 from mspy_vendi.domain.sales.schemas import (
-    BaseQuantitySchema,
     CategoryProductQuantityDateSchema,
     CategoryProductQuantitySchema,
     CategoryTimeFrameSalesSchema,
     ConversionRateSchema,
-    DecimalQuantitySchema,
+    DecimalQuantityStatisticSchema,
     DecimalTimeFrameSalesSchema,
     GeographyDecimalQuantitySchema,
     ProductsCountGeographySchema,
+    QuantityStatisticSchema,
     TimeFrameSalesSchema,
     TimePeriodSalesCountSchema,
     TimePeriodSalesRevenueSchema,
@@ -46,7 +46,7 @@ class SaleService(CRUDService, ExportMixin):
         self.email_service = email_service
         super().__init__(db_session)
 
-    async def get_sales_quantity_by_product(self, query_filter: SaleFilter) -> BaseQuantitySchema:
+    async def get_sales_quantity_by_product(self, query_filter: SaleFilter) -> QuantityStatisticSchema:
         return await self.manager.get_sales_quantity_by_product(query_filter)
 
     async def get_sales_quantity_per_range(
@@ -54,7 +54,7 @@ class SaleService(CRUDService, ExportMixin):
     ) -> Page[TimeFrameSalesSchema]:
         return await self.manager.get_sales_quantity_per_range(time_frame, query_filter)
 
-    async def get_average_sales_across_machines(self, query_filter: SaleFilter) -> DecimalQuantitySchema:
+    async def get_average_sales_across_machines(self, query_filter: SaleFilter) -> DecimalQuantityStatisticSchema:
         return await self.manager.get_average_sales_across_machines(query_filter)
 
     async def get_average_sales_per_range(

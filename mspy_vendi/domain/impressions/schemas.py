@@ -7,7 +7,7 @@ from mspy_vendi.core.constants import DEFAULT_SOURCE_SYSTEM
 from mspy_vendi.core.schemas import BaseSchema
 from mspy_vendi.core.validators import DecimalFloat
 from mspy_vendi.domain.geographies.schemas import GeographyDetailSchema
-from mspy_vendi.domain.sales.schemas import BaseQuantitySchema, ConversionRateSchema
+from mspy_vendi.domain.sales.schemas import BaseQuantitySchema, ConversionRateSchema, PreviousMonthEntityCountSchema
 
 
 class ImpressionBaseSchema(BaseSchema):
@@ -87,3 +87,6 @@ class ImpressionsSalesPlayoutsConvertions(
           "quantity": 0
         }
     """
+
+
+class ExposureStatisticSchema(ExposureBaseSchema, PreviousMonthEntityCountSchema): ...

@@ -1,4 +1,4 @@
-from datetime import time
+from datetime import time, timedelta
 from typing import Any
 
 from fastapi_filter.contrib.sqlalchemy import Filter
@@ -8,7 +8,6 @@ from sqlalchemy import CTE, Date, Select, cast, desc, func, label, select, text
 from sqlalchemy.orm import joinedload
 
 from mspy_vendi.core.enums.date_range import DailyTimePeriodEnum, DateRangeEnum, TimePeriodEnum
-from mspy_vendi.core.exceptions.base_exception import NotFoundError
 from mspy_vendi.core.filter import BaseFilter
 from mspy_vendi.core.manager import CRUDManager, Model, Schema
 from mspy_vendi.db import Sale
@@ -18,15 +17,15 @@ from mspy_vendi.domain.product_category.models import ProductCategory
 from mspy_vendi.domain.products.models import Product
 from mspy_vendi.domain.sales.filters import ExportSaleFilter, SaleFilter, StatisticDateRangeFilter
 from mspy_vendi.domain.sales.schemas import (
-    BaseQuantitySchema,
     CategoryProductQuantityDateSchema,
     CategoryProductQuantitySchema,
     CategoryTimeFrameSalesSchema,
     ConversionRateSchema,
-    DecimalQuantitySchema,
+    DecimalQuantityStatisticSchema,
     DecimalTimeFrameSalesSchema,
     GeographyDecimalQuantitySchema,
     ProductsCountGeographySchema,
+    QuantityStatisticSchema,
     TimeFrameSalesSchema,
     TimePeriodSalesCountSchema,
     TimePeriodSalesRevenueSchema,
@@ -99,6 +98,26 @@ class SaleManager(CRUDManager):
         )
 
     @staticmethod
+    def _generate_previous_month_filter(query_filter: SaleFilter) -> SaleFilter:
+        """
+        Modify the given SaleFilter to focus only on the previous month
+        based on query_filter.date_from.
+
+        :param query_filter: The original SaleFilter instance.
+        :return: Modified SaleFilter with date_from and date_to set to the previous month's range.
+        """
+        current_date = query_filter.date_from
+        first_day_of_current_month = current_date.replace(day=1)
+
+        last_day_of_previous_month = first_day_of_current_month - timedelta(days=1)
+        first_day_of_previous_month = last_day_of_previous_month.replace(day=1)
+
+        query_filter.date_from = first_day_of_previous_month
+        query_filter.date_to = last_day_of_previous_month
+
+        return query_filter
+
+    @staticmethod
     def _generate_date_range_cte(time_frame: DateRangeEnum, query_filter: StatisticDateRangeFilter) -> CTE:
         """
         Generate CTE with date range.
@@ -129,7 +148,7 @@ class SaleManager(CRUDManager):
         """
         return {period.name: (period.start, period.end) for period in time_period}
 
-    async def get_sales_quantity_by_product(self, query_filter: SaleFilter) -> BaseQuantitySchema:
+    async def get_sales_quantity_by_product(self, query_filter: SaleFilter) -> QuantityStatisticSchema:
         """
         Get the total quantity of sales by product|s.
         Calculate the sum of the quantity field. If no sales are found, raise a NotFoundError.
@@ -144,13 +163,19 @@ class SaleManager(CRUDManager):
         stmt = self._generate_geography_query(query_filter, stmt)
         stmt = query_filter.filter(stmt)
 
-        if (
-            not (result := (await self.session.execute(stmt)).mappings().one_or_none())
-            or result.get("quantity") is None
-        ):
-            raise NotFoundError(detail="No sales were find.")
+        stmt_previous_month_stat = select(func.sum(self.sql_model.quantity).label("previous_month_statistic"))
+        query_filter = self._generate_previous_month_filter(query_filter)
+        stmt_previous_month_stat = self._generate_geography_query(query_filter, stmt_previous_month_stat)
 
-        return result  # type: ignore
+        stmt_previous_month_stat = query_filter.filter(stmt_previous_month_stat)
+
+        current_month_result = await self.session.scalar(stmt) or 0
+        previous_month_result = await self.session.scalar(stmt_previous_month_stat) or 0
+
+        return QuantityStatisticSchema(
+            quantity=current_month_result,
+            previous_month_statistic=previous_month_result,
+        )
 
     async def get_sales_quantity_per_range(
         self,
@@ -188,7 +213,7 @@ class SaleManager(CRUDManager):
 
         return await paginate(self.session, final_stmt)
 
-    async def get_average_sales_across_machines(self, query_filter: SaleFilter) -> DecimalQuantitySchema:
+    async def get_average_sales_across_machines(self, query_filter: SaleFilter) -> DecimalQuantityStatisticSchema:
         """
         Get the average quantity of sales across machines.
         Calculate the average of the quantity field. If no sales are found, raise a NotFoundError.
@@ -199,17 +224,23 @@ class SaleManager(CRUDManager):
         :return: Average quantity of sales.
         """
         stmt = select(func.avg(self.sql_model.quantity).label("quantity"))
-
         stmt = self._generate_geography_query(query_filter, stmt)
+
         stmt = query_filter.filter(stmt)
 
-        if (
-            not (result := (await self.session.execute(stmt)).mappings().one_or_none())
-            or result.get("quantity") is None
-        ):
-            raise NotFoundError(detail="No sales were find.")
+        stmt_previous_month_stat = select(func.avg(self.sql_model.quantity).label("previous_month_statistic"))
+        query_filter = self._generate_previous_month_filter(query_filter)
+        stmt_previous_month_stat = self._generate_geography_query(query_filter, stmt_previous_month_stat)
 
-        return result  # type: ignore
+        stmt_previous_month_stat = query_filter.filter(stmt_previous_month_stat)
+
+        current_month_result = await self.session.scalar(stmt) or 0
+        previous_month_result = await self.session.scalar(stmt_previous_month_stat) or 0
+
+        return DecimalQuantityStatisticSchema(
+            quantity=current_month_result,
+            previous_month_statistic=previous_month_result,
+        )
 
     async def get_average_sales_per_range(
         self,

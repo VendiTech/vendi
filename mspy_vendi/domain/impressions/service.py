@@ -16,6 +16,7 @@ from mspy_vendi.domain.impressions.schemas import (
     AverageExposureSchema,
     AverageImpressionsSchema,
     ExposurePerRangeSchema,
+    ExposureStatisticSchema,
     GeographyImpressionsCountSchema,
     ImpressionsSalesPlayoutsConvertions,
     TimeFrameImpressionsByVenueSchema,
@@ -57,6 +58,9 @@ class ImpressionService(CRUDService, ExportMixin):
 
     async def get_average_impressions_count(self, query_filter: ImpressionFilter) -> AverageImpressionsSchema:
         return await self.manager.get_average_impressions_count(query_filter)
+
+    async def get_exposure(self, query_filter: ImpressionFilter) -> ExposureStatisticSchema:
+        return await self.manager.get_exposure(query_filter)
 
     async def get_advert_playouts_per_range(
         self,

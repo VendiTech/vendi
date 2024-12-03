@@ -29,19 +29,33 @@ class SaleDetailSchema(SaleBaseSchema):
     machine: MachineDetailSchema
 
 
+class PreviousMonthEntityCountSchema(BaseSchema):
+    previous_month_statistic: NonNegativeInt
+
+
+class PreviousMonthEntityDecimalCountSchema(BaseSchema):
+    previous_month_statistic: DecimalFloat
+
+
 class BaseQuantitySchema(BaseSchema):
     quantity: NonNegativeInt
 
 
-class DecimalQuantitySchema(BaseSchema):
+class DecimalQuantityBaseSchema(BaseSchema):
     quantity: DecimalFloat
+
+
+class QuantityStatisticSchema(BaseQuantitySchema, PreviousMonthEntityCountSchema): ...
+
+
+class DecimalQuantityStatisticSchema(DecimalQuantityBaseSchema, PreviousMonthEntityDecimalCountSchema): ...
 
 
 class TimeFrameSalesSchema(BaseQuantitySchema):
     time_frame: datetime
 
 
-class DecimalTimeFrameSalesSchema(DecimalQuantitySchema):
+class DecimalTimeFrameSalesSchema(DecimalQuantityBaseSchema):
     time_frame: datetime
 
 
@@ -71,7 +85,7 @@ class UnitsTimeFrameSchema(BaseSchema):
     time_frame: datetime
 
 
-class GeographyDecimalQuantitySchema(DecimalQuantitySchema):
+class GeographyDecimalQuantitySchema(DecimalQuantityBaseSchema):
     geography: GeographyDetailSchema
 
 
