@@ -63,8 +63,9 @@ async def get__impressions_per_geography(
 async def get__exposure_statistic(
     query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
     impression_service: Annotated[ImpressionService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
 ) -> ExposureStatisticSchema:
-    return await impression_service.get_exposure(query_filter)
+    return await impression_service.get_exposure(query_filter, user)
 
 
 @router.get("/exposure-per-range", response_model=Page[ExposurePerRangeSchema])

@@ -65,8 +65,8 @@ class ImpressionService(CRUDService, ExportMixin):
     ) -> AverageImpressionsSchema:
         return await self.manager.get_average_impressions_count(query_filter, user)
 
-    async def get_exposure(self, query_filter: ImpressionFilter) -> ExposureStatisticSchema:
-        return await self.manager.get_exposure(query_filter)
+    async def get_exposure(self, query_filter: ImpressionFilter, user: User) -> ExposureStatisticSchema:
+        return await self.manager.get_exposure(query_filter, user)
 
     async def get_advert_playouts_per_range(
         self,

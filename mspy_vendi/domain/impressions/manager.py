@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 
 from fastapi_pagination.ext.sqlalchemy import paginate
-from sqlalchemy import CTE, Date, Select, cast, func, label, select, text
+from sqlalchemy import CTE, Date, Row, Select, cast, func, label, select, text
 from sqlalchemy.dialects.postgresql import insert
 
 from mspy_vendi.core.enums.date_range import DateRangeEnum
@@ -223,10 +223,13 @@ class ImpressionManager(CRUDManager):
             .order_by(Geography.id)
         )
 
-        stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
-        stmt = self._generate_user_query(query_filter, user, stmt)
+        if query_filter.geography_id__in:
+            stmt = stmt.where(Geography.id.in_(query_filter.geography_id__in or []))
+            setattr(query_filter, "geography_id__in", None)
 
-        setattr(query_filter, "geography_id__in", None)
+        if not user.is_superuser:
+            stmt = stmt.join(MachineUser, MachineUser.machine_id == Machine.id).where(MachineUser.user_id == user.id)
+
         stmt = query_filter.filter(stmt)
 
         return await paginate(self.session, stmt, unique=False)
@@ -269,23 +272,34 @@ class ImpressionManager(CRUDManager):
 
         return (await self.session.execute(stmt)).mappings().all()  # type: ignore
 
-    async def get_exposure(self, query_filter) -> ExposureStatisticSchema:
+    async def get_exposure(self, query_filter: ImpressionFilter, user: User) -> ExposureStatisticSchema:
         """
         Get total seconds of exposure filtered by dates and statistic for previous month.
 
         :param query_filter: Filter object.
+        :param user: Current User.
+
         :return: Exposure statistic.
         """
         stmt_seconds_exposure = label("seconds_exposure", func.sum(self.sql_model.seconds_exposure))
 
         stmt = select(stmt_seconds_exposure)
-        stmt = self._generate_geography_query(query_filter, stmt)
+
+        stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
+        stmt = self._generate_user_query(query_filter, user, stmt)
+
+        setattr(query_filter, "geography_id__in", None)
         stmt = query_filter.filter(stmt)
 
         stmt_previous_month_stat = select(func.sum(self.sql_model.seconds_exposure).label("previous_month_statistic"))
         query_filter = self._generate_previous_month_filter(query_filter)
-        stmt_previous_month_stat = self._generate_geography_query(query_filter, stmt_previous_month_stat)
 
+        stmt_previous_month_stat = self._generate_geography_query(
+            query_filter, stmt_previous_month_stat, modify_filter=False
+        )
+        stmt_previous_month_stat = self._generate_user_query(query_filter, user, stmt_previous_month_stat)
+
+        setattr(query_filter, "geography_id__in", None)
         stmt_previous_month_stat = query_filter.filter(stmt_previous_month_stat)
 
         current_month_result = await self.session.scalar(stmt) or 0
@@ -347,8 +361,10 @@ class ImpressionManager(CRUDManager):
 
         :return: Average count of impressions and count of total impression for all time.
         """
-        stmt_avg_impressions = label("avg_impressions", func.avg(self.sql_model.total_impressions))
-        stmt_total_impressions = label("total_impressions", func.sum(self.sql_model.total_impressions))
+        stmt_avg_impressions = label("avg_impressions", func.coalesce(func.avg(self.sql_model.total_impressions), 0))
+        stmt_total_impressions = label(
+            "total_impressions", func.coalesce(func.sum(self.sql_model.total_impressions), 0)
+        )
 
         stmt = select(stmt_avg_impressions)
 
@@ -360,11 +376,14 @@ class ImpressionManager(CRUDManager):
         stmt = stmt.subquery()
 
         final_stmt = select(stmt.c.avg_impressions, stmt_total_impressions).group_by(stmt.c.avg_impressions)
+        final_stmt = self._generate_user_query(query_filter, user, final_stmt)
 
         result = await self.session.execute(final_stmt)
-        row = result.one()
+        row: Row | None = result.one_or_none()
 
-        return AverageImpressionsSchema(avg_impressions=row.avg_impressions, total_impressions=row.total_impressions)
+        return AverageImpressionsSchema(
+            avg_impressions=getattr(row, "avg_impressions", 0), total_impressions=getattr(row, "total_impressions", 0)
+        )
 
     async def get_advert_playouts_per_range(
         self,
@@ -508,10 +527,15 @@ class ImpressionManager(CRUDManager):
             .order_by(stmt_time_frame)
         )
 
-        stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
-        stmt = self._generate_user_query(query_filter, user, stmt)
+        if query_filter.geography_id__in:
+            stmt = stmt.join(Geography, Machine.geography_id == Geography.id).where(
+                Geography.id.in_(query_filter.geography_id__in)
+            )
+            setattr(query_filter, "geography_id__in", None)
 
-        setattr(query_filter, "geography_id__in", None)
+        if not user.is_superuser:
+            stmt = stmt.join(MachineUser, MachineUser.machine_id == Machine.id).where(MachineUser.user_id == user.id)
+
         stmt = query_filter.filter(stmt)
         stmt = stmt.subquery()
 
