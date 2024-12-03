@@ -238,24 +238,22 @@ class ImpressionManager(CRUDManager):
         :return: Exposure statistic.
         """
         stmt_seconds_exposure = label("seconds_exposure", func.sum(self.sql_model.seconds_exposure))
+        stmt_previous_month_stat = label("previous_month_statistic", func.sum(self.sql_model.seconds_exposure))
 
         stmt = select(stmt_seconds_exposure)
         stmt = self._generate_geography_query(query_filter, stmt)
-        stmt = query_filter.filter(stmt)
+        stmt = query_filter.filter(stmt).subquery()
 
-        stmt_previous_month_stat = select(func.sum(self.sql_model.seconds_exposure).label("previous_month_statistic"))
         query_filter = self._generate_previous_month_filter(query_filter)
-        stmt_previous_month_stat = self._generate_geography_query(query_filter, stmt_previous_month_stat)
 
-        stmt_previous_month_stat = query_filter.filter(stmt_previous_month_stat)
+        stmt_previous_month = select(stmt_previous_month_stat)
+        stmt_previous_month = self._generate_geography_query(query_filter, stmt_previous_month)
+        stmt_previous_month = query_filter.filter(stmt_previous_month)
+        stmt_previous_month = stmt_previous_month.subquery()
 
-        current_month_result = await self.session.scalar(stmt) or 0
-        previous_month_result = await self.session.scalar(stmt_previous_month_stat) or 0
+        final_stmt = select(stmt.c.seconds_exposure, stmt_previous_month.c.previous_month_statistic)
 
-        return ExposureStatisticSchema(
-            seconds_exposure=current_month_result,
-            previous_month_statistic=previous_month_result,
-        )
+        return (await self.session.execute(final_stmt)).mappings().one_or_none()  # type: ignore
 
     async def get_exposure_per_range(
         self,
@@ -291,26 +289,34 @@ class ImpressionManager(CRUDManager):
 
     async def get_average_impressions_count(self, query_filter: ImpressionFilter) -> AverageImpressionsSchema:
         """
-        Get average count of impressions per time range and total count of impressions for all time.
+        Calculate the average and total count of impressions for a given time range,
+        including the overall total count of impressions.
 
-        :param query_filter: Filter object.
-        :return: Average count of impressions and count of total impression for all time.
+        This method performs the following:
+        - Calculates the average number of impressions within the given time range.
+        - Calculates the sum of all impressions within the given time range.
+        - Computes the total count of impressions without considering any time range.
+
+        :param query_filter: A filter object used to apply specific time range and geographical filters.
+        :return: An instance of `AverageImpressionsSchema` containing the average count of impressions,
+                 the total count of impressions for the time range, and the total count for all time.
         """
         stmt_avg_impressions = label("avg_impressions", func.avg(self.sql_model.total_impressions))
+        stmt_sum_impressions = label("impressions", func.sum(self.sql_model.total_impressions))
         stmt_total_impressions = label("total_impressions", func.sum(self.sql_model.total_impressions))
 
-        stmt = select(stmt_avg_impressions)
+        stmt = select(stmt_avg_impressions, stmt_sum_impressions)
 
         stmt = self._generate_geography_query(query_filter, stmt)
         stmt = query_filter.filter(stmt)
         stmt = stmt.subquery()
 
-        final_stmt = select(stmt.c.avg_impressions, stmt_total_impressions).group_by(stmt.c.avg_impressions)
+        final_stmt = select(stmt.c.avg_impressions, stmt.c.impressions, stmt_total_impressions).group_by(
+            stmt.c.avg_impressions, stmt.c.impressions
+        )
+        final_stmt = self._generate_geography_query(query_filter, final_stmt)
 
-        result = await self.session.execute(final_stmt)
-        row = result.one()
-
-        return AverageImpressionsSchema(avg_impressions=row.avg_impressions, total_impressions=row.total_impressions)
+        return (await self.session.execute(final_stmt)).mappings().one_or_none()  # type: ignore
 
     async def get_advert_playouts_per_range(
         self,

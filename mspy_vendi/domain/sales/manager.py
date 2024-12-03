@@ -2,7 +2,6 @@ from datetime import time, timedelta
 from typing import Any
 
 from fastapi_filter.contrib.sqlalchemy import Filter
-from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import CTE, Date, Select, cast, desc, func, label, select, text
 from sqlalchemy.orm import joinedload
@@ -10,6 +9,7 @@ from sqlalchemy.orm import joinedload
 from mspy_vendi.core.enums.date_range import DailyTimePeriodEnum, DateRangeEnum, TimePeriodEnum
 from mspy_vendi.core.filter import BaseFilter
 from mspy_vendi.core.manager import CRUDManager, Model, Schema
+from mspy_vendi.core.pagination import Page
 from mspy_vendi.db import Sale
 from mspy_vendi.domain.geographies.models import Geography
 from mspy_vendi.domain.machines.models import Machine, MachineUser
@@ -29,6 +29,7 @@ from mspy_vendi.domain.sales.schemas import (
     TimeFrameSalesSchema,
     TimePeriodSalesCountSchema,
     TimePeriodSalesRevenueSchema,
+    UnitsStatisticSchema,
     UnitsTimeFrameSchema,
     VenueSalesQuantitySchema,
 )
@@ -150,32 +151,31 @@ class SaleManager(CRUDManager):
 
     async def get_sales_quantity_by_product(self, query_filter: SaleFilter) -> QuantityStatisticSchema:
         """
-        Get the total quantity of sales by product|s.
-        Calculate the sum of the quantity field. If no sales are found, raise a NotFoundError.
+        Get the total quantity of sales by product for the current period and the previous month.
 
-        :param user: Current user.
-        :param query_filter: Filter object.
-
-        :return: Total quantity of sales.
+        :param query_filter: Filter object that contains the filtering parameters for the query.
+        :return: A schema containing the total quantity of sales for the current period
+                 and the previous month.
         """
-        stmt = select(func.sum(self.sql_model.quantity).label("quantity"))
+        stmt_total_quantity = label("total_quantity", func.sum(self.sql_model.quantity))
+        stmt_previous_month_stat = label("previous_month_statistic", func.sum(self.sql_model.quantity))
 
+        stmt = select(stmt_total_quantity)
         stmt = self._generate_geography_query(query_filter, stmt)
-        stmt = query_filter.filter(stmt)
+        stmt = query_filter.filter(stmt).subquery(name="current_month")
 
-        stmt_previous_month_stat = select(func.sum(self.sql_model.quantity).label("previous_month_statistic"))
         query_filter = self._generate_previous_month_filter(query_filter)
-        stmt_previous_month_stat = self._generate_geography_query(query_filter, stmt_previous_month_stat)
 
-        stmt_previous_month_stat = query_filter.filter(stmt_previous_month_stat)
+        stmt_previous_month = select(stmt_previous_month_stat)
+        stmt_previous_month = self._generate_geography_query(query_filter, stmt_previous_month)
+        stmt_previous_month = query_filter.filter(stmt_previous_month).subquery(name="previous_month")
 
-        current_month_result = await self.session.scalar(stmt) or 0
-        previous_month_result = await self.session.scalar(stmt_previous_month_stat) or 0
-
-        return QuantityStatisticSchema(
-            quantity=current_month_result,
-            previous_month_statistic=previous_month_result,
+        final_stmt = select(
+            func.coalesce(stmt.c.total_quantity, 0).label("quantity"),
+            func.coalesce(stmt_previous_month.c.previous_month_statistic, 0).label("previous_month_statistic"),
         )
+
+        return (await self.session.execute(final_stmt)).mappings().one_or_none()  # type: ignore
 
     async def get_sales_quantity_per_range(
         self,
@@ -215,32 +215,31 @@ class SaleManager(CRUDManager):
 
     async def get_average_sales_across_machines(self, query_filter: SaleFilter) -> DecimalQuantityStatisticSchema:
         """
-        Get the average quantity of sales across machines.
-        Calculate the average of the quantity field. If no sales are found, raise a NotFoundError.
+        Get the average quantity of sales for the current period and the previous month.
 
-        :param user: Current user.
-        :param query_filter: Filter object.
-
-        :return: Average quantity of sales.
+        :param query_filter: Filter object that contains the filtering parameters for the query.
+        :return: A schema containing the average quantity of sales for the current period
+                 and the previous month.
         """
-        stmt = select(func.avg(self.sql_model.quantity).label("quantity"))
+        stmt_avg_quantity = label("quantity", func.avg(self.sql_model.quantity))
+        stmt_previous_month_stat = label("previous_month_statistic", func.avg(self.sql_model.quantity))
+
+        stmt = select(stmt_avg_quantity)
         stmt = self._generate_geography_query(query_filter, stmt)
+        stmt = query_filter.filter(stmt).subquery()
 
-        stmt = query_filter.filter(stmt)
-
-        stmt_previous_month_stat = select(func.avg(self.sql_model.quantity).label("previous_month_statistic"))
         query_filter = self._generate_previous_month_filter(query_filter)
-        stmt_previous_month_stat = self._generate_geography_query(query_filter, stmt_previous_month_stat)
 
-        stmt_previous_month_stat = query_filter.filter(stmt_previous_month_stat)
+        stmt_previous_month = select(stmt_previous_month_stat)
+        stmt_previous_month = self._generate_geography_query(query_filter, stmt_previous_month)
+        stmt_previous_month = query_filter.filter(stmt_previous_month).subquery()
 
-        current_month_result = await self.session.scalar(stmt) or 0
-        previous_month_result = await self.session.scalar(stmt_previous_month_stat) or 0
-
-        return DecimalQuantityStatisticSchema(
-            quantity=current_month_result,
-            previous_month_statistic=previous_month_result,
+        final_stmt = select(
+            func.coalesce(stmt.c.quantity, 0).label("quantity"),
+            func.coalesce(stmt_previous_month.c.previous_month_statistic, 0).label("previous_month_statistic"),
         )
+
+        return (await self.session.execute(final_stmt)).mappings().one_or_none()  # type: ignore
 
     async def get_average_sales_per_range(
         self,
@@ -304,7 +303,7 @@ class SaleManager(CRUDManager):
 
         return await paginate(self.session, stmt)
 
-    async def get_sales_category_quantity_per_time_frame(
+    async def get_sales_category_quantity(
         self,
         query_filter: SaleFilter,
     ) -> Page[CategoryTimeFrameSalesSchema]:
@@ -421,7 +420,11 @@ class SaleManager(CRUDManager):
 
         return [{"time_period": period, "revenue": total} for period, total in revenue_by_period.items()]  # type: ignore
 
-    async def get_units_sold(self, time_frame: DateRangeEnum, query_filter: SaleFilter) -> Page[UnitsTimeFrameSchema]:
+    async def get_units_sold_per_range(
+        self,
+        time_frame: DateRangeEnum,
+        query_filter: SaleFilter,
+    ) -> Page[UnitsTimeFrameSchema]:
         """
         Get the units (quantity * price) sold per each time frame.
 
@@ -452,6 +455,35 @@ class SaleManager(CRUDManager):
         )
 
         return await paginate(self.session, final_stmt)
+
+    async def get_units_sold_statistic(self, query_filter: SaleFilter) -> UnitsStatisticSchema:
+        """
+        Get the filtered units (quantity * price) sold and for previous month statistics.
+
+        :param query_filter: Filter object.
+        :return: Units sold statistic.
+        """
+        stmt_units = label("units", func.sum(self.sql_model.quantity * Product.price))
+        stmt_previous_month_units = label("previous_month_stat", func.sum(self.sql_model.quantity * Product.price))
+
+        stmt = select(stmt_units).join(Product, Product.id == self.sql_model.product_id)
+        stmt = self._generate_geography_query(query_filter, stmt)
+        stmt = query_filter.filter(stmt)
+
+        stmt_previous_month_stat = select(stmt_previous_month_units).join(
+            Product, Product.id == self.sql_model.product_id
+        )
+        query_filter = self._generate_previous_month_filter(query_filter)
+        stmt_previous_month_stat = self._generate_geography_query(query_filter, stmt_previous_month_stat)
+        stmt_previous_month_stat = query_filter.filter(stmt_previous_month_stat)
+
+        current_month_result = await self.session.scalar(stmt) or 0
+        previous_month_result = await self.session.scalar(stmt_previous_month_stat) or 0
+
+        return UnitsStatisticSchema(
+            units=current_month_result,
+            previous_month_statistic=previous_month_result,
+        )
 
     async def get_sales_quantity_per_geography(self, query_filter: SaleFilter) -> Page[GeographyDecimalQuantitySchema]:
         """

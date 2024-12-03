@@ -85,6 +85,10 @@ class UnitsTimeFrameSchema(BaseSchema):
     time_frame: datetime
 
 
+class UnitsStatisticSchema(PreviousMonthEntityDecimalCountSchema):
+    units: DecimalFloat
+
+
 class GeographyDecimalQuantitySchema(DecimalQuantityBaseSchema):
     geography: GeographyDetailSchema
 
