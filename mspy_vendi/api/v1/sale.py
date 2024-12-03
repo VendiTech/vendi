@@ -134,12 +134,13 @@ async def post__export_sales(
     export_type: ExportTypeEnum,
     query_filter: Annotated[ExportSaleFilter, FilterDepends(ExportSaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
-    _: Annotated[User, Depends(get_current_user())],
+    user: Annotated[User, Depends(get_current_user())],
 ) -> StreamingResponse:
     return await sale_service.export(
         query_filter=query_filter,
         export_type=export_type,
         entity=ExportEntityTypeEnum.SALE,
+        user=user,
     )
 
 

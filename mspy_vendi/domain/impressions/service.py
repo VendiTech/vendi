@@ -22,6 +22,7 @@ from mspy_vendi.domain.impressions.schemas import (
     TimeFrameImpressionsByVenueSchema,
     TimeFrameImpressionsSchema,
 )
+from mspy_vendi.domain.user.models import User
 
 
 class ImpressionService(CRUDService, ExportMixin):
@@ -40,24 +41,29 @@ class ImpressionService(CRUDService, ExportMixin):
         self,
         time_frame: DateRangeEnum,
         query_filter: ImpressionFilter,
+        user: User,
     ) -> Page[TimeFrameImpressionsSchema]:
-        return await self.manager.get_impressions_per_range(time_frame, query_filter)
+        return await self.manager.get_impressions_per_range(time_frame, query_filter, user)
 
     async def get_impressions_per_geography(
         self,
         query_filter: ImpressionFilter,
+        user: User,
     ) -> Page[GeographyImpressionsCountSchema]:
-        return await self.manager.get_impressions_per_geography(query_filter)
+        return await self.manager.get_impressions_per_geography(query_filter, user)
 
     async def get_exposure_per_range(
         self,
         time_frame: DateRangeEnum,
         query_filter: ImpressionFilter,
+        user: User,
     ) -> Page[ExposurePerRangeSchema]:
-        return await self.manager.get_exposure_per_range(time_frame, query_filter)
+        return await self.manager.get_exposure_per_range(time_frame, query_filter, user)
 
-    async def get_average_impressions_count(self, query_filter: ImpressionFilter) -> AverageImpressionsSchema:
-        return await self.manager.get_average_impressions_count(query_filter)
+    async def get_average_impressions_count(
+        self, query_filter: ImpressionFilter, user: User
+    ) -> AverageImpressionsSchema:
+        return await self.manager.get_average_impressions_count(query_filter, user)
 
     async def get_exposure(self, query_filter: ImpressionFilter) -> ExposureStatisticSchema:
         return await self.manager.get_exposure(query_filter)
@@ -66,22 +72,25 @@ class ImpressionService(CRUDService, ExportMixin):
         self,
         time_frame: DateRangeEnum,
         query_filter: ImpressionFilter,
+        user: User,
     ) -> Page[AdvertPlayoutsTimeFrameSchema]:
-        return await self.manager.get_advert_playouts_per_range(time_frame, query_filter)
+        return await self.manager.get_advert_playouts_per_range(time_frame, query_filter, user)
 
-    async def get_average_exposure(self, query_filter: ImpressionFilter) -> AverageExposureSchema:
-        return await self.manager.get_average_exposure(query_filter)
+    async def get_average_exposure(self, query_filter: ImpressionFilter, user: User) -> AverageExposureSchema:
+        return await self.manager.get_average_exposure(query_filter, user)
 
     async def get_impressions_by_venue_per_range(
         self,
         time_frame: DateRangeEnum,
         query_filter: ImpressionFilter,
+        user: User,
     ) -> Page[TimeFrameImpressionsByVenueSchema]:
-        return await self.manager.get_impressions_by_venue_per_range(time_frame, query_filter)
+        return await self.manager.get_impressions_by_venue_per_range(time_frame, query_filter, user)
 
     async def get_impressions_sales_playouts_convertion_per_range(
         self,
         time_frame: DateRangeEnum,
         query_filter: ImpressionFilter,
+        user: User,
     ) -> Page[ImpressionsSalesPlayoutsConvertions]:
-        return await self.manager.get_impressions_sales_playouts_convertion_per_range(time_frame, query_filter)
+        return await self.manager.get_impressions_sales_playouts_convertion_per_range(time_frame, query_filter, user)

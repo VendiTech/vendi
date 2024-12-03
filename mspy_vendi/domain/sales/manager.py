@@ -12,6 +12,7 @@ from mspy_vendi.core.filter import BaseFilter
 from mspy_vendi.core.manager import CRUDManager, Model, Schema
 from mspy_vendi.db import Sale
 from mspy_vendi.domain.geographies.models import Geography
+from mspy_vendi.domain.machine_impression.models import MachineImpression
 from mspy_vendi.domain.machines.models import Machine, MachineUser
 from mspy_vendi.domain.product_category.models import ProductCategory
 from mspy_vendi.domain.products.models import Product
@@ -82,6 +83,28 @@ class SaleManager(CRUDManager):
             setattr(query_filter, "geography_id__in", None)
 
         return stmt
+
+    def _generate_user_query(self, query_filter: BaseFilter, user: User, stmt: Select) -> Select:
+        """
+        Generate query to filter by assigned Machines.
+        It makes a join with User table to filter by assigned Machines.
+        If the user is a superuser, it returns the original statement.
+
+        :param query_filter: Filter object.
+        :param user: Current user.
+        :param stmt: Current statement.
+
+        :return: New statement with the filter applied.
+        """
+        if user.is_superuser:
+            return stmt
+
+        if not query_filter.geography_id__in:
+            stmt = stmt.join(
+                MachineImpression, MachineImpression.impression_device_number == self.sql_model.device_number
+            ).join(Machine, Machine.id == MachineImpression.machine_id)
+
+        return stmt.join(MachineUser, MachineUser.machine_id == Machine.id).where(MachineUser.user_id == user.id)
 
     def _generate_user_filtration_query(self, user: User, stmt: Select) -> Select:
         """
@@ -569,12 +592,13 @@ class SaleManager(CRUDManager):
 
         return await paginate(self.session, stmt)
 
-    async def export(self, query_filter: ExportSaleFilter) -> list[Sale]:
+    async def export(self, query_filter: ExportSaleFilter, user: User) -> list[Sale]:
         """
         Export sales data. This method is used to export sales data in different formats.
         It returns a list of sales objects based on the filter.
 
         :param query_filter: Filter object.
+        :param user: Current User.
 
         :return: List of sales objects.
         """
@@ -598,8 +622,10 @@ class SaleManager(CRUDManager):
 
         if query_filter.geography_id__in:
             stmt = stmt.where(Geography.id.in_(query_filter.geography_id__in or []))
-            setattr(query_filter, "geography_id__in", None)
 
+        stmt = self._generate_user_query(query_filter, user, stmt)
+
+        setattr(query_filter, "geography_id__in", None)
         stmt = query_filter.filter(stmt)
 
         return (await self.session.execute(stmt)).mappings().all()  # type: ignore
