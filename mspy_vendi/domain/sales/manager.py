@@ -2,7 +2,6 @@ from datetime import time, timedelta
 from typing import Any
 
 from fastapi_filter.contrib.sqlalchemy import Filter
-from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import CTE, Date, Select, cast, desc, func, label, select, text
 from sqlalchemy.orm import joinedload
@@ -10,6 +9,7 @@ from sqlalchemy.orm import joinedload
 from mspy_vendi.core.enums.date_range import DailyTimePeriodEnum, DateRangeEnum, TimePeriodEnum
 from mspy_vendi.core.filter import BaseFilter
 from mspy_vendi.core.manager import CRUDManager, Model, Schema
+from mspy_vendi.core.pagination import Page
 from mspy_vendi.db import Sale
 from mspy_vendi.domain.geographies.models import Geography
 from mspy_vendi.domain.machines.models import Machine, MachineUser
@@ -29,6 +29,7 @@ from mspy_vendi.domain.sales.schemas import (
     TimeFrameSalesSchema,
     TimePeriodSalesCountSchema,
     TimePeriodSalesRevenueSchema,
+    UnitsStatisticSchema,
     UnitsTimeFrameSchema,
     VenueSalesQuantitySchema,
 )
@@ -80,6 +81,27 @@ class SaleManager(CRUDManager):
             )
             # We do it to ignore the field inside the filter block
             setattr(query_filter, "geography_id__in", None)
+
+        return stmt
+
+    def _generate_product_category_query(self, query_filter: BaseFilter, stmt: Select) -> Select:
+        """
+        Generate query to filter by product_id field.
+        It makes a join with ProductCategory table to filter by product_id field.
+
+        :param query_filter: Filter object.
+        :param stmt: Current statement.
+
+        :return: New statement with the filter applied.
+        """
+        if query_filter.product_category_id__in:
+            stmt = (
+                stmt.join(Product, Product.id == self.sql_model.product_id)
+                .join(ProductCategory, ProductCategory.id == Product.product_category_id)
+                .where(ProductCategory.id.in_(query_filter.product_category_id__in))
+            )
+            # We do it to ignore the field inside the filter block
+            setattr(query_filter, "product_category_id__in", None)
 
         return stmt
 
@@ -150,32 +172,33 @@ class SaleManager(CRUDManager):
 
     async def get_sales_quantity_by_product(self, query_filter: SaleFilter) -> QuantityStatisticSchema:
         """
-        Get the total quantity of sales by product|s.
-        Calculate the sum of the quantity field. If no sales are found, raise a NotFoundError.
+        Get the total quantity of sales by product for the current period and the previous month.
 
-        :param user: Current user.
-        :param query_filter: Filter object.
-
-        :return: Total quantity of sales.
+        :param query_filter: Filter object that contains the filtering parameters for the query.
+        :return: A schema containing the total quantity of sales for the current period
+                 and the previous month.
         """
-        stmt = select(func.sum(self.sql_model.quantity).label("quantity"))
+        stmt_total_quantity = label("total_quantity", func.sum(self.sql_model.quantity))
+        stmt_previous_month_stat = label("previous_month_statistic", func.sum(self.sql_model.quantity))
 
+        stmt = select(stmt_total_quantity)
         stmt = self._generate_geography_query(query_filter, stmt)
-        stmt = query_filter.filter(stmt)
+        stmt = self._generate_product_category_query(query_filter, stmt)
+        stmt = query_filter.filter(stmt).subquery(name="current_month")
 
-        stmt_previous_month_stat = select(func.sum(self.sql_model.quantity).label("previous_month_statistic"))
         query_filter = self._generate_previous_month_filter(query_filter)
-        stmt_previous_month_stat = self._generate_geography_query(query_filter, stmt_previous_month_stat)
 
-        stmt_previous_month_stat = query_filter.filter(stmt_previous_month_stat)
+        stmt_previous_month = select(stmt_previous_month_stat)
+        stmt_previous_month = self._generate_geography_query(query_filter, stmt_previous_month)
+        stmt_previous_month = self._generate_product_category_query(query_filter, stmt_previous_month)
+        stmt_previous_month = query_filter.filter(stmt_previous_month).subquery(name="previous_month")
 
-        current_month_result = await self.session.scalar(stmt) or 0
-        previous_month_result = await self.session.scalar(stmt_previous_month_stat) or 0
-
-        return QuantityStatisticSchema(
-            quantity=current_month_result,
-            previous_month_statistic=previous_month_result,
+        final_stmt = select(
+            func.coalesce(stmt.c.total_quantity, 0).label("quantity"),
+            func.coalesce(stmt_previous_month.c.previous_month_statistic, 0).label("previous_month_statistic"),
         )
+
+        return (await self.session.execute(final_stmt)).mappings().one_or_none()  # type: ignore
 
     async def get_sales_quantity_per_range(
         self,
@@ -199,6 +222,7 @@ class SaleManager(CRUDManager):
         stmt = select(stmt_time_frame, stmt_sum_quantity).group_by(stmt_time_frame).order_by(stmt_time_frame)
 
         stmt = self._generate_geography_query(query_filter, stmt)
+        stmt = self._generate_product_category_query(query_filter, stmt)
         stmt = query_filter.filter(stmt)
         stmt = stmt.subquery()
 
@@ -215,32 +239,33 @@ class SaleManager(CRUDManager):
 
     async def get_average_sales_across_machines(self, query_filter: SaleFilter) -> DecimalQuantityStatisticSchema:
         """
-        Get the average quantity of sales across machines.
-        Calculate the average of the quantity field. If no sales are found, raise a NotFoundError.
+        Get the average quantity of sales for the current period and the previous month.
 
-        :param user: Current user.
-        :param query_filter: Filter object.
-
-        :return: Average quantity of sales.
+        :param query_filter: Filter object that contains the filtering parameters for the query.
+        :return: A schema containing the average quantity of sales for the current period
+                 and the previous month.
         """
-        stmt = select(func.avg(self.sql_model.quantity).label("quantity"))
+        stmt_avg_quantity = label("quantity", func.avg(self.sql_model.quantity))
+        stmt_previous_month_stat = label("previous_month_statistic", func.avg(self.sql_model.quantity))
+
+        stmt = select(stmt_avg_quantity)
         stmt = self._generate_geography_query(query_filter, stmt)
+        stmt = self._generate_product_category_query(query_filter, stmt)
+        stmt = query_filter.filter(stmt).subquery()
 
-        stmt = query_filter.filter(stmt)
-
-        stmt_previous_month_stat = select(func.avg(self.sql_model.quantity).label("previous_month_statistic"))
         query_filter = self._generate_previous_month_filter(query_filter)
-        stmt_previous_month_stat = self._generate_geography_query(query_filter, stmt_previous_month_stat)
 
-        stmt_previous_month_stat = query_filter.filter(stmt_previous_month_stat)
+        stmt_previous_month = select(stmt_previous_month_stat)
+        stmt_previous_month = self._generate_geography_query(query_filter, stmt_previous_month)
+        stmt_previous_month = self._generate_product_category_query(query_filter, stmt_previous_month)
+        stmt_previous_month = query_filter.filter(stmt_previous_month).subquery()
 
-        current_month_result = await self.session.scalar(stmt) or 0
-        previous_month_result = await self.session.scalar(stmt_previous_month_stat) or 0
-
-        return DecimalQuantityStatisticSchema(
-            quantity=current_month_result,
-            previous_month_statistic=previous_month_result,
+        final_stmt = select(
+            func.coalesce(stmt.c.quantity, 0).label("quantity"),
+            func.coalesce(stmt_previous_month.c.previous_month_statistic, 0).label("previous_month_statistic"),
         )
+
+        return (await self.session.execute(final_stmt)).mappings().one_or_none()  # type: ignore
 
     async def get_average_sales_per_range(
         self,
@@ -264,6 +289,7 @@ class SaleManager(CRUDManager):
         stmt = select(stmt_time_frame, stmt_avg_quantity).group_by(stmt_time_frame)
 
         stmt = self._generate_geography_query(query_filter, stmt)
+        stmt = self._generate_product_category_query(query_filter, stmt)
         stmt = query_filter.filter(stmt)
         stmt = stmt.subquery()
 
@@ -293,18 +319,23 @@ class SaleManager(CRUDManager):
 
         stmt = (
             select(stmt_category_id, stmt_category_name, stmt_sum_category_quantity)
-            .join(Product, Product.id == self.sql_model.product_id)
-            .join(ProductCategory, ProductCategory.id == Product.product_category_id)
             .group_by(stmt_category_name, stmt_category_id)
             .order_by(stmt_sum_category_quantity.desc())
         )
+
+        if query_filter.product_category_id__in:
+            stmt = self._generate_product_category_query(query_filter, stmt)
+        else:
+            stmt = stmt.join(Product, Product.id == self.sql_model.product_id).join(
+                ProductCategory, ProductCategory.id == Product.product_category_id
+            )
 
         stmt = self._generate_geography_query(query_filter, stmt)
         stmt = query_filter.filter(stmt)
 
         return await paginate(self.session, stmt)
 
-    async def get_sales_category_quantity_per_time_frame(
+    async def get_sales_category_quantity(
         self,
         query_filter: SaleFilter,
     ) -> Page[CategoryTimeFrameSalesSchema]:
@@ -323,11 +354,16 @@ class SaleManager(CRUDManager):
 
         subquery = (
             select(stmt_category_id, stmt_category_name, stmt_sale_date, stmt_sum_quantity)
-            .join(Product, Product.id == self.sql_model.product_id)
-            .join(ProductCategory, ProductCategory.id == Product.product_category_id)
             .group_by(stmt_category_name, stmt_sale_date, stmt_category_id)
             .order_by(stmt_category_name, stmt_sale_date)
         )
+
+        if query_filter.product_category_id__in:
+            subquery = self._generate_product_category_query(query_filter, subquery)
+        else:
+            subquery = subquery.join(Product, Product.id == self.sql_model.product_id).join(
+                ProductCategory, ProductCategory.id == Product.product_category_id
+            )
 
         subquery = self._generate_geography_query(query_filter, subquery)
         subquery = query_filter.filter(subquery).subquery()
@@ -371,6 +407,7 @@ class SaleManager(CRUDManager):
         stmt = select(self.sql_model.sale_time)
 
         stmt = self._generate_geography_query(query_filter, stmt)
+        stmt = self._generate_product_category_query(query_filter, stmt)
         stmt = query_filter.filter(stmt)
 
         result = await self.session.execute(stmt)
@@ -405,6 +442,7 @@ class SaleManager(CRUDManager):
         )
 
         stmt = self._generate_geography_query(query_filter, stmt)
+        stmt = self._generate_product_category_query(query_filter, stmt)
         stmt = query_filter.filter(stmt)
 
         result = await self.session.execute(stmt)
@@ -421,7 +459,11 @@ class SaleManager(CRUDManager):
 
         return [{"time_period": period, "revenue": total} for period, total in revenue_by_period.items()]  # type: ignore
 
-    async def get_units_sold(self, time_frame: DateRangeEnum, query_filter: SaleFilter) -> Page[UnitsTimeFrameSchema]:
+    async def get_units_sold_per_range(
+        self,
+        time_frame: DateRangeEnum,
+        query_filter: SaleFilter,
+    ) -> Page[UnitsTimeFrameSchema]:
         """
         Get the units (quantity * price) sold per each time frame.
 
@@ -433,11 +475,12 @@ class SaleManager(CRUDManager):
         stmt_time_frame = label("time_frame", func.date_trunc(time_frame.value, self.sql_model.sale_date))
         stmt_units = label("units", func.sum(self.sql_model.quantity * Product.price))
 
-        sales_subquery = (
-            select(stmt_time_frame, stmt_units)
-            .join(Product, Product.id == self.sql_model.product_id)
-            .group_by(stmt_time_frame)
-        )
+        sales_subquery = select(stmt_time_frame, stmt_units).group_by(stmt_time_frame)
+
+        if query_filter.product_category_id__in:
+            sales_subquery = self._generate_product_category_query(query_filter, sales_subquery)
+        else:
+            sales_subquery = sales_subquery.join(Product, Product.id == self.sql_model.product_id)
 
         sales_subquery = self._generate_geography_query(query_filter, sales_subquery)
         sales_subquery = query_filter.filter(sales_subquery).subquery()
@@ -452,6 +495,48 @@ class SaleManager(CRUDManager):
         )
 
         return await paginate(self.session, final_stmt)
+
+    async def get_units_sold_statistic(self, query_filter: SaleFilter) -> UnitsStatisticSchema:
+        """
+        Get the filtered units (quantity * price) sold and statistics for the previous month.
+
+        This method calculates the total units sold (quantity * price) for the current month
+        and the previous month based on the provided filter.
+
+        :param query_filter: Filter object to apply time range and geographical filters.
+        :return: Units sold statistics, including current month and previous month data.
+        """
+        stmt_units = label("units", func.sum(self.sql_model.quantity * Product.price))
+        stmt_previous_month_units = label("previous_month_stat", func.sum(self.sql_model.quantity * Product.price))
+
+        stmt = select(stmt_units)
+
+        if query_filter.product_category_id__in:
+            stmt = self._generate_product_category_query(query_filter, stmt)
+        else:
+            stmt = stmt.join(Product, Product.id == self.sql_model.product_id)
+
+        stmt = self._generate_geography_query(query_filter, stmt)
+        stmt = query_filter.filter(stmt).subquery()
+
+        query_filter = self._generate_previous_month_filter(query_filter)
+
+        stmt_previous_month_stat = select(stmt_previous_month_units)
+
+        if query_filter.product_category_id__in:
+            stmt_previous_month_stat = self._generate_product_category_query(query_filter, stmt_previous_month_stat)
+        else:
+            stmt_previous_month_stat = stmt_previous_month_stat.join(Product, Product.id == self.sql_model.product_id)
+
+        stmt_previous_month_stat = self._generate_geography_query(query_filter, stmt_previous_month_stat)
+        stmt_previous_month_stat = query_filter.filter(stmt_previous_month_stat).subquery()
+
+        final_stmt = select(
+            func.coalesce(stmt.c.units, 0).label("units"),
+            func.coalesce(stmt_previous_month_stat.c.previous_month_stat, 0).label("previous_month_statistic"),
+        )
+
+        return (await self.session.execute(final_stmt)).mappings().one_or_none()  # type: ignore
 
     async def get_sales_quantity_per_geography(self, query_filter: SaleFilter) -> Page[GeographyDecimalQuantitySchema]:
         """
@@ -484,6 +569,9 @@ class SaleManager(CRUDManager):
         )
 
         stmt = self._generate_geography_query(query_filter, stmt)
+        if query_filter.geography_id__in:
+            stmt = stmt.where(Geography.id.in_(query_filter.geography_id__in or []))
+            setattr(query_filter, "geography_id__in", None)
         stmt = query_filter.filter(stmt)
 
         return await paginate(self.session, stmt, unique=False)
@@ -510,7 +598,13 @@ class SaleManager(CRUDManager):
             .join(Machine, Machine.id == MachineUser.machine_id)
             .join(Sale, Sale.machine_id == Machine.id)
         )
-        stmt = self._generate_geography_query(query_filter, stmt)
+
+        if query_filter.geography_id__in:
+            stmt = self._generate_geography_query(query_filter, stmt)
+        else:
+            stmt = stmt.join(Machine, Machine.id == MachineUser.machine_id)
+
+        stmt = self._generate_product_category_query(query_filter, stmt)
 
         stmt = query_filter.filter(stmt)
         result = await self.session.execute(stmt)
@@ -531,6 +625,7 @@ class SaleManager(CRUDManager):
         stmt = select(stmt_sum_quantity, stmt_source_system).group_by(stmt_source_system).order_by(stmt_source_system)
 
         stmt = self._generate_geography_query(query_filter, stmt)
+        stmt = self._generate_product_category_query(query_filter, stmt)
         stmt = query_filter.filter(stmt)
 
         return await paginate(self.session, stmt)
@@ -558,11 +653,16 @@ class SaleManager(CRUDManager):
                 stmt_product_name,
                 stmt_sale_date,
             )
-            .join(Product, Product.id == self.sql_model.product_id)
-            .join(ProductCategory, ProductCategory.id == Product.product_category_id)
             .group_by(stmt_category_id, stmt_category_name, stmt_product_id, stmt_product_name)
             .order_by(desc(stmt_sale_date))
         )
+
+        if query_filter.product_category_id__in:
+            stmt = self._generate_product_category_query(query_filter, stmt)
+        else:
+            stmt = stmt.join(Product, Product.id == self.sql_model.product_id).join(
+                ProductCategory, ProductCategory.id == Product.product_category_id
+            )
 
         stmt = self._generate_geography_query(query_filter, stmt)
         stmt = query_filter.filter(stmt)
@@ -625,7 +725,6 @@ class SaleManager(CRUDManager):
 
         stmt = (
             select(stmt_products_count, stmt_geography_object)
-            .join(Product, Product.id == self.sql_model.product_id)
             .join(Machine, Machine.id == self.sql_model.machine_id)
             .join(Geography, Geography.id == Machine.geography_id)
             .select_from(self.sql_model)
@@ -639,7 +738,15 @@ class SaleManager(CRUDManager):
             .group_by(stmt.c.geography)
         )
 
-        final_stmt = self._generate_geography_query(query_filter, final_stmt)
+        if query_filter.product_category_id__in:
+            final_stmt = self._generate_product_category_query(query_filter, final_stmt)
+        else:
+            final_stmt = final_stmt.join(Product, Product.id == self.sql_model.product_id)
+
+        if query_filter.geography_id__in:
+            final_stmt = final_stmt.where(Geography.id.in_(query_filter.geography_id__in or []))
+            setattr(query_filter, "geography_id__in", None)
+
         final_stmt = query_filter.filter(final_stmt)
 
         return await paginate(self.session, final_stmt, unique=False)

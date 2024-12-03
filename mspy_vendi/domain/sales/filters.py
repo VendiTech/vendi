@@ -23,6 +23,7 @@ class SaleFilter(StatisticDateRangeFilter, GeographyFilter):
     source_system_id: PositiveInt | None = None
     product_id__in: list[PositiveInt] | None = None
     machine_id__in: list[PositiveInt] | None = None
+    product_category_id__in: list[PositiveInt] | None = None
 
 
 class ExportSaleFilter(StatisticDateRangeFilter, GeographyFilter): ...

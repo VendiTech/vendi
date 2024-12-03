@@ -190,7 +190,10 @@ class ImpressionManager(CRUDManager):
             .order_by(Geography.id)
         )
 
-        stmt = self._generate_geography_query(query_filter, stmt)
+        if query_filter.geography_id__in:
+            stmt = stmt.where(Geography.id.in_(query_filter.geography_id__in or []))
+            setattr(query_filter, "geography_id__in", None)
+
         stmt = query_filter.filter(stmt)
 
         return await paginate(self.session, stmt, unique=False)
@@ -421,14 +424,18 @@ class ImpressionManager(CRUDManager):
                 stmt_sum_sales_quantity,
                 stmt_advert_playouts,
             )
-            .join(MachineImpression, MachineImpression.impression_device_number == self.sql_model.device_number)
-            .join(Machine, Machine.id == MachineImpression.machine_id)
             .join(Sale, Sale.machine_id == Machine.id)
             .group_by(stmt_time_frame)
             .order_by(stmt_time_frame)
         )
 
-        stmt = self._generate_geography_query(query_filter, stmt)
+        if query_filter.geography_id__in:
+            stmt = self._generate_geography_query(query_filter, stmt)
+        else:
+            stmt = stmt.join(
+                MachineImpression, MachineImpression.impression_device_number == self.sql_model.device_number
+            ).join(Machine, Machine.id == MachineImpression.machine_id)
+
         stmt = query_filter.filter(stmt)
         stmt = stmt.subquery()
 
