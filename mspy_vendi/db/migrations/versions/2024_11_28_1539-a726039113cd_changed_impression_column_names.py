@@ -19,52 +19,38 @@ depends_on = None
 
 
 def upgrade() -> None:
-    if table_has_column("impressions", "temperature"):
+    if table_has_column("impression", "temperature"):
+        op.drop_column("impression", "temperature")
+
+    if not table_has_column("impression", "seconds_exposure"):
         op.add_column(
             "impression", sa.Column("seconds_exposure", sa.Integer(), server_default=sa.text("0"), nullable=False)
         )
-        op.drop_column("impression", "temperature")
 
-    if table_has_column("impressions", "rainfall"):
-        op.add_column(
-            "impression", sa.Column("advert_playouts", sa.Integer(), server_default=sa.text("0"), nullable=False)
-        )
+    if table_has_column("impression", "rainfall"):
         op.drop_column("impression", "rainfall")
 
-    if table_has_column("impressions", "source_system_id"):
-        op.alter_column(
-            "impression",
-            "source_system_id",
-            existing_type=sa.VARCHAR(),
-            comment="""
-            ID of the impression in the source system. Combination of the `device_number` and `date`. Must be unique.
-            """,
-            existing_comment="""
-            ID of the impression in the source system. Combination of the `device_number` and `date`. Must be unique.
-            """,
-            existing_nullable=False,
+    if not table_has_column("impression", "advert_playouts"):
+        op.add_column(
+            "impression", sa.Column("advert_playouts", sa.Integer(), server_default=sa.text("0"), nullable=False)
         )
 
 
 def downgrade() -> None:
-    if table_has_column("impressions", "advert_playouts"):
-        op.add_column("impression", sa.Column("rainfall", sa.INTEGER(), autoincrement=False, nullable=False))
+    if table_has_column("impression", "advert_playouts"):
         op.drop_column("impression", "advert_playouts")
 
-    if table_has_column("impressions", "seconds_exposure"):
-        op.add_column("impression", sa.Column("temperature", sa.INTEGER(), autoincrement=False, nullable=False))
+    if not table_has_column("impression", "rainfall"):
+        op.add_column(
+            "impression",
+            sa.Column("rainfall", sa.INTEGER(), autoincrement=False, nullable=False, server_default=sa.text("0")),
+        )
+
+    if table_has_column("impression", "seconds_exposure"):
         op.drop_column("impression", "seconds_exposure")
 
-    if table_has_column("impressions", "source_system_id"):
-        op.alter_column(
+    if not table_has_column("impression", "temperature"):
+        op.add_column(
             "impression",
-            "source_system_id",
-            existing_type=sa.VARCHAR(),
-            comment="""
-            ID of the impression in the source system. Combination of the `device_number` and `date`. Must be unique.
-            """,
-            existing_comment="""
-            ID of the impression in the source system. Combination of the `device_number` and `date`. Must be unique.
-            """,
-            existing_nullable=False,
+            sa.Column("temperature", sa.INTEGER(), autoincrement=False, nullable=False, server_default=sa.text("0")),
         )
