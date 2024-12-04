@@ -725,10 +725,8 @@ class SaleManager(CRUDManager):
 
         if query_filter.geography_id__in:
             stmt = stmt.where(Geography.id.in_(query_filter.geography_id__in or []))
+            setattr(query_filter, "geography_id__in", None)
 
-        stmt = self._generate_user_query(query_filter, user, stmt)
-
-        setattr(query_filter, "geography_id__in", None)
         stmt = query_filter.filter(stmt)
 
         return (await self.session.execute(stmt)).mappings().all()  # type: ignore
