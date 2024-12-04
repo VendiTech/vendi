@@ -1,7 +1,9 @@
+from fastapi_filter import FilterDepends, with_prefix
 from pydantic import PositiveInt
 
 from mspy_vendi.core.filter import BaseFilter, DateRangeFilter
 from mspy_vendi.db import Sale
+from mspy_vendi.domain.products.models import Product
 
 
 class StatisticDateRangeFilter(DateRangeFilter):
@@ -18,12 +20,22 @@ class GeographyFilter(BaseFilter):
         model = Sale
 
 
+class ProductCategoryFilter(BaseFilter):
+    product_category_id__in: list[PositiveInt] | None = None
+
+    class Constants(BaseFilter.Constants):
+        model = Product
+
+
 class SaleFilter(StatisticDateRangeFilter, GeographyFilter):
     quantity: PositiveInt | None = None
     source_system_id: PositiveInt | None = None
     product_id__in: list[PositiveInt] | None = None
     machine_id__in: list[PositiveInt] | None = None
-    product_category_id__in: list[PositiveInt] | None = None
+    product: ProductCategoryFilter | None = FilterDepends(with_prefix("product", ProductCategoryFilter))
+
+    class Constants(StatisticDateRangeFilter.Constants):
+        model = Sale
 
 
 class ExportSaleFilter(StatisticDateRangeFilter, GeographyFilter): ...

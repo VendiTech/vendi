@@ -21,6 +21,7 @@ from mspy_vendi.domain.sales.schemas import (
     DecimalTimeFrameSalesSchema,
     GeographyDecimalQuantitySchema,
     ProductsCountGeographySchema,
+    ProductVenueSalesCountSchema,
     QuantityStatisticSchema,
     SaleCreateSchema,
     SaleDetailSchema,
@@ -147,7 +148,7 @@ async def get__frequency_of_sales(
     sale_service: Annotated[SaleService, Depends()],
     user: Annotated[User, Depends(get_current_user())],
 ) -> list[TimePeriodSalesCountSchema]:
-    return await sale_service.get_daily_sales_count_per_time_period(query_filter)
+    return await sale_service.get_daily_sales_count_per_time_period(query_filter, user)
 
 
 @router.get("/sales-quantity-by-venue", response_model=Page[VenueSalesQuantitySchema])
@@ -175,6 +176,15 @@ async def get__average_products_count_per_geography(
     user: Annotated[User, Depends(get_current_user())],
 ) -> Page[ProductsCountGeographySchema]:
     return await sale_service.get_average_products_count_per_geography(query_filter, user)
+
+
+@router.get("/products-quantity-by-venue", response_model=Page[ProductVenueSalesCountSchema])
+async def get__products_quantity_by_venue(
+    query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
+    sale_service: Annotated[SaleService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
+) -> Page[ProductVenueSalesCountSchema]:
+    return await sale_service.get_products_quantity_by_venue(query_filter, user)
 
 
 @router.post("/export", response_class=StreamingResponse)

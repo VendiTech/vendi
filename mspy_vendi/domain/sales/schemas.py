@@ -111,3 +111,8 @@ class CategoryProductQuantityDateSchema(CategoryProductQuantitySchema):
 class ProductsCountGeographySchema(BaseSchema):
     products: DecimalFloat
     geography: GeographyDetailSchema
+
+
+class ProductVenueSalesCountSchema(VenueSalesQuantitySchema):
+    sale_date: datetime
+    product_name: str

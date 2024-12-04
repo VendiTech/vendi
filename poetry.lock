@@ -2193,13 +2193,13 @@ jupyter = ["ipywidgets (>=7.5.1,<9)"]
 
 [[package]]
 name = "rich-toolkit"
-version = "0.11.1"
+version = "0.11.2"
 description = "Rich toolkit for building command-line applications"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "rich_toolkit-0.11.1-py3-none-any.whl", hash = "sha256:d0192bc0643ab61cd8057ee6246058323a1616830798865f6ef0019c069ac94a"},
-    {file = "rich_toolkit-0.11.1.tar.gz", hash = "sha256:5f68fe642700fe88d67e7e899f08df5642eb9b7aa4452ceb85a65db005805422"},
+    {file = "rich_toolkit-0.11.2-py3-none-any.whl", hash = "sha256:28faa6eed48faed42e644de63dc045775bce38775eac010502f94f14f1b482d7"},
+    {file = "rich_toolkit-0.11.2.tar.gz", hash = "sha256:628f8d92b08c0f00be97cc841a90910807192f4f47364746750f42c8bc849ef3"},
 ]
 
 [package.dependencies]
