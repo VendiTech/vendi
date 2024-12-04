@@ -87,12 +87,12 @@ async def get__quantity_per_product(
 
 
 @router.get("/quantity-per-category", response_model=Page[CategoryTimeFrameSalesSchema])
-async def get__quantity_per_product_over_time(
+async def get__quantity_per_category(
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
     user: Annotated[User, Depends(get_current_user())],
 ) -> Page[CategoryTimeFrameSalesSchema]:
-    return await sale_service.get_sales_category_quantity(query_filter, user)
+    return await sale_service.get_sales_category_quantity_per_time_frame(query_filter, user)
 
 
 @router.get("/sales-revenue-per-time-period", response_model=list[TimePeriodSalesRevenueSchema])

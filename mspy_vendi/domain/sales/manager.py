@@ -63,6 +63,27 @@ class SaleManager(CRUDManager):
 
         return stmt
 
+    def _generate_product_category_query(self, query_filter: BaseFilter, stmt: Select) -> Select:
+        """
+        Generate query to filter by product_id field.
+        It makes a join with ProductCategory table to filter by product_id field.
+
+        :param query_filter: Filter object.
+        :param stmt: Current statement.
+
+        :return: New statement with the filter applied.
+        """
+        if query_filter.product_category_id__in:
+            stmt = (
+                stmt.join(Product, Product.id == self.sql_model.product_id)
+                .join(ProductCategory, ProductCategory.id == Product.product_category_id)
+                .where(ProductCategory.id.in_(query_filter.product_category_id__in))
+            )
+            # We do it to ignore the field inside the filter block
+            setattr(query_filter, "product_category_id__in", None)
+
+        return stmt
+
     def _generate_user_query(self, query_filter: BaseFilter, user: User, stmt: Select) -> Select:
         """
         Generate query to filter by assigned Machines.
@@ -193,9 +214,11 @@ class SaleManager(CRUDManager):
 
     async def get_sales_quantity_by_product(self, query_filter: SaleFilter, user: User) -> QuantityStatisticSchema:
         """
-        Get the total quantity of sales by product for the current period and the previous month.
+        Get the total quantity of sales by product|s.
+        Calculate the sum of the quantity field. If no sales are found, raise a NotFoundError.
 
         :param query_filter: Filter object that contains the filtering parameters for the query.
+        :param user: Current user.
         :return: A schema containing the total quantity of sales for the current period
                  and the previous month.
         """
@@ -203,6 +226,7 @@ class SaleManager(CRUDManager):
 
         stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
         stmt = self._generate_user_query(query_filter, user, stmt)
+        stmt = self._generate_product_category_query(query_filter, stmt)
 
         setattr(query_filter, "geography_id__in", None)
         stmt = query_filter.filter(stmt)
@@ -212,6 +236,7 @@ class SaleManager(CRUDManager):
 
         stmt_previous_month_stat = self._generate_geography_query(query_filter, stmt_previous_month_stat)
         stmt_previous_month_stat = self._generate_user_query(query_filter, user, stmt_previous_month_stat)
+        stmt_previous_month_stat = self._generate_product_category_query(query_filter, stmt_previous_month_stat)
 
         setattr(query_filter, "geography_id__in", None)
         stmt_previous_month_stat = query_filter.filter(stmt_previous_month_stat)
@@ -248,6 +273,7 @@ class SaleManager(CRUDManager):
 
         stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
         stmt = self._generate_user_query(query_filter, user, stmt)
+        stmt = self._generate_product_category_query(query_filter, stmt)
 
         setattr(query_filter, "geography_id__in", None)
         stmt = query_filter.filter(stmt)
@@ -271,6 +297,7 @@ class SaleManager(CRUDManager):
         Get the average quantity of sales for the current period and the previous month.
 
         :param query_filter: Filter object that contains the filtering parameters for the query.
+        :param user: Current user.
         :return: A schema containing the average quantity of sales for the current period
                  and the previous month.
         """
@@ -278,6 +305,7 @@ class SaleManager(CRUDManager):
 
         stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
         stmt = self._generate_user_query(query_filter, user, stmt)
+        stmt = self._generate_product_category_query(query_filter, stmt)
 
         setattr(query_filter, "geography_id__in", None)
         stmt = query_filter.filter(stmt)
@@ -285,6 +313,7 @@ class SaleManager(CRUDManager):
         stmt_previous_month_stat = select(func.avg(self.sql_model.quantity).label("previous_month_statistic"))
         query_filter = self._generate_previous_month_filter(query_filter)
         stmt_previous_month_stat = self._generate_geography_query(query_filter, stmt_previous_month_stat)
+        stmt_previous_month_stat = self._generate_product_category_query(query_filter, stmt_previous_month_stat)
 
         stmt_previous_month_stat = query_filter.filter(stmt_previous_month_stat)
 
@@ -320,6 +349,7 @@ class SaleManager(CRUDManager):
 
         stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
         stmt = self._generate_user_query(query_filter, user, stmt)
+        stmt = self._generate_product_category_query(query_filter, stmt)
 
         setattr(query_filter, "geography_id__in", None)
         stmt = query_filter.filter(stmt)
@@ -362,6 +392,9 @@ class SaleManager(CRUDManager):
         stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
         stmt = self._generate_user_query(query_filter, user, stmt)
 
+        if query_filter.product_category_id__in:
+            stmt = stmt.where(Product.id.in_(query_filter.product_category_id__in or []))
+
         setattr(query_filter, "geography_id__in", None)
         stmt = query_filter.filter(stmt)
 
@@ -395,6 +428,9 @@ class SaleManager(CRUDManager):
 
         subquery = self._generate_geography_query(query_filter, subquery, modify_filter=False)
         subquery = self._generate_user_query(query_filter, user, subquery)
+
+        if query_filter.product_category_id__in:
+            subquery = subquery.where(Product.id.in_(query_filter.product_category_id__in or []))
 
         setattr(query_filter, "geography_id__in", None)
         subquery = query_filter.filter(subquery).subquery()
@@ -440,6 +476,7 @@ class SaleManager(CRUDManager):
 
         stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
         stmt = self._generate_user_query(query_filter, user, stmt)
+        stmt = self._generate_product_category_query(query_filter, stmt)
 
         setattr(query_filter, "geography_id__in", None)
         stmt = query_filter.filter(stmt)
@@ -480,6 +517,7 @@ class SaleManager(CRUDManager):
 
         stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
         stmt = self._generate_user_query(query_filter, user, stmt)
+        stmt = self._generate_product_category_query(query_filter, stmt)
 
         setattr(query_filter, "geography_id__in", None)
         stmt = query_filter.filter(stmt)
@@ -525,6 +563,9 @@ class SaleManager(CRUDManager):
         sales_subquery = self._generate_geography_query(query_filter, sales_subquery, modify_filter=False)
         sales_subquery = self._generate_user_query(query_filter, user, sales_subquery)
 
+        if query_filter.product_category_id__in:
+            sales_subquery = sales_subquery.where(Product.id.in_(query_filter.product_category_id__in or []))
+
         setattr(query_filter, "geography_id__in", None)
         sales_subquery = query_filter.filter(sales_subquery).subquery()
 
@@ -541,11 +582,14 @@ class SaleManager(CRUDManager):
 
     async def get_units_sold_statistic(self, query_filter: SaleFilter, user: User) -> UnitsStatisticSchema:
         """
-        Get the filtered units (quantity * price) sold and for previous month statistics.
+        Get the filtered units (quantity * price) sold and statistics for the previous month.
 
-        :param query_filter: Filter object.
+        This method calculates the total units sold (quantity * price) for the current month
+        and the previous month based on the provided filter.
+
+        :param query_filter: Filter object to apply time range and geographical filters.
         :param user: Current user.
-        :return: Units sold statistic.
+        :return: Units sold statistics, including current month and previous month data.
         """
         stmt_units = label("units", func.sum(self.sql_model.quantity * Product.price))
         stmt_previous_month_units = label("previous_month_stat", func.sum(self.sql_model.quantity * Product.price))
@@ -555,6 +599,10 @@ class SaleManager(CRUDManager):
         stmt = self._generate_user_query(query_filter, user, stmt)
 
         setattr(query_filter, "geography_id__in", None)
+
+        if query_filter.product_category_id__in:
+            stmt = stmt.where(Product.id.in_(query_filter.product_category_id__in or []))
+
         stmt = query_filter.filter(stmt)
 
         stmt_previous_month_stat = select(stmt_previous_month_units).join(
@@ -567,6 +615,12 @@ class SaleManager(CRUDManager):
         stmt_previous_month_stat = self._generate_user_query(query_filter, user, stmt_previous_month_stat)
 
         setattr(query_filter, "geography_id__in", None)
+
+        if query_filter.product_category_id__in:
+            stmt_previous_month_stat = stmt_previous_month_stat.where(
+                Product.id.in_(query_filter.product_category_id__in or [])
+            )
+
         stmt_previous_month_stat = query_filter.filter(stmt_previous_month_stat)
 
         current_month_result = await self.session.scalar(stmt) or 0
@@ -620,6 +674,7 @@ class SaleManager(CRUDManager):
         if not user.is_superuser:
             stmt = stmt.join(MachineUser, MachineUser.machine_id == Machine.id).where(MachineUser.user_id == user.id)
 
+        stmt = self._generate_product_category_query(query_filter, stmt)
         stmt = query_filter.filter(stmt)
 
         return await paginate(self.session, stmt, unique=False)
@@ -658,6 +713,7 @@ class SaleManager(CRUDManager):
         if not user.is_superuser:
             stmt = stmt.where(MachineUser.user_id == user.id)
 
+        stmt = self._generate_product_category_query(query_filter, stmt)
         stmt = query_filter.filter(stmt)
 
         result = await self.session.execute(stmt)
@@ -688,6 +744,8 @@ class SaleManager(CRUDManager):
         stmt = self._generate_user_query(query_filter, user, stmt)
 
         setattr(query_filter, "geography_id__in", None)
+
+        stmt = self._generate_product_category_query(query_filter, stmt)
         stmt = query_filter.filter(stmt)
 
         return await paginate(self.session, stmt)
@@ -729,6 +787,10 @@ class SaleManager(CRUDManager):
         stmt = self._generate_user_query(query_filter, user, stmt)
 
         setattr(query_filter, "geography_id__in", None)
+
+        if query_filter.product_category_id__in:
+            stmt = stmt.where(Product.id.in_(query_filter.product_category_id__in or []))
+
         stmt = query_filter.filter(stmt)
 
         return await paginate(self.session, stmt)
