@@ -214,9 +214,11 @@ class SaleManager(CRUDManager):
 
     async def get_sales_quantity_by_product(self, query_filter: SaleFilter, user: User) -> QuantityStatisticSchema:
         """
-        Get the total quantity of sales by product for the current period and the previous month.
+        Get the total quantity of sales by product|s.
+        Calculate the sum of the quantity field. If no sales are found, raise a NotFoundError.
 
         :param query_filter: Filter object that contains the filtering parameters for the query.
+        :param user: Current user.
         :return: A schema containing the total quantity of sales for the current period
                  and the previous month.
         """
@@ -295,6 +297,7 @@ class SaleManager(CRUDManager):
         Get the average quantity of sales for the current period and the previous month.
 
         :param query_filter: Filter object that contains the filtering parameters for the query.
+        :param user: Current user.
         :return: A schema containing the average quantity of sales for the current period
                  and the previous month.
         """
