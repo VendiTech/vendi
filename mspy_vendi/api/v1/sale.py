@@ -86,7 +86,7 @@ async def get__quantity_per_product(
     return await sale_service.get_sales_quantity_per_category(query_filter, user)
 
 
-@router.get("/quantity-per-product", response_model=Page[CategoryTimeFrameSalesSchema])
+@router.get("/quantity-per-category", response_model=Page[CategoryTimeFrameSalesSchema])
 async def get__quantity_per_product_over_time(
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
@@ -118,8 +118,9 @@ async def get__units_sold(
 async def get__units_sold_statistic(
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
 ) -> UnitsStatisticSchema:
-    return await sale_service.get_units_sold_statistic(query_filter)
+    return await sale_service.get_units_sold_statistic(query_filter, user)
 
 
 @router.get("/quantity-per-geography", response_model=Page[GeographyDecimalQuantitySchema])
@@ -147,6 +148,33 @@ async def get__frequency_of_sales(
     user: Annotated[User, Depends(get_current_user())],
 ) -> list[TimePeriodSalesCountSchema]:
     return await sale_service.get_daily_sales_count_per_time_period(query_filter)
+
+
+@router.get("/sales-quantity-by-venue", response_model=Page[VenueSalesQuantitySchema])
+async def get__sales_quantity_by_venue(
+    query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
+    sale_service: Annotated[SaleService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
+) -> Page[VenueSalesQuantitySchema]:
+    return await sale_service.get_sales_by_venue_over_time(query_filter, user)
+
+
+@router.get("/sales-quantity-by-category", response_model=Page[CategoryProductQuantityDateSchema])
+async def get__sales_quantity_by_category(
+    query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
+    sale_service: Annotated[SaleService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
+) -> Page[CategoryProductQuantityDateSchema]:
+    return await sale_service.get_sales_quantity_by_category(query_filter, user)
+
+
+@router.get("/average-products-per-geography", response_model=Page[ProductsCountGeographySchema])
+async def get__average_products_count_per_geography(
+    query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
+    sale_service: Annotated[SaleService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
+) -> Page[ProductsCountGeographySchema]:
+    return await sale_service.get_average_products_count_per_geography(query_filter, user)
 
 
 @router.post("/export", response_class=StreamingResponse)
@@ -202,33 +230,6 @@ async def delete__existing_schedule(
         schedule_id=schedule_id,
         entity_type=ExportEntityTypeEnum.SALE,
     )
-
-
-@router.get("/sales-quantity-by-venue", response_model=Page[VenueSalesQuantitySchema])
-async def get__sales_quantity_by_venue(
-    query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
-    sale_service: Annotated[SaleService, Depends()],
-    user: Annotated[User, Depends(get_current_user())],
-) -> Page[VenueSalesQuantitySchema]:
-    return await sale_service.get_sales_by_venue_over_time(query_filter, user)
-
-
-@router.get("/sales-quantity-by-category", response_model=Page[CategoryProductQuantityDateSchema])
-async def get__sales_quantity_by_category(
-    query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
-    sale_service: Annotated[SaleService, Depends()],
-    user: Annotated[User, Depends(get_current_user())],
-) -> Page[CategoryProductQuantityDateSchema]:
-    return await sale_service.get_sales_quantity_by_category(query_filter, user)
-
-
-@router.get("/average-products-per-geography", response_model=Page[ProductsCountGeographySchema])
-async def get__average_products_count_per_geography(
-    query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
-    sale_service: Annotated[SaleService, Depends()],
-    user: Annotated[User, Depends(get_current_user())],
-) -> Page[ProductsCountGeographySchema]:
-    return await sale_service.get_average_products_count_per_geography(query_filter, user)
 
 
 class SaleAPI(CRUDApi):

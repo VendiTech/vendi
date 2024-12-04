@@ -97,8 +97,8 @@ class SaleService(CRUDService, ExportMixin):
     ) -> Page[UnitsTimeFrameSchema]:
         return await self.manager.get_units_sold_per_range(time_frame, query_filter, user)
 
-    async def get_units_sold_statistic(self, query_filter: SaleFilter) -> UnitsStatisticSchema:
-        return await self.manager.get_units_sold_statistic(query_filter)
+    async def get_units_sold_statistic(self, query_filter: SaleFilter, user: User) -> UnitsStatisticSchema:
+        return await self.manager.get_units_sold_statistic(query_filter, user)
 
     async def get_sales_quantity_per_geography(
         self, query_filter: SaleFilter, user: User
