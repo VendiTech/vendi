@@ -551,14 +551,22 @@ class SaleManager(CRUDManager):
         stmt_previous_month_units = label("previous_month_stat", func.sum(self.sql_model.quantity * Product.price))
 
         stmt = select(stmt_units).join(Product, Product.id == self.sql_model.product_id)
-        stmt = self._generate_geography_query(query_filter, stmt)
+        stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
+        stmt = self._generate_user_query(query_filter, user, stmt)
+
+        setattr(query_filter, "geography_id__in", None)
         stmt = query_filter.filter(stmt)
 
         stmt_previous_month_stat = select(stmt_previous_month_units).join(
             Product, Product.id == self.sql_model.product_id
         )
         query_filter = self._generate_previous_month_filter(query_filter)
-        stmt_previous_month_stat = self._generate_geography_query(query_filter, stmt_previous_month_stat)
+        stmt_previous_month_stat = self._generate_geography_query(
+            query_filter, stmt_previous_month_stat, modify_filter=False
+        )
+        stmt_previous_month_stat = self._generate_user_query(query_filter, user, stmt_previous_month_stat)
+
+        setattr(query_filter, "geography_id__in", None)
         stmt_previous_month_stat = query_filter.filter(stmt_previous_month_stat)
 
         current_month_result = await self.session.scalar(stmt) or 0
