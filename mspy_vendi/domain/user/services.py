@@ -1,7 +1,8 @@
+from datetime import datetime
 from importlib import import_module
 from typing import LiteralString, cast, Optional, Any
 
-from fastapi import Request
+from fastapi import Request, Response
 from fastapi_users import BaseUserManager, IntegerIDMixin, schemas, models
 from fastapi_users.schemas import BaseUserCreate
 
@@ -40,6 +41,7 @@ from mspy_vendi.domain.user.schemas import (
     UserExistingSchedulesSchema,
     UserAdminCreateSchema,
     UserAdminEditSchema,
+    UserUpdatePerSignIn,
 )
 from mspy_vendi.domain.sales.tasks import export_sale_task
 
@@ -237,6 +239,24 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
             html=html_content,
         )
         log.info("Sent verify email message", info=get_described_user_info(user, request=request))
+
+    async def on_after_login(
+        self,
+        user: models.UP,
+        request: Optional[Request] = None,
+        response: Optional[Response] = None,
+    ) -> None:
+        """
+        Perform an update of the User `last_logged_in` column when sign-in occurs into our system.
+
+        :param user: Current User
+        :param request: Request from HTTP context
+        :param response: Response from HTTP context
+        """
+        await self.user_service.update(
+            obj_id=user.id,
+            obj=UserUpdatePerSignIn(last_logged_in=datetime.now()),
+        )
 
     async def on_after_forgot_password(self, user: User, token: str, request: Request | None = None) -> None:
         await self.activity_log_manager.create(

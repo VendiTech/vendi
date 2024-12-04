@@ -1,7 +1,8 @@
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTable
-from sqlalchemy import Computed, Enum, String
+from sqlalchemy import Computed, DateTime, Enum, String
 from sqlalchemy.dialects.postgresql import ARRAY as PGARRAY
 from sqlalchemy.ext.associationproxy import AssociationProxy, association_proxy
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -32,6 +33,7 @@ class User(CommonMixin, SQLAlchemyBaseUserTable[int], Base):
     )
     phone_number: Mapped[str | None]
     status: Mapped[Enum] = mapped_column(status_db_enum, default=StatusEnum.ACTIVE)
+    last_logged_in: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     is_superuser: Mapped[bool] = mapped_column(
         Computed(
             f"""
