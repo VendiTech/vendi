@@ -612,6 +612,12 @@ class SaleManager(CRUDManager):
         stmt_previous_month_stat = self._generate_user_query(query_filter, user, stmt_previous_month_stat)
 
         setattr(query_filter, "geography_id__in", None)
+
+        if query_filter.product_category_id__in:
+            stmt_previous_month_stat = stmt_previous_month_stat.where(
+                Product.id.in_(query_filter.product_category_id__in or [])
+            )
+
         stmt_previous_month_stat = query_filter.filter(stmt_previous_month_stat)
 
         current_month_result = await self.session.scalar(stmt) or 0
