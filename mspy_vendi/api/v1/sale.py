@@ -43,8 +43,9 @@ router = APIRouter(prefix="/sale", default_response_class=ORJSONResponse, tags=[
 async def get__quantity_by_product(
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
 ) -> QuantityStatisticSchema:
-    return await sale_service.get_sales_quantity_by_product(query_filter)
+    return await sale_service.get_sales_quantity_by_product(query_filter, user)
 
 
 @router.get("/quantity-per-range", response_model=Page[TimeFrameSalesSchema])
@@ -52,16 +53,18 @@ async def get__sales_per_range(
     time_frame: DateRangeEnum,
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
 ) -> Page[TimeFrameSalesSchema]:
-    return await sale_service.get_sales_quantity_per_range(time_frame, query_filter)
+    return await sale_service.get_sales_quantity_per_range(time_frame, query_filter, user)
 
 
 @router.get("/average-sales", response_model=DecimalQuantityStatisticSchema)
 async def get__average_sales_across_machines(
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
 ) -> DecimalQuantityStatisticSchema:
-    return await sale_service.get_average_sales_across_machines(query_filter)
+    return await sale_service.get_average_sales_across_machines(query_filter, user)
 
 
 @router.get("/average-sales-per-range", response_model=Page[DecimalTimeFrameSalesSchema])
@@ -69,32 +72,36 @@ async def get__average_sales_per_range(
     time_frame: DateRangeEnum,
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
 ) -> Page[DecimalTimeFrameSalesSchema]:
-    return await sale_service.get_average_sales_per_range(time_frame, query_filter)
+    return await sale_service.get_average_sales_per_range(time_frame, query_filter, user)
 
 
 @router.get("/quantity-per-product", response_model=Page[CategoryProductQuantitySchema])
 async def get__quantity_per_product(
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
 ) -> Page[CategoryProductQuantitySchema]:
-    return await sale_service.get_sales_quantity_per_category(query_filter)
+    return await sale_service.get_sales_quantity_per_category(query_filter, user)
 
 
-@router.get("/quantity-per-product", response_model=Page[CategoryTimeFrameSalesSchema])
+@router.get("/quantity-per-category", response_model=Page[CategoryTimeFrameSalesSchema])
 async def get__quantity_per_product_over_time(
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
 ) -> Page[CategoryTimeFrameSalesSchema]:
-    return await sale_service.get_sales_category_quantity(query_filter)
+    return await sale_service.get_sales_category_quantity(query_filter, user)
 
 
 @router.get("/sales-revenue-per-time-period", response_model=list[TimePeriodSalesRevenueSchema])
 async def get__sales_revenue_per_time_period(
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
 ) -> list[TimePeriodSalesRevenueSchema]:
-    return await sale_service.get_sales_revenue_per_time_period(query_filter)
+    return await sale_service.get_sales_revenue_per_time_period(query_filter, user)
 
 
 @router.get("/units-sold-per-range", response_model=Page[UnitsTimeFrameSchema])
@@ -102,38 +109,43 @@ async def get__units_sold(
     time_frame: DateRangeEnum,
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
 ) -> Page[UnitsTimeFrameSchema]:
-    return await sale_service.get_units_sold_per_range(time_frame, query_filter)
+    return await sale_service.get_units_sold_per_range(time_frame, query_filter, user)
 
 
 @router.get("/units-sold-statistic", response_model=UnitsStatisticSchema)
 async def get__units_sold_statistic(
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
 ) -> UnitsStatisticSchema:
-    return await sale_service.get_units_sold_statistic(query_filter)
+    return await sale_service.get_units_sold_statistic(query_filter, user)
 
 
 @router.get("/quantity-per-geography", response_model=Page[GeographyDecimalQuantitySchema])
 async def get__quantity_per_geography(
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
 ) -> Page[GeographyDecimalQuantitySchema]:
-    return await sale_service.get_sales_quantity_per_geography(query_filter)
+    return await sale_service.get_sales_quantity_per_geography(query_filter, user)
 
 
 @router.get("/conversion-rate", response_model=ConversionRateSchema)
 async def get__conversion_rate(
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
 ) -> ConversionRateSchema:
-    return await sale_service.get_conversion_rate(query_filter)
+    return await sale_service.get_conversion_rate(query_filter, user)
 
 
 @router.get("/frequency-of-sales", response_model=list[TimePeriodSalesCountSchema])
 async def get__frequency_of_sales(
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
 ) -> list[TimePeriodSalesCountSchema]:
     return await sale_service.get_daily_sales_count_per_time_period(query_filter)
 
@@ -142,24 +154,27 @@ async def get__frequency_of_sales(
 async def get__sales_quantity_by_venue(
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
 ) -> Page[VenueSalesQuantitySchema]:
-    return await sale_service.get_sales_by_venue_over_time(query_filter)
+    return await sale_service.get_sales_by_venue_over_time(query_filter, user)
 
 
 @router.get("/sales-quantity-by-category", response_model=Page[CategoryProductQuantityDateSchema])
 async def get__sales_quantity_by_category(
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
 ) -> Page[CategoryProductQuantityDateSchema]:
-    return await sale_service.get_sales_quantity_by_category(query_filter)
+    return await sale_service.get_sales_quantity_by_category(query_filter, user)
 
 
 @router.get("/average-products-per-geography", response_model=Page[ProductsCountGeographySchema])
 async def get__average_products_count_per_geography(
     query_filter: Annotated[SaleFilter, FilterDepends(SaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
 ) -> Page[ProductsCountGeographySchema]:
-    return await sale_service.get_average_products_count_per_geography(query_filter)
+    return await sale_service.get_average_products_count_per_geography(query_filter, user)
 
 
 @router.post("/export", response_class=StreamingResponse)
@@ -167,12 +182,13 @@ async def post__export_sales(
     export_type: ExportTypeEnum,
     query_filter: Annotated[ExportSaleFilter, FilterDepends(ExportSaleFilter)],
     sale_service: Annotated[SaleService, Depends()],
-    _: Annotated[User, Depends(get_current_user())],
+    user: Annotated[User, Depends(get_current_user())],
 ) -> StreamingResponse:
     return await sale_service.export(
         query_filter=query_filter,
         export_type=export_type,
         entity=ExportEntityTypeEnum.SALE,
+        user=user,
     )
 
 

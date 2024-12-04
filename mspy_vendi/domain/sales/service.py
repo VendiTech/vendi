@@ -33,6 +33,7 @@ from mspy_vendi.domain.sales.schemas import (
     UnitsTimeFrameSchema,
     VenueSalesQuantitySchema,
 )
+from mspy_vendi.domain.user.models import User
 
 
 class SaleService(CRUDService, ExportMixin):
@@ -47,56 +48,83 @@ class SaleService(CRUDService, ExportMixin):
         self.email_service = email_service
         super().__init__(db_session)
 
-    async def get_sales_quantity_by_product(self, query_filter: SaleFilter) -> QuantityStatisticSchema:
-        return await self.manager.get_sales_quantity_by_product(query_filter)
+    async def get_sales_quantity_by_product(
+        self,
+        query_filter: SaleFilter,
+        user: User,
+    ) -> QuantityStatisticSchema:
+        return await self.manager.get_sales_quantity_by_product(query_filter, user)
 
     async def get_sales_quantity_per_range(
-        self, time_frame: DateRangeEnum, query_filter: StatisticDateRangeFilter
+        self, time_frame: DateRangeEnum, query_filter: StatisticDateRangeFilter, user: User
     ) -> Page[TimeFrameSalesSchema]:
-        return await self.manager.get_sales_quantity_per_range(time_frame, query_filter)
+        return await self.manager.get_sales_quantity_per_range(time_frame, query_filter, user)
 
-    async def get_average_sales_across_machines(self, query_filter: SaleFilter) -> DecimalQuantityStatisticSchema:
-        return await self.manager.get_average_sales_across_machines(query_filter)
+    async def get_average_sales_across_machines(
+        self,
+        query_filter: SaleFilter,
+        user: User,
+    ) -> DecimalQuantityStatisticSchema:
+        return await self.manager.get_average_sales_across_machines(query_filter, user)
 
     async def get_average_sales_per_range(
-        self, time_frame: DateRangeEnum, query_filter: SaleFilter
+        self,
+        time_frame: DateRangeEnum,
+        query_filter: SaleFilter,
+        user: User,
     ) -> Page[DecimalTimeFrameSalesSchema]:
-        return await self.manager.get_average_sales_per_range(time_frame, query_filter)
+        return await self.manager.get_average_sales_per_range(time_frame, query_filter, user)
 
-    async def get_sales_quantity_per_category(self, query_filter: SaleFilter) -> Page[CategoryProductQuantitySchema]:
-        return await self.manager.get_sales_quantity_per_category(query_filter)
+    async def get_sales_quantity_per_category(
+        self,
+        query_filter: SaleFilter,
+        user: User,
+    ) -> Page[CategoryProductQuantitySchema]:
+        return await self.manager.get_sales_quantity_per_category(query_filter, user)
 
-    async def get_sales_category_quantity(self, query_filter: SaleFilter) -> Page[CategoryTimeFrameSalesSchema]:
-        return await self.manager.get_sales_category_quantity(query_filter)
+    async def get_sales_category_quantity_per_time_frame(
+        self, query_filter: SaleFilter, user: User
+    ) -> Page[CategoryTimeFrameSalesSchema]:
+        return await self.manager.get_sales_category_quantity(query_filter, user)
 
-    async def get_sales_revenue_per_time_period(self, query_filter: SaleFilter) -> list[TimePeriodSalesRevenueSchema]:
-        return await self.manager.get_sales_revenue_per_time_period(TimePeriodEnum, query_filter)
+    async def get_sales_revenue_per_time_period(
+        self, query_filter: SaleFilter, user: User
+    ) -> list[TimePeriodSalesRevenueSchema]:
+        return await self.manager.get_sales_revenue_per_time_period(TimePeriodEnum, query_filter, user)
 
     async def get_units_sold_per_range(
-        self, time_frame: DateRangeEnum, query_filter: SaleFilter
+        self, time_frame: DateRangeEnum, query_filter: SaleFilter, user: User
     ) -> Page[UnitsTimeFrameSchema]:
-        return await self.manager.get_units_sold_per_range(time_frame, query_filter)
+        return await self.manager.get_units_sold_per_range(time_frame, query_filter, user)
 
-    async def get_units_sold_statistic(self, query_filter: SaleFilter) -> UnitsStatisticSchema:
-        return await self.manager.get_units_sold_statistic(query_filter)
+    async def get_units_sold_statistic(self, query_filter: SaleFilter, user: User) -> UnitsStatisticSchema:
+        return await self.manager.get_units_sold_statistic(query_filter, user)
 
-    async def get_sales_quantity_per_geography(self, query_filter: SaleFilter) -> Page[GeographyDecimalQuantitySchema]:
-        return await self.manager.get_sales_quantity_per_geography(query_filter)
+    async def get_sales_quantity_per_geography(
+        self, query_filter: SaleFilter, user: User
+    ) -> Page[GeographyDecimalQuantitySchema]:
+        return await self.manager.get_sales_quantity_per_geography(query_filter, user)
 
-    async def get_conversion_rate(self, query_filter: SaleFilter) -> ConversionRateSchema:
-        return await self.manager.get_conversion_rate(query_filter)
+    async def get_conversion_rate(self, query_filter: SaleFilter, user: User) -> ConversionRateSchema:
+        return await self.manager.get_conversion_rate(query_filter, user)
 
-    async def get_daily_sales_count_per_time_period(self, query_filter: SaleFilter) -> list[TimePeriodSalesCountSchema]:
+    async def get_daily_sales_count_per_time_period(
+        self, query_filter: SaleFilter, user: User
+    ) -> list[TimePeriodSalesCountSchema]:
         query_filter.date_from = query_filter.date_to = datetime.datetime.now()
-        return await self.manager.get_sales_count_per_time_period(DailyTimePeriodEnum, query_filter)
+        return await self.manager.get_sales_count_per_time_period(DailyTimePeriodEnum, query_filter, user)
 
-    async def get_sales_by_venue_over_time(self, query_filter: SaleFilter) -> Page[VenueSalesQuantitySchema]:
-        return await self.manager.get_sales_by_venue_over_time(query_filter)
+    async def get_sales_by_venue_over_time(
+        self, query_filter: SaleFilter, user: User
+    ) -> Page[VenueSalesQuantitySchema]:
+        return await self.manager.get_sales_by_venue_over_time(query_filter, user)
 
-    async def get_sales_quantity_by_category(self, query_filter: SaleFilter) -> Page[CategoryProductQuantityDateSchema]:
-        return await self.manager.get_sales_quantity_by_category(query_filter)
+    async def get_sales_quantity_by_category(
+        self, query_filter: SaleFilter, user: User
+    ) -> Page[CategoryProductQuantityDateSchema]:
+        return await self.manager.get_sales_quantity_by_category(query_filter, user)
 
     async def get_average_products_count_per_geography(
-        self, query_filter: SaleFilter
+        self, query_filter: SaleFilter, user: User
     ) -> Page[ProductsCountGeographySchema]:
-        return await self.manager.get_average_products_count_per_geography(query_filter)
+        return await self.manager.get_average_products_count_per_geography(query_filter, user)

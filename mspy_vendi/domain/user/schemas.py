@@ -104,3 +104,4 @@ class UserScheduleSchema(BaseSchema):
     email: EmailStr | None = None
     firstname: AlphaString | None = None
     lastname: AlphaString | None = None
+    is_superuser: bool | None = None
