@@ -13,11 +13,13 @@ from mspy_vendi.core.enums.date_range import ScheduleEnum
 from mspy_vendi.core.enums.export import ExportEntityTypeEnum
 from mspy_vendi.core.factory import DataExportFactory
 from mspy_vendi.core.filter import BaseFilter
+from mspy_vendi.db.base import Base
+from mspy_vendi.domain.user.models import User
 from mspy_vendi.domain.user.schemas import UserScheduleSchema
 
 
 class ExportManager(Protocol):
-    async def export(self, query_filter: BaseFilter) -> Any: ...
+    async def export(self, query_filter: BaseFilter, user: Base) -> Any: ...
 
 
 class ExportProtocol(Protocol):
@@ -78,7 +80,7 @@ class ExportMixin(ExportProtocol):
         export_type: ExportTypeEnum,
         entity: ExportEntityTypeEnum,
         sync: bool = True,
-        user: UserScheduleSchema | None = None,
+        user: UserScheduleSchema | User | None = None,
         schedule: ScheduleEnum | None = None,
     ) -> StreamingResponse | None:
         """
@@ -97,7 +99,7 @@ class ExportMixin(ExportProtocol):
 
         :return: The StreamingResponse or None.
         """
-        entity_data: list[dict] = await self.manager.export(query_filter)
+        entity_data: list[dict] = await self.manager.export(query_filter, user)
 
         file_extension: str = DEFAULT_EXPORT_TYPES[export_type].get("file_extension")
         file_content_type: str = DEFAULT_EXPORT_TYPES[export_type].get("content_type")

@@ -380,9 +380,9 @@ class UserService(CRUDService):
     async def update(
         self, obj_id: int, obj: UpdateSchema, *, autocommit: bool = True, raise_error: bool = True, **kwargs: Any
     ) -> UserDetail:
-        return await self.manager.update(
-            obj_id=obj_id, obj=obj, autocommit=autocommit, raise_error=raise_error, **kwargs
-        )
+        await self.manager.update(obj_id=obj_id, obj=obj, autocommit=autocommit, raise_error=raise_error, **kwargs)
+
+        return await self.manager.get(obj_id=obj_id)
 
     async def add_permission(self, user_id: int, obj: UserPermissionsModifySchema) -> UserDetail:
         modify_user: User = await self.get(obj_id=user_id)

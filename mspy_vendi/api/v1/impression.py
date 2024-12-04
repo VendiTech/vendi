@@ -38,24 +38,34 @@ async def get__impressions_per_range(
     time_frame: DateRangeEnum,
     query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
     impression_service: Annotated[ImpressionService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
 ) -> Page[TimeFrameImpressionsSchema]:
-    return await impression_service.get_impressions_per_range(time_frame, query_filter)
+    return await impression_service.get_impressions_per_range(
+        time_frame=time_frame,
+        query_filter=query_filter,
+        user=user,
+    )
 
 
 @router.get("/impressions-per-geography", response_model=Page[GeographyImpressionsCountSchema])
 async def get__impressions_per_geography(
     query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
     impression_service: Annotated[ImpressionService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
 ) -> Page[GeographyImpressionsCountSchema]:
-    return await impression_service.get_impressions_per_geography(query_filter)
+    return await impression_service.get_impressions_per_geography(
+        query_filter=query_filter,
+        user=user,
+    )
 
 
 @router.get("/exposure", response_model=ExposureStatisticSchema)
 async def get__exposure_statistic(
     query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
     impression_service: Annotated[ImpressionService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
 ) -> ExposureStatisticSchema:
-    return await impression_service.get_exposure(query_filter)
+    return await impression_service.get_exposure(query_filter, user)
 
 
 @router.get("/exposure-per-range", response_model=Page[ExposurePerRangeSchema])
@@ -63,16 +73,18 @@ async def get__exposure_per_range(
     time_frame: DateRangeEnum,
     query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
     impression_service: Annotated[ImpressionService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
 ) -> Page[ExposurePerRangeSchema]:
-    return await impression_service.get_exposure_per_range(time_frame, query_filter)
+    return await impression_service.get_exposure_per_range(time_frame, query_filter, user)
 
 
 @router.get("/average-impressions", response_model=AverageImpressionsSchema)
 async def get__average_impressions(
     query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
     impression_service: Annotated[ImpressionService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
 ) -> AverageImpressionsSchema:
-    return await impression_service.get_average_impressions_count(query_filter)
+    return await impression_service.get_average_impressions_count(query_filter, user)
 
 
 @router.get("/advert-playouts-per-range", response_model=Page[AdvertPlayoutsTimeFrameSchema])
@@ -80,16 +92,18 @@ async def get__advert_playouts_per_range(
     time_frame: DateRangeEnum,
     query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
     impression_service: Annotated[ImpressionService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
 ) -> Page[AdvertPlayoutsTimeFrameSchema]:
-    return await impression_service.get_advert_playouts_per_range(time_frame, query_filter)
+    return await impression_service.get_advert_playouts_per_range(time_frame, query_filter, user)
 
 
 @router.get("/average-exposure", response_model=AverageExposureSchema)
 async def get__average_exposure(
     query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
     impression_service: Annotated[ImpressionService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
 ) -> AverageExposureSchema:
-    return await impression_service.get_average_exposure(query_filter)
+    return await impression_service.get_average_exposure(query_filter, user)
 
 
 @router.get("/impressions-by-venue-per-range", response_model=Page[TimeFrameImpressionsByVenueSchema])
@@ -97,8 +111,9 @@ async def get__impressions_by_venue_per_range(
     time_frame: DateRangeEnum,
     query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
     impression_service: Annotated[ImpressionService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
 ) -> Page[TimeFrameImpressionsByVenueSchema]:
-    return await impression_service.get_impressions_by_venue_per_range(time_frame, query_filter)
+    return await impression_service.get_impressions_by_venue_per_range(time_frame, query_filter, user)
 
 
 @router.get("/month-on-month-summary", response_model=Page[ImpressionsSalesPlayoutsConvertions])
@@ -106,8 +121,9 @@ async def get__months_on_month_summary(
     time_frame: DateRangeEnum,
     query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
     impression_service: Annotated[ImpressionService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
 ) -> Page[ImpressionsSalesPlayoutsConvertions]:
-    return await impression_service.get_impressions_sales_playouts_convertion_per_range(time_frame, query_filter)
+    return await impression_service.get_impressions_sales_playouts_convertion_per_range(time_frame, query_filter, user)
 
 
 @router.post("/export", response_class=StreamingResponse)
@@ -115,9 +131,10 @@ async def post__export_impressions(
     export_type: ExportTypeEnum,
     query_filter: Annotated[ExportImpressionFilter, FilterDepends(ExportImpressionFilter)],
     impression_service: Annotated[ImpressionService, Depends()],
-    _: Annotated[User, Depends(get_current_user())],
+    user: Annotated[User, Depends(get_current_user())],
 ) -> StreamingResponse:
     return await impression_service.export(
+        user=user,
         query_filter=query_filter,
         export_type=export_type,
         entity=ExportEntityTypeEnum.IMPRESSION,
