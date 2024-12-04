@@ -1,11 +1,10 @@
 from datetime import time, timedelta
 from typing import Any
 
-from fastapi_filter.contrib.sqlalchemy import Filter
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import CTE, Date, Row, Select, cast, desc, func, label, select, text
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import contains_eager, joinedload
 
 from mspy_vendi.core.enums.date_range import DailyTimePeriodEnum, DateRangeEnum, TimePeriodEnum
 from mspy_vendi.core.exceptions.base_exception import NotFoundError
@@ -165,23 +164,18 @@ class SaleManager(CRUDManager):
 
     async def get_all(
         self,
-        query_filter: Filter | None = None,
+        query_filter: BaseFilter | None = None,
         raw_result: bool = False,
         is_unique: bool = False,
         user: User | None = None,
         **_: Any,
     ) -> Page[Schema] | list[Model]:
-        stmt = self.get_query().options(
-            joinedload(Sale.product),
-            joinedload(Sale.machine),
-        )
+        stmt = self.get_query().options(joinedload(Sale.product), contains_eager(Sale.machine))
 
-        if not user.is_superuser:
-            stmt = (
-                stmt.join(Machine, Machine.id == self.sql_model.machine_id)
-                .join(MachineUser, MachineUser.machine_id == Machine.id)
-                .where(MachineUser.user_id == user.id)
-            )
+        stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
+        stmt = self._generate_user_query(query_filter, user, stmt)
+
+        setattr(query_filter, "geography_id__in", None)
 
         if query_filter:
             stmt = query_filter.filter(stmt)
@@ -578,10 +572,13 @@ class SaleManager(CRUDManager):
             .order_by(Geography.id)
         )
 
-        stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
-        stmt = self._generate_user_query(query_filter, user, stmt)
+        if query_filter.geography_id__in:
+            stmt = stmt.where(Geography.id.in_(query_filter.geography_id__in))
+            setattr(query_filter, "geography_id__in", None)
 
-        setattr(query_filter, "geography_id__in", None)
+        if not user.is_superuser:
+            stmt = stmt.join(MachineUser, MachineUser.machine_id == Machine.id).where(MachineUser.user_id == user.id)
+
         stmt = query_filter.filter(stmt)
 
         return await paginate(self.session, stmt, unique=False)
@@ -610,10 +607,16 @@ class SaleManager(CRUDManager):
             .join(Machine, Machine.id == MachineUser.machine_id)
             .join(Sale, Sale.machine_id == Machine.id)
         )
-        stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
-        stmt = self._generate_user_query(query_filter, user, stmt)
 
-        setattr(query_filter, "geography_id__in", None)
+        if query_filter.geography_id__in:
+            stmt = stmt.join(Geography, Geography.id == Machine.geography_id).where(
+                Geography.id.in_(query_filter.geography_id__in)
+            )
+            setattr(query_filter, "geography_id__in", None)
+
+        if not user.is_superuser:
+            stmt = stmt.where(MachineUser.user_id == user.id)
+
         stmt = query_filter.filter(stmt)
 
         result = await self.session.execute(stmt)
@@ -761,10 +764,12 @@ class SaleManager(CRUDManager):
             .order_by(Geography.id)
         )
 
+        if query_filter.geography_id__in:
+            stmt = stmt.where(Geography.id.in_(query_filter.geography_id__in))
+            setattr(query_filter, "geography_id__in", None)
+
         if not user.is_superuser:
-            stmt = stmt.join(MachineUser, MachineUser.machine_id == self.sql_model.machine_id).where(
-                MachineUser.user_id == user.id
-            )
+            stmt = stmt.join(MachineUser, MachineUser.machine_id == Machine.id).where(MachineUser.user_id == user.id)
 
         stmt = stmt.subquery()
 
@@ -774,7 +779,6 @@ class SaleManager(CRUDManager):
             .group_by(stmt.c.geography)
         )
 
-        final_stmt = self._generate_geography_query(query_filter, final_stmt)
         final_stmt = query_filter.filter(final_stmt)
 
         return await paginate(self.session, final_stmt, unique=False)

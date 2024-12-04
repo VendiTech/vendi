@@ -1,7 +1,6 @@
 from datetime import date, timedelta
 from typing import Any
 
-from fastapi_filter.contrib.sqlalchemy import Filter
 from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import CTE, Date, Row, Select, cast, func, label, select, text
 from sqlalchemy.dialects.postgresql import insert
@@ -67,36 +66,6 @@ class ImpressionManager(CRUDManager):
             raise NotFoundError(detail=f"{self.sql_model.__name__} object with {obj_id=} not found")
 
         return result
-
-    async def get_all(
-        self,
-        query_filter: Filter | None = None,
-        raw_result: bool = False,
-        is_unique: bool = False,
-        user: User | None = None,
-        **_: Any,
-    ) -> Page[Schema] | list[Model]:
-        stmt = self.get_query()
-
-        if not user.is_superuser:
-            stmt = (
-                stmt.join(MachineImpression, MachineImpression.impression_device_number == self.sql_model.device_number)
-                .join(Machine, Machine.id == MachineImpression.machine_id)
-                .join(MachineUser, MachineUser.machine_id == Machine.id)
-                .where(MachineUser.user_id == user.id)
-            )
-
-        if query_filter:
-            stmt = query_filter.filter(stmt)
-            stmt = query_filter.sort(stmt)
-
-        if raw_result:
-            if is_unique:
-                return (await self.session.execute(stmt)).unique().all()  # type: ignore
-
-            return (await self.session.scalars(stmt)).all()  # type: ignore
-
-        return await paginate(self.session, stmt)
 
     async def get_latest_impression_date(self, device_number: str) -> date | None:
         """
@@ -214,6 +183,33 @@ class ImpressionManager(CRUDManager):
                 text(f"'{time_frame.interval}'"),
             ).label("time_frame")
         ).cte()
+
+    async def get_all(
+        self,
+        query_filter: BaseFilter | None = None,
+        raw_result: bool = False,
+        is_unique: bool = False,
+        user: User | None = None,
+        **_: Any,
+    ) -> Page[Schema] | list[Model]:
+        stmt = self.get_query()
+
+        stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
+        stmt = self._generate_user_query(query_filter, user, stmt)
+
+        setattr(query_filter, "geography_id__in", None)
+
+        if query_filter:
+            stmt = query_filter.filter(stmt)
+            stmt = query_filter.sort(stmt)
+
+        if raw_result:
+            if is_unique:
+                return (await self.session.execute(stmt)).unique().all()  # type: ignore
+
+            return (await self.session.scalars(stmt)).all()  # type: ignore
+
+        return await paginate(self.session, stmt)
 
     async def get_impressions_per_range(
         self, time_frame: DateRangeEnum, query_filter: ImpressionFilter, user: User
