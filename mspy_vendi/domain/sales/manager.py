@@ -4,15 +4,15 @@ from typing import Any
 from fastapi_filter.contrib.sqlalchemy import Filter
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
-from sqlalchemy import CTE, Date, Select, cast, desc, func, label, select, text
+from sqlalchemy import CTE, Date, Row, Select, cast, desc, func, label, select, text
 from sqlalchemy.orm import joinedload
 
 from mspy_vendi.core.enums.date_range import DailyTimePeriodEnum, DateRangeEnum, TimePeriodEnum
+from mspy_vendi.core.exceptions.base_exception import NotFoundError
 from mspy_vendi.core.filter import BaseFilter
 from mspy_vendi.core.manager import CRUDManager, Model, Schema
 from mspy_vendi.db import Sale
 from mspy_vendi.domain.geographies.models import Geography
-from mspy_vendi.domain.machine_impression.models import MachineImpression
 from mspy_vendi.domain.machines.models import Machine, MachineUser
 from mspy_vendi.domain.product_category.models import ProductCategory
 from mspy_vendi.domain.products.models import Product
@@ -34,42 +34,20 @@ from mspy_vendi.domain.sales.schemas import (
     VenueSalesQuantitySchema,
 )
 from mspy_vendi.domain.user.models import User
+from mspy_vendi.domain.user.schemas import UserScheduleSchema
 
 
 class SaleManager(CRUDManager):
     sql_model = Sale
 
-    async def get_all(
-        self,
-        query_filter: Filter | None = None,
-        raw_result: bool = False,
-        is_unique: bool = False,
-        **_: Any,
-    ) -> Page[Schema] | list[Model]:
-        stmt = self.get_query().options(
-            joinedload(Sale.product),
-            joinedload(Sale.machine),
-        )
-
-        if query_filter:
-            stmt = query_filter.filter(stmt)
-            stmt = query_filter.sort(stmt)
-
-        if raw_result:
-            if is_unique:
-                return (await self.session.execute(stmt)).unique().all()  # type: ignore
-
-            return (await self.session.scalars(stmt)).all()  # type: ignore
-
-        return await paginate(self.session, stmt)
-
-    def _generate_geography_query(self, query_filter: BaseFilter, stmt: Select) -> Select:
+    def _generate_geography_query(self, query_filter: BaseFilter, stmt: Select, modify_filter: bool = True) -> Select:
         """
         Generate query to filter by geography_id field.
         It makes a join with Machine and Geography tables to filter by geography_id field.
 
         :param query_filter: Filter object.
         :param stmt: Current statement.
+        :param modify_filter: Flag to modify the filter object.
 
         :return: New statement with the filter applied.
         """
@@ -80,7 +58,8 @@ class SaleManager(CRUDManager):
                 .where(Geography.id.in_(query_filter.geography_id__in))
             )
             # We do it to ignore the field inside the filter block
-            setattr(query_filter, "geography_id__in", None)
+            if modify_filter:
+                setattr(query_filter, "geography_id__in", None)
 
         return stmt
 
@@ -100,25 +79,9 @@ class SaleManager(CRUDManager):
             return stmt
 
         if not query_filter.geography_id__in:
-            stmt = stmt.join(
-                MachineImpression, MachineImpression.impression_device_number == self.sql_model.device_number
-            ).join(Machine, Machine.id == MachineImpression.machine_id)
+            stmt = stmt.join(Machine, Machine.id == self.sql_model.machine_id)
 
         return stmt.join(MachineUser, MachineUser.machine_id == Machine.id).where(MachineUser.user_id == user.id)
-
-    def _generate_user_filtration_query(self, user: User, stmt: Select) -> Select:
-        """
-        Generate a query to filter by machine_id related to current User
-
-        :param user: Current User.
-        :param stmt: Current statement.
-        :return: New statement with the filter applied.
-        """
-        return (
-            stmt.join(Machine, Machine.id == self.sql_model.machine_id)
-            .join(MachineUser, MachineUser.machine_id == Machine.id)
-            .where(MachineUser.user_id == user.id)
-        )
 
     @staticmethod
     def _generate_previous_month_filter(query_filter: SaleFilter) -> SaleFilter:
@@ -171,7 +134,68 @@ class SaleManager(CRUDManager):
         """
         return {period.name: (period.start, period.end) for period in time_period}
 
-    async def get_sales_quantity_by_product(self, query_filter: SaleFilter) -> QuantityStatisticSchema:
+    async def get(self, obj_id: int, *, raise_error: bool = True, user: User | None = None, **_: Any) -> Sale | None:
+        """
+        This method retrieves an object from the database using its ID.
+
+        :param obj_id: The ID of the object to be retrieved.
+        :param user: Current user.
+        :param raise_error: A flag that determines whether an error should be raised if the object is not found.
+                            If True, a NotFoundError will be raised when the object is not found.
+                            If False, the method will return None when the object is not found. Default is True.
+
+        :return: The retrieved object if it exists. If the object does not exist and raise_error is False, the method
+                 will return None.
+
+        :raises NotFoundError: If raise_error is True and the object is not found in the database.
+        """
+        stmt = self.get_query().where(self.sql_model.id == obj_id)
+
+        if not user.is_superuser:
+            stmt = (
+                stmt.join(Machine, Machine.id == self.sql_model.machine_id)
+                .join(MachineUser, MachineUser.machine_id == Machine.id)
+                .where(MachineUser.user_id == user.id)
+            )
+
+        if not (result := await self.session.scalar(stmt)) and raise_error:
+            raise NotFoundError(detail=f"{self.sql_model.__name__} object with {obj_id=} not found")
+
+        return result
+
+    async def get_all(
+        self,
+        query_filter: Filter | None = None,
+        raw_result: bool = False,
+        is_unique: bool = False,
+        user: User | None = None,
+        **_: Any,
+    ) -> Page[Schema] | list[Model]:
+        stmt = self.get_query().options(
+            joinedload(Sale.product),
+            joinedload(Sale.machine),
+        )
+
+        if not user.is_superuser:
+            stmt = (
+                stmt.join(Machine, Machine.id == self.sql_model.machine_id)
+                .join(MachineUser, MachineUser.machine_id == Machine.id)
+                .where(MachineUser.user_id == user.id)
+            )
+
+        if query_filter:
+            stmt = query_filter.filter(stmt)
+            stmt = query_filter.sort(stmt)
+
+        if raw_result:
+            if is_unique:
+                return (await self.session.execute(stmt)).unique().all()  # type: ignore
+
+            return (await self.session.scalars(stmt)).all()  # type: ignore
+
+        return await paginate(self.session, stmt)
+
+    async def get_sales_quantity_by_product(self, query_filter: SaleFilter, user: User) -> QuantityStatisticSchema:
         """
         Get the total quantity of sales by product|s.
         Calculate the sum of the quantity field. If no sales are found, raise a NotFoundError.
@@ -183,13 +207,19 @@ class SaleManager(CRUDManager):
         """
         stmt = select(func.sum(self.sql_model.quantity).label("quantity"))
 
-        stmt = self._generate_geography_query(query_filter, stmt)
+        stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
+        stmt = self._generate_user_query(query_filter, user, stmt)
+
+        setattr(query_filter, "geography_id__in", None)
         stmt = query_filter.filter(stmt)
 
         stmt_previous_month_stat = select(func.sum(self.sql_model.quantity).label("previous_month_statistic"))
         query_filter = self._generate_previous_month_filter(query_filter)
-        stmt_previous_month_stat = self._generate_geography_query(query_filter, stmt_previous_month_stat)
 
+        stmt_previous_month_stat = self._generate_geography_query(query_filter, stmt_previous_month_stat)
+        stmt_previous_month_stat = self._generate_user_query(query_filter, user, stmt_previous_month_stat)
+
+        setattr(query_filter, "geography_id__in", None)
         stmt_previous_month_stat = query_filter.filter(stmt_previous_month_stat)
 
         current_month_result = await self.session.scalar(stmt) or 0
@@ -204,6 +234,7 @@ class SaleManager(CRUDManager):
         self,
         time_frame: DateRangeEnum,
         query_filter: SaleFilter,
+        user: User,
     ) -> Page[TimeFrameSalesSchema]:
         """
         Get the total quantity of sales per time frame.
@@ -221,7 +252,10 @@ class SaleManager(CRUDManager):
 
         stmt = select(stmt_time_frame, stmt_sum_quantity).group_by(stmt_time_frame).order_by(stmt_time_frame)
 
-        stmt = self._generate_geography_query(query_filter, stmt)
+        stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
+        stmt = self._generate_user_query(query_filter, user, stmt)
+
+        setattr(query_filter, "geography_id__in", None)
         stmt = query_filter.filter(stmt)
         stmt = stmt.subquery()
 
@@ -236,7 +270,9 @@ class SaleManager(CRUDManager):
 
         return await paginate(self.session, final_stmt)
 
-    async def get_average_sales_across_machines(self, query_filter: SaleFilter) -> DecimalQuantityStatisticSchema:
+    async def get_average_sales_across_machines(
+        self, query_filter: SaleFilter, user: User
+    ) -> DecimalQuantityStatisticSchema:
         """
         Get the average quantity of sales across machines.
         Calculate the average of the quantity field. If no sales are found, raise a NotFoundError.
@@ -247,8 +283,11 @@ class SaleManager(CRUDManager):
         :return: Average quantity of sales.
         """
         stmt = select(func.avg(self.sql_model.quantity).label("quantity"))
-        stmt = self._generate_geography_query(query_filter, stmt)
 
+        stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
+        stmt = self._generate_user_query(query_filter, user, stmt)
+
+        setattr(query_filter, "geography_id__in", None)
         stmt = query_filter.filter(stmt)
 
         stmt_previous_month_stat = select(func.avg(self.sql_model.quantity).label("previous_month_statistic"))
@@ -269,6 +308,7 @@ class SaleManager(CRUDManager):
         self,
         time_frame: DateRangeEnum,
         query_filter: SaleFilter,
+        user: User,
     ) -> Page[DecimalTimeFrameSalesSchema]:
         """
         Get the average quantity of sales per time frame.
@@ -286,7 +326,10 @@ class SaleManager(CRUDManager):
 
         stmt = select(stmt_time_frame, stmt_avg_quantity).group_by(stmt_time_frame)
 
-        stmt = self._generate_geography_query(query_filter, stmt)
+        stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
+        stmt = self._generate_user_query(query_filter, user, stmt)
+
+        setattr(query_filter, "geography_id__in", None)
         stmt = query_filter.filter(stmt)
         stmt = stmt.subquery()
 
@@ -301,7 +344,9 @@ class SaleManager(CRUDManager):
 
         return await paginate(self.session, final_stmt)
 
-    async def get_sales_quantity_per_category(self, query_filter: SaleFilter) -> Page[CategoryProductQuantitySchema]:
+    async def get_sales_quantity_per_category(
+        self, query_filter: SaleFilter, user: User
+    ) -> Page[CategoryProductQuantitySchema]:
         """
         Get the sales quantity for each product category.
 
@@ -322,7 +367,10 @@ class SaleManager(CRUDManager):
             .order_by(stmt_sum_category_quantity.desc())
         )
 
-        stmt = self._generate_geography_query(query_filter, stmt)
+        stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
+        stmt = self._generate_user_query(query_filter, user, stmt)
+
+        setattr(query_filter, "geography_id__in", None)
         stmt = query_filter.filter(stmt)
 
         return await paginate(self.session, stmt)
@@ -330,6 +378,7 @@ class SaleManager(CRUDManager):
     async def get_sales_category_quantity_per_time_frame(
         self,
         query_filter: SaleFilter,
+        user: User,
     ) -> Page[CategoryTimeFrameSalesSchema]:
         """
         Get the sales quantity per day for each product category.
@@ -352,7 +401,10 @@ class SaleManager(CRUDManager):
             .order_by(stmt_category_name, stmt_sale_date)
         )
 
-        subquery = self._generate_geography_query(query_filter, subquery)
+        subquery = self._generate_geography_query(query_filter, subquery, modify_filter=False)
+        subquery = self._generate_user_query(query_filter, user, subquery)
+
+        setattr(query_filter, "geography_id__in", None)
         subquery = query_filter.filter(subquery).subquery()
 
         stmt = (
@@ -378,6 +430,7 @@ class SaleManager(CRUDManager):
         self,
         time_period: type[DailyTimePeriodEnum],
         query_filter: SaleFilter,
+        user: User,
     ) -> list[TimePeriodSalesCountSchema]:
         """
         Get the sales count for each time frame.
@@ -393,7 +446,10 @@ class SaleManager(CRUDManager):
 
         stmt = select(self.sql_model.sale_time)
 
-        stmt = self._generate_geography_query(query_filter, stmt)
+        stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
+        stmt = self._generate_user_query(query_filter, user, stmt)
+
+        setattr(query_filter, "geography_id__in", None)
         stmt = query_filter.filter(stmt)
 
         result = await self.session.execute(stmt)
@@ -413,12 +469,15 @@ class SaleManager(CRUDManager):
         self,
         time_period: type[TimePeriodEnum],
         query_filter: SaleFilter,
+        user: User,
     ) -> list[TimePeriodSalesRevenueSchema]:
         """
         Get the total sales revenue (quantity * price) for each time frame.
 
         :param time_period: Enum object to map sales.
         :param query_filter: Filter object.
+        :param user: Current user.
+
         :return: A list with sales revenue for each time period.
         """
         time_periods = self._get_time_periods(time_period)
@@ -427,7 +486,10 @@ class SaleManager(CRUDManager):
             Product, Product.id == self.sql_model.product_id
         )
 
-        stmt = self._generate_geography_query(query_filter, stmt)
+        stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
+        stmt = self._generate_user_query(query_filter, user, stmt)
+
+        setattr(query_filter, "geography_id__in", None)
         stmt = query_filter.filter(stmt)
 
         result = await self.session.execute(stmt)
@@ -444,12 +506,15 @@ class SaleManager(CRUDManager):
 
         return [{"time_period": period, "revenue": total} for period, total in revenue_by_period.items()]  # type: ignore
 
-    async def get_units_sold(self, time_frame: DateRangeEnum, query_filter: SaleFilter) -> Page[UnitsTimeFrameSchema]:
+    async def get_units_sold(
+        self, time_frame: DateRangeEnum, query_filter: SaleFilter, user: User
+    ) -> Page[UnitsTimeFrameSchema]:
         """
         Get the units (quantity * price) sold per each time frame.
 
         :param time_frame: Time frame to group the data.
         :param query_filter: Filter object.
+        :param user: Current user.
 
         :return: Paginated list of units sold per each time frame.
         """
@@ -462,7 +527,10 @@ class SaleManager(CRUDManager):
             .group_by(stmt_time_frame)
         )
 
-        sales_subquery = self._generate_geography_query(query_filter, sales_subquery)
+        sales_subquery = self._generate_geography_query(query_filter, sales_subquery, modify_filter=False)
+        sales_subquery = self._generate_user_query(query_filter, user, sales_subquery)
+
+        setattr(query_filter, "geography_id__in", None)
         sales_subquery = query_filter.filter(sales_subquery).subquery()
 
         date_range_cte = self._generate_date_range_cte(time_frame, query_filter)
@@ -476,11 +544,15 @@ class SaleManager(CRUDManager):
 
         return await paginate(self.session, final_stmt)
 
-    async def get_sales_quantity_per_geography(self, query_filter: SaleFilter) -> Page[GeographyDecimalQuantitySchema]:
+    async def get_sales_quantity_per_geography(
+        self, query_filter: SaleFilter, user: User
+    ) -> Page[GeographyDecimalQuantitySchema]:
         """
         Get the total and average sales quantity across geography locations.
 
         :param query_filter: Filter object.
+        :param user: Current user.
+
         :return: Paginated list of sales quantity across geography locations and geography objects.
         """
         stmt_sum_quantity = label("quantity", func.sum(self.sql_model.quantity))
@@ -506,16 +578,21 @@ class SaleManager(CRUDManager):
             .order_by(Geography.id)
         )
 
-        stmt = self._generate_geography_query(query_filter, stmt)
+        stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
+        stmt = self._generate_user_query(query_filter, user, stmt)
+
+        setattr(query_filter, "geography_id__in", None)
         stmt = query_filter.filter(stmt)
 
         return await paginate(self.session, stmt, unique=False)
 
-    async def get_conversion_rate(self, query_filter: SaleFilter) -> ConversionRateSchema:
+    async def get_conversion_rate(self, query_filter: SaleFilter, user: User) -> ConversionRateSchema:
         """
         Get the conversion rate.
 
         :param query_filter: Filter object.
+        :param user: Current user.
+
         :return: Count of new costumers (created_at >= date_from) and
                  count of returning customers (created_at < date_from).
         """
@@ -533,19 +610,29 @@ class SaleManager(CRUDManager):
             .join(Machine, Machine.id == MachineUser.machine_id)
             .join(Sale, Sale.machine_id == Machine.id)
         )
-        stmt = self._generate_geography_query(query_filter, stmt)
+        stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
+        stmt = self._generate_user_query(query_filter, user, stmt)
 
+        setattr(query_filter, "geography_id__in", None)
         stmt = query_filter.filter(stmt)
+
         result = await self.session.execute(stmt)
-        row = result.one()
+        row: Row | None = result.one_or_none()
 
-        return ConversionRateSchema(customers_new=row.customers_new, customers_returning=row.customers_returning)
+        return ConversionRateSchema(
+            customers_new=getattr(row, "customers_new", 0),
+            customers_returning=getattr(row, "customers_returning", 0),
+        )
 
-    async def get_sales_by_venue_over_time(self, query_filter: SaleFilter) -> Page[VenueSalesQuantitySchema]:
+    async def get_sales_by_venue_over_time(
+        self, query_filter: SaleFilter, user: User
+    ) -> Page[VenueSalesQuantitySchema]:
         """
         Get the sales quantity by venue (source system id) over time.
 
         :param query_filter: Filter object.
+        :param user: Current user.
+
         :return: Paginated list of sales quantity across venue objects.
         """
         stmt_sum_quantity = label("quantity", func.sum(self.sql_model.quantity))
@@ -553,16 +640,23 @@ class SaleManager(CRUDManager):
 
         stmt = select(stmt_sum_quantity, stmt_source_system).group_by(stmt_source_system).order_by(stmt_source_system)
 
-        stmt = self._generate_geography_query(query_filter, stmt)
+        stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
+        stmt = self._generate_user_query(query_filter, user, stmt)
+
+        setattr(query_filter, "geography_id__in", None)
         stmt = query_filter.filter(stmt)
 
         return await paginate(self.session, stmt)
 
-    async def get_sales_quantity_by_category(self, query_filter: SaleFilter) -> Page[CategoryProductQuantityDateSchema]:
+    async def get_sales_quantity_by_category(
+        self, query_filter: SaleFilter, user: User
+    ) -> Page[CategoryProductQuantityDateSchema]:
         """
         Get the sales quantity by category.
 
         :param query_filter: Filter object.
+        :param user: Current user.
+
         :return: Paginated list of sales quantity across category objects.
         """
         stmt_sum_quantity = label("quantity", func.sum(self.sql_model.quantity))
@@ -587,12 +681,15 @@ class SaleManager(CRUDManager):
             .order_by(desc(stmt_sale_date))
         )
 
-        stmt = self._generate_geography_query(query_filter, stmt)
+        stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
+        stmt = self._generate_user_query(query_filter, user, stmt)
+
+        setattr(query_filter, "geography_id__in", None)
         stmt = query_filter.filter(stmt)
 
         return await paginate(self.session, stmt)
 
-    async def export(self, query_filter: ExportSaleFilter, user: User) -> list[Sale]:
+    async def export(self, query_filter: ExportSaleFilter, user: User | UserScheduleSchema) -> list[Sale]:
         """
         Export sales data. This method is used to export sales data in different formats.
         It returns a list of sales objects based on the filter.
@@ -620,6 +717,9 @@ class SaleManager(CRUDManager):
             .order_by(self.sql_model.sale_date)
         )
 
+        if not user.is_superuser:
+            stmt = stmt.join(MachineUser, MachineUser.machine_id == Machine.id).where(MachineUser.user_id == user.id)
+
         if query_filter.geography_id__in:
             stmt = stmt.where(Geography.id.in_(query_filter.geography_id__in or []))
 
@@ -631,12 +731,14 @@ class SaleManager(CRUDManager):
         return (await self.session.execute(stmt)).mappings().all()  # type: ignore
 
     async def get_average_products_count_per_geography(
-        self, query_filter: SaleFilter
+        self, query_filter: SaleFilter, user: User
     ) -> Page[ProductsCountGeographySchema]:
         """
         Get the average count of products purchased per geography.
 
         :param query_filter: Filter object.
+        :param user: Current user.
+
         :return: Paginated list with average count of products purchased per each geography location.
         """
         stmt_products_count = label("products", func.count(Product.id))
@@ -657,7 +759,14 @@ class SaleManager(CRUDManager):
             .select_from(self.sql_model)
             .group_by(Geography.id)
             .order_by(Geography.id)
-        ).subquery()
+        )
+
+        if not user.is_superuser:
+            stmt = stmt.join(MachineUser, MachineUser.machine_id == self.sql_model.machine_id).where(
+                MachineUser.user_id == user.id
+            )
+
+        stmt = stmt.subquery()
 
         final_stmt = (
             select(func.avg(stmt.c.products).label("products"), stmt.c.geography.label("geography"))

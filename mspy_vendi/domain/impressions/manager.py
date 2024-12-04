@@ -1,12 +1,15 @@
 from datetime import date, timedelta
+from typing import Any
 
+from fastapi_filter.contrib.sqlalchemy import Filter
 from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import CTE, Date, Row, Select, cast, func, label, select, text
 from sqlalchemy.dialects.postgresql import insert
 
 from mspy_vendi.core.enums.date_range import DateRangeEnum
+from mspy_vendi.core.exceptions.base_exception import NotFoundError
 from mspy_vendi.core.filter import BaseFilter
-from mspy_vendi.core.manager import CRUDManager
+from mspy_vendi.core.manager import CRUDManager, Model, Schema
 from mspy_vendi.core.pagination import Page
 from mspy_vendi.db import Impression
 from mspy_vendi.domain.geographies.models import Geography
@@ -27,10 +30,73 @@ from mspy_vendi.domain.machine_impression.models import MachineImpression
 from mspy_vendi.domain.machines.models import Machine, MachineUser
 from mspy_vendi.domain.sales.models import Sale
 from mspy_vendi.domain.user.models import User
+from mspy_vendi.domain.user.schemas import UserScheduleSchema
 
 
 class ImpressionManager(CRUDManager):
     sql_model = Impression
+
+    async def get(
+        self, obj_id: int, *, raise_error: bool = True, user: User | None = None, **_: Any
+    ) -> Impression | None:
+        """
+        This method retrieves an object from the database using its ID.
+
+        :param obj_id: The ID of the object to be retrieved.
+        :param user: Current user.
+        :param raise_error: A flag that determines whether an error should be raised if the object is not found.
+                            If True, a NotFoundError will be raised when the object is not found.
+                            If False, the method will return None when the object is not found. Default is True.
+
+        :return: The retrieved object if it exists. If the object does not exist and raise_error is False, the method
+                 will return None.
+
+        :raises NotFoundError: If raise_error is True and the object is not found in the database.
+        """
+        stmt = self.get_query().where(self.sql_model.id == obj_id)
+
+        if not user.is_superuser:
+            stmt = (
+                stmt.join(MachineImpression, MachineImpression.impression_device_number == self.sql_model.device_number)
+                .join(Machine, Machine.id == MachineImpression.machine_id)
+                .join(MachineUser, MachineUser.machine_id == Machine.id)
+                .where(MachineUser.user_id == user.id)
+            )
+
+        if not (result := await self.session.scalar(stmt)) and raise_error:
+            raise NotFoundError(detail=f"{self.sql_model.__name__} object with {obj_id=} not found")
+
+        return result
+
+    async def get_all(
+        self,
+        query_filter: Filter | None = None,
+        raw_result: bool = False,
+        is_unique: bool = False,
+        user: User | None = None,
+        **_: Any,
+    ) -> Page[Schema] | list[Model]:
+        stmt = self.get_query()
+
+        if not user.is_superuser:
+            stmt = (
+                stmt.join(MachineImpression, MachineImpression.impression_device_number == self.sql_model.device_number)
+                .join(Machine, Machine.id == MachineImpression.machine_id)
+                .join(MachineUser, MachineUser.machine_id == Machine.id)
+                .where(MachineUser.user_id == user.id)
+            )
+
+        if query_filter:
+            stmt = query_filter.filter(stmt)
+            stmt = query_filter.sort(stmt)
+
+        if raw_result:
+            if is_unique:
+                return (await self.session.execute(stmt)).unique().all()  # type: ignore
+
+            return (await self.session.scalars(stmt)).all()  # type: ignore
+
+        return await paginate(self.session, stmt)
 
     async def get_latest_impression_date(self, device_number: str) -> date | None:
         """
@@ -234,7 +300,11 @@ class ImpressionManager(CRUDManager):
 
         return await paginate(self.session, stmt, unique=False)
 
-    async def export(self, query_filter: ExportImpressionFilter, user: User) -> list[Impression]:
+    async def export(
+        self,
+        query_filter: ExportImpressionFilter,
+        user: User | UserScheduleSchema,
+    ) -> list[Impression]:
         """
         Export impression data. This method is used to export sales data in different formats.
         It returns a list of sales objects based on the filter.
@@ -259,10 +329,11 @@ class ImpressionManager(CRUDManager):
             .join(MachineImpression, MachineImpression.impression_device_number == self.sql_model.device_number)
             .join(Machine, Machine.id == MachineImpression.machine_id)
             .join(Geography, Geography.id == Machine.geography_id)
-            .join(MachineUser, MachineUser.machine_id == Machine.id)
-            .where(MachineUser.user_id == user.id)
             .order_by(self.sql_model.date)
         )
+
+        if not user.is_superuser:
+            stmt = stmt.join(MachineUser, MachineUser.machine_id == Machine.id).where(MachineUser.user_id == user.id)
 
         if query_filter.geography_id__in:
             stmt = stmt.where(Geography.id.in_(query_filter.geography_id__in or []))
