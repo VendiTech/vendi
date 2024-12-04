@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi_users import schemas
 from pydantic import EmailStr, PositiveInt
 from pydantic.json_schema import SkipJsonSchema
@@ -32,6 +34,11 @@ class UserBaseDetail(UserBase):
 
 class UserDetail(UserBaseDetail):
     machines: list[MachineDetailSchema]
+    last_logged_in: datetime | None
+
+
+class UserUpdatePerSignIn(BaseSchema):
+    last_logged_in: datetime
 
 
 class UserExistingSchedulesSchema(BaseSchema):
