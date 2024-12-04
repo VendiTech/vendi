@@ -61,7 +61,7 @@ class ExposurePerRangeSchema(ExposureBaseSchema):
     time_frame: datetime
 
 
-class AverageImpressionsSchema(BaseSchema):
+class AverageImpressionsSchema(ImpressionCountBaseSchema):
     avg_impressions: DecimalFloat
     total_impressions: DecimalFloat
 

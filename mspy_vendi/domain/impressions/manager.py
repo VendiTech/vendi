@@ -421,17 +421,22 @@ class ImpressionManager(CRUDManager):
         user: User,
     ) -> AverageImpressionsSchema:
         """
-        Get average count of impressions per time range and total count of impressions for all time.
+        Calculate the average and total count of impressions for a given time range,
+        including the overall total count of impressions.
+
+        This method performs the following:
+        - Calculates the average number of impressions within the given time range.
+        - Calculates the sum of all impressions within the given time range.
+        - Computes the total count of impressions without considering any time range.
 
         :param query_filter: Filter object.
         :param user: Current user.
 
-        :return: Average count of impressions and count of total impression for all time.
+        :return: An instance of `AverageImpressionsSchema` containing the average count of impressions,
+                 the total count of impressions for the time range, and the total count for all time.
         """
-        stmt_avg_impressions = label("avg_impressions", func.coalesce(func.avg(self.sql_model.total_impressions), 0))
-        stmt_total_impressions = label(
-            "total_impressions", func.coalesce(func.sum(self.sql_model.total_impressions), 0)
-        )
+        stmt_avg_impressions = label("avg_impressions", func.avg(self.sql_model.total_impressions))
+        stmt_total_impressions = label("total_impressions", func.sum(self.sql_model.total_impressions))
 
         stmt = select(stmt_avg_impressions)
 
