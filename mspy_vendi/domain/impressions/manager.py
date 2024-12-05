@@ -436,9 +436,10 @@ class ImpressionManager(CRUDManager):
                  the total count of impressions for the time range, and the total count for all time.
         """
         stmt_avg_impressions = label("avg_impressions", func.avg(self.sql_model.total_impressions))
+        stmt_sum_impressions = label("impressions", func.sum(self.sql_model.total_impressions))
         stmt_total_impressions = label("total_impressions", func.sum(self.sql_model.total_impressions))
 
-        stmt = select(stmt_avg_impressions)
+        stmt = select(stmt_avg_impressions, stmt_sum_impressions)
 
         stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
         stmt = self._generate_user_query(query_filter, user, stmt)
@@ -447,14 +448,20 @@ class ImpressionManager(CRUDManager):
         stmt = query_filter.filter(stmt)
         stmt = stmt.subquery()
 
-        final_stmt = select(stmt.c.avg_impressions, stmt_total_impressions).group_by(stmt.c.avg_impressions)
+        final_stmt = (
+            select(stmt.c.avg_impressions, stmt.c.impressions, stmt_total_impressions)
+            .select_from(stmt)
+            .group_by(stmt.c.avg_impressions, stmt.c.impressions)
+        )
         final_stmt = self._generate_user_query(query_filter, user, final_stmt)
 
         result = await self.session.execute(final_stmt)
         row: Row | None = result.one_or_none()
 
         return AverageImpressionsSchema(
-            avg_impressions=getattr(row, "avg_impressions", 0), total_impressions=getattr(row, "total_impressions", 0)
+            avg_impressions=getattr(row, "avg_impressions", 0),
+            total_impressions=getattr(row, "total_impressions", 0),
+            impressions=getattr(row, "impressions", 0),
         )
 
     async def get_advert_playouts_per_range(

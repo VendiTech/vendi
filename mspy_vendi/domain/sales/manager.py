@@ -862,6 +862,6 @@ class SaleManager(CRUDManager):
             .group_by(stmt.c.geography)
         )
 
-        final_stmt = query_filter.filter(final_stmt)
+        final_stmt = query_filter.filter(final_stmt, autojoin=False)
 
         return await paginate(self.session, final_stmt, unique=False)

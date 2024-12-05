@@ -14,7 +14,7 @@ router_v1 = APIRouter(
 router_v1.include_router(activity_log.router)
 router_v1.include_router(user.router)
 router_v1.include_router(sale.router)
-router_v1.include_router(machine.router)
 router_v1.include_router(impression.router)
+router_v1.include_router(machine.router)
 router_v1.include_router(geography.router)
 router_v1.include_router(machine_impression.router)
