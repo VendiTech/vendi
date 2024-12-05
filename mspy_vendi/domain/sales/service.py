@@ -5,12 +5,14 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mspy_vendi.core.email import MailGunService
+from mspy_vendi.core.enums import ExportEntityTypeEnum
 from mspy_vendi.core.enums.date_range import DailyTimePeriodEnum, DateRangeEnum, TimePeriodEnum
 from mspy_vendi.core.mixins.export import ExportMixin
 from mspy_vendi.core.pagination import Page
 from mspy_vendi.core.service import CRUDService
 from mspy_vendi.deps import get_db_session, get_email_service
 from mspy_vendi.domain.sales.filters import (
+    ExportSaleFilter,
     SaleFilter,
     SaleGetAllFilter,
     StatisticDateRangeFilter,
@@ -23,6 +25,7 @@ from mspy_vendi.domain.sales.schemas import (
     ConversionRateSchema,
     DecimalQuantityStatisticSchema,
     DecimalTimeFrameSalesSchema,
+    ExportSaleDetailSchema,
     GeographyDecimalQuantitySchema,
     ProductsCountGeographySchema,
     ProductVenueSalesCountSchema,
@@ -136,3 +139,6 @@ class SaleService(CRUDService, ExportMixin):
         user: User,
     ) -> Page[ProductVenueSalesCountSchema]:
         return await self.manager.get_products_quantity_by_venue(query_filter, user)
+
+    async def get_export_data(self, query_filter: ExportSaleFilter, user: User) -> Page[ExportSaleDetailSchema]:
+        return await self.export(query_filter, entity=ExportEntityTypeEnum.SALE, raw_result=False, user=user)

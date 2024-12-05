@@ -143,8 +143,8 @@ async def post__export_impressions(
 
 
 @router.get("/export-raw-data", response_model=Page[ExportImpressionDetailSchema])
-async def get__export_raw_data(
-    query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
+async def get__impressions_export_raw_data(
+    query_filter: Annotated[ExportImpressionFilter, FilterDepends(ExportImpressionFilter)],
     impression_service: Annotated[ImpressionService, Depends()],
     user: Annotated[User, Depends(get_current_user())],
 ) -> Page[ExportImpressionDetailSchema]:

@@ -23,6 +23,7 @@ from mspy_vendi.domain.sales.schemas import (
     ConversionRateSchema,
     DecimalQuantityStatisticSchema,
     DecimalTimeFrameSalesSchema,
+    ExportSaleDetailSchema,
     GeographyDecimalQuantitySchema,
     ProductsCountGeographySchema,
     ProductVenueSalesCountSchema,
@@ -777,13 +778,19 @@ class SaleManager(CRUDManager):
 
         return await paginate(self.session, stmt)
 
-    async def export(self, query_filter: ExportSaleFilter, user: User | UserScheduleSchema) -> list[Sale]:
+    async def export(
+        self,
+        query_filter: ExportSaleFilter,
+        user: User | UserScheduleSchema,
+        raw_result: bool = True,
+    ) -> list[Sale] | Page[ExportSaleDetailSchema]:
         """
         Export sales data. This method is used to export sales data in different formats.
         It returns a list of sales objects based on the filter.
 
         :param query_filter: Filter object.
         :param user: Current User.
+        :param raw_result: A flag object indicating whether to export raw data.
 
         :return: List of sales objects.
         """
@@ -813,6 +820,9 @@ class SaleManager(CRUDManager):
             setattr(query_filter, "geography_id__in", None)
 
         stmt = query_filter.filter(stmt)
+
+        if not raw_result:
+            return await paginate(self.session, stmt)
 
         return (await self.session.execute(stmt)).mappings().all()  # type: ignore
 
