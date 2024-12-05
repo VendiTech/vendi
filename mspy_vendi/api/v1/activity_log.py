@@ -10,7 +10,7 @@ from mspy_vendi.core.enums import ApiTagEnum, CRUDEnum, ExportEntityTypeEnum, Ex
 from mspy_vendi.core.pagination import Page
 from mspy_vendi.deps import get_db_session
 from mspy_vendi.domain.activity_log.filters import ActivityLogFilter
-from mspy_vendi.domain.activity_log.schemas import ActivityLogDetailSchema
+from mspy_vendi.domain.activity_log.schemas import ActivityLogDetailSchema, ExportActivityLogDetailSchema
 from mspy_vendi.domain.activity_log.service import ActivityLogService
 from mspy_vendi.domain.auth import get_current_user
 from mspy_vendi.domain.user.models import User
@@ -31,6 +31,15 @@ async def post__export_sales(
         entity=ExportEntityTypeEnum.ACTIVITY_LOG,
         user=user,
     )
+
+
+@router.get("/export-raw-data", response_model=Page[ExportActivityLogDetailSchema])
+async def get__activity_log_export_raw_data(
+    query_filter: Annotated[ActivityLogFilter, FilterDepends(ActivityLogFilter)],
+    activity_log_service: Annotated[ActivityLogService, Depends()],
+    user: Annotated[User, Depends(get_current_user(is_superuser=True))],
+) -> Page[ExportActivityLogDetailSchema]:
+    return await activity_log_service.get_export_data(query_filter, user)
 
 
 class ActivityLogAPI(CRUDApi):
