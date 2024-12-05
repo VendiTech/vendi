@@ -7,5 +7,6 @@ class ExportTypeEnum(StrEnum):
 
 
 class ExportEntityTypeEnum(StrEnum):
+    ACTIVITY_LOG = "activity_log"
     SALE = "sale"
     IMPRESSION = "impression"

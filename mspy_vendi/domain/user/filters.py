@@ -1,6 +1,7 @@
 from pydantic import PositiveInt
 
 from mspy_vendi.core.filter import BaseFilter
+from mspy_vendi.domain.user.enums import RoleEnum
 from mspy_vendi.domain.user.models import User
 
 
@@ -13,6 +14,7 @@ class UserFilter(BaseFilter):
     company_name: str | None = None
     job_title: str | None = None
     phone_number: str | None = None
+    role: RoleEnum | None = None
 
     # Multi-field search
     search: str | None = None
