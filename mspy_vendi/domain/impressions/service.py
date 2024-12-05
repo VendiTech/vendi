@@ -13,6 +13,7 @@ from mspy_vendi.deps import get_db_session, get_email_service
 from mspy_vendi.domain.impressions.filters import ExportImpressionFilter, ImpressionFilter
 from mspy_vendi.domain.impressions.manager import ImpressionManager
 from mspy_vendi.domain.impressions.schemas import (
+    AdvertPlayoutsStatisticsSchema,
     AdvertPlayoutsTimeFrameSchema,
     AverageExposureSchema,
     AverageImpressionsSchema,
@@ -65,7 +66,15 @@ class ImpressionService(CRUDService, ExportMixin):
     async def get_average_impressions_count(
         self, query_filter: ImpressionFilter, user: User
     ) -> AverageImpressionsSchema:
-        return await self.manager.get_average_impressions_count(query_filter, user)
+        prev_month_filter = self.manager.generate_previous_month_filter(query_filter)
+        prev_month_res: AverageImpressionsSchema = await self.manager.get_average_impressions_count(
+            prev_month_filter, user
+        )
+        res: AverageImpressionsSchema = await self.manager.get_average_impressions_count(query_filter, user)
+        return AverageImpressionsSchema(
+            previous_month_statistic=prev_month_res.impressions,
+            **res.model_dump(exclude={"previous_month_statistic"}),
+        )
 
     async def get_exposure(self, query_filter: ImpressionFilter, user: User) -> ExposureStatisticSchema:
         return await self.manager.get_exposure(query_filter, user)
@@ -80,6 +89,15 @@ class ImpressionService(CRUDService, ExportMixin):
 
     async def get_average_exposure(self, query_filter: ImpressionFilter, user: User) -> AverageExposureSchema:
         return await self.manager.get_average_exposure(query_filter, user)
+
+    async def get_advert_playouts(self, query_filter: ImpressionFilter, user: User) -> AdvertPlayoutsStatisticsSchema:
+        prev_month_filter = self.manager.generate_previous_month_filter(query_filter)
+        prev_month_res: AdvertPlayoutsStatisticsSchema = await self.manager.get_advert_playouts(prev_month_filter, user)
+        res: AdvertPlayoutsStatisticsSchema = await self.manager.get_advert_playouts(query_filter, user)
+        return AdvertPlayoutsStatisticsSchema(
+            previous_month_statistic=prev_month_res.advert_playouts,
+            **res.model_dump(exclude={"previous_month_statistic"}),
+        )
 
     async def get_impressions_by_venue_per_range(
         self,
