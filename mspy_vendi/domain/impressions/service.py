@@ -4,17 +4,19 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mspy_vendi.core.email import MailGunService
+from mspy_vendi.core.enums import ExportEntityTypeEnum
 from mspy_vendi.core.enums.date_range import DateRangeEnum
 from mspy_vendi.core.mixins.export import ExportMixin
 from mspy_vendi.core.pagination import Page
 from mspy_vendi.core.service import CRUDService
 from mspy_vendi.deps import get_db_session, get_email_service
-from mspy_vendi.domain.impressions.filters import ImpressionFilter
+from mspy_vendi.domain.impressions.filters import ExportImpressionFilter, ImpressionFilter
 from mspy_vendi.domain.impressions.manager import ImpressionManager
 from mspy_vendi.domain.impressions.schemas import (
     AdvertPlayoutsTimeFrameSchema,
     AverageExposureSchema,
     AverageImpressionsSchema,
+    ExportImpressionDetailSchema,
     ExposurePerRangeSchema,
     ExposureStatisticSchema,
     GeographyImpressionsCountSchema,
@@ -94,3 +96,10 @@ class ImpressionService(CRUDService, ExportMixin):
         user: User,
     ) -> Page[ImpressionsSalesPlayoutsConvertions]:
         return await self.manager.get_impressions_sales_playouts_convertion_per_range(time_frame, query_filter, user)
+
+    async def get_export_data(
+        self,
+        query_filter: ExportImpressionFilter,
+        user: User,
+    ) -> Page[ExportImpressionDetailSchema]:
+        return await self.export(query_filter, entity=ExportEntityTypeEnum.IMPRESSION, raw_result=False, user=user)

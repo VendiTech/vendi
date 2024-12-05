@@ -19,6 +19,7 @@ from mspy_vendi.domain.sales.schemas import (
     ConversionRateSchema,
     DecimalQuantityStatisticSchema,
     DecimalTimeFrameSalesSchema,
+    ExportSaleDetailSchema,
     GeographyDecimalQuantitySchema,
     ProductsCountGeographySchema,
     ProductVenueSalesCountSchema,
@@ -200,6 +201,15 @@ async def post__export_sales(
         entity=ExportEntityTypeEnum.SALE,
         user=user,
     )
+
+
+@router.get("/export-raw-data", response_model=Page[ExportSaleDetailSchema])
+async def get__sales_export_raw_data(
+    query_filter: Annotated[ExportSaleFilter, FilterDepends(ExportSaleFilter)],
+    sale_service: Annotated[SaleService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
+) -> Page[ExportSaleDetailSchema]:
+    return await sale_service.get_export_data(query_filter, user)
 
 
 @router.post("/schedule", response_class=StreamingResponse)

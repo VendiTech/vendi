@@ -17,6 +17,7 @@ from mspy_vendi.domain.impressions.schemas import (
     AdvertPlayoutsTimeFrameSchema,
     AverageExposureSchema,
     AverageImpressionsSchema,
+    ExportImpressionDetailSchema,
     ExposurePerRangeSchema,
     ExposureStatisticSchema,
     GeographyImpressionsCountSchema,
@@ -300,13 +301,15 @@ class ImpressionManager(CRUDManager):
         self,
         query_filter: ExportImpressionFilter,
         user: User | UserScheduleSchema,
-    ) -> list[Impression]:
+        raw_result: bool = True,
+    ) -> list[Impression] | Page[ExportImpressionDetailSchema]:
         """
         Export impression data. This method is used to export sales data in different formats.
         It returns a list of sales objects based on the filter.
 
         :param query_filter: Filter object.
         :param user: User object.
+        :param raw_result: A flag object indicating whether to export raw data.
 
         :return: List of sales objects.
         """
@@ -336,6 +339,9 @@ class ImpressionManager(CRUDManager):
             setattr(query_filter, "geography_id__in", None)
 
         stmt = query_filter.filter(stmt)
+
+        if not raw_result:
+            return await paginate(self.session, stmt)
 
         return (await self.session.execute(stmt)).mappings().all()  # type: ignore
 

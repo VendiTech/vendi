@@ -29,6 +29,18 @@ class SaleDetailSchema(SaleBaseSchema):
     machine: MachineDetailSchema
 
 
+class ExportSaleDetailSchema(BaseSchema):
+    id: PositiveInt = Field(..., alias="Sale ID")
+    venue_name: str = Field(..., alias="Venue name")
+    geography: str = Field(..., alias="Geography")
+    product_sold: str = Field(..., alias="Product sold")
+    product_id: PositiveInt = Field(..., alias="Product ID")
+    machine_id: PositiveInt = Field(..., alias="Machine ID")
+    machine_name: str = Field(..., alias="Machine Name")
+    sale_date: date = Field(..., alias="Date")
+    sale_time: time = Field(..., alias="Time")
+
+
 class PreviousMonthEntityCountSchema(BaseSchema):
     previous_month_statistic: NonNegativeInt
 

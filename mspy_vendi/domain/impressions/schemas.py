@@ -1,7 +1,8 @@
-from datetime import date, datetime
+from datetime import date as python_date
+from datetime import datetime
 from decimal import Decimal
 
-from pydantic import NonNegativeInt, PositiveInt
+from pydantic import Field, NonNegativeInt, PositiveInt
 
 from mspy_vendi.core.constants import DEFAULT_SOURCE_SYSTEM
 from mspy_vendi.core.schemas import BaseSchema
@@ -11,7 +12,7 @@ from mspy_vendi.domain.sales.schemas import BaseQuantitySchema, ConversionRateSc
 
 
 class ImpressionBaseSchema(BaseSchema):
-    date: date
+    date: python_date
     total_impressions: Decimal
     seconds_exposure: int
     advert_playouts: int
@@ -25,6 +26,17 @@ class ImpressionCreateSchema(ImpressionBaseSchema): ...
 
 class ImpressionDetailSchema(ImpressionBaseSchema):
     id: PositiveInt
+
+
+class ExportImpressionDetailSchema(BaseSchema):
+    id: PositiveInt = Field(..., alias="Impression ID")
+    device_number: str = Field(..., alias="Device Number")
+    venue_name: str = Field(..., alias="Venue name")
+    geography: str = Field(..., alias="Geography")
+    total_impressions: Decimal = Field(..., alias="Total Impressions")
+    machine_id: PositiveInt = Field(..., alias="Machine ID")
+    machine_name: str = Field(..., alias="Machine Name")
+    date: python_date = Field(..., alias="Date")
 
 
 class ImpressionCountBaseSchema(BaseSchema):
