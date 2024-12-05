@@ -300,6 +300,7 @@ class ImpressionManager(CRUDManager):
         self,
         query_filter: ExportImpressionFilter,
         user: User | UserScheduleSchema,
+        raw_result: bool = True,
     ) -> list[Impression]:
         """
         Export impression data. This method is used to export sales data in different formats.
@@ -336,6 +337,9 @@ class ImpressionManager(CRUDManager):
             setattr(query_filter, "geography_id__in", None)
 
         stmt = query_filter.filter(stmt)
+
+        if not raw_result:
+            return await paginate(self.session, stmt)
 
         return (await self.session.execute(stmt)).mappings().all()  # type: ignore
 

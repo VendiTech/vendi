@@ -13,13 +13,15 @@ from mspy_vendi.core.enums.date_range import ScheduleEnum
 from mspy_vendi.core.enums.export import ExportEntityTypeEnum
 from mspy_vendi.core.factory import DataExportFactory
 from mspy_vendi.core.filter import BaseFilter
+from mspy_vendi.core.pagination import Page
+from mspy_vendi.core.schemas import BaseSchema
 from mspy_vendi.db.base import Base
 from mspy_vendi.domain.user.models import User
 from mspy_vendi.domain.user.schemas import UserScheduleSchema
 
 
 class ExportManager(Protocol):
-    async def export(self, query_filter: BaseFilter, user: Base) -> Any: ...
+    async def export(self, query_filter: BaseFilter, user: Base, **kwargs: Any) -> Any: ...
 
 
 class ExportProtocol(Protocol):
@@ -77,12 +79,13 @@ class ExportMixin(ExportProtocol):
     async def export(
         self,
         query_filter: BaseFilter,
-        export_type: ExportTypeEnum,
         entity: ExportEntityTypeEnum,
+        raw_result: bool = True,
         sync: bool = True,
+        export_type: ExportTypeEnum | None = None,
         user: UserScheduleSchema | User | None = None,
         schedule: ScheduleEnum | None = None,
-    ) -> StreamingResponse | None:
+    ) -> StreamingResponse | Page[BaseSchema] | None:
         """
         Export the entity data based on the provided filter and export type.
 
@@ -93,13 +96,19 @@ class ExportMixin(ExportProtocol):
         :param query_filter: The filter to use for the export.
         :param entity: The entity to export.
         :param export_type: The type of export to use.
+        :param raw_result: Whether the export is raw result.
         :param sync: Whether to export the data sync or async.
         :param user: The user to send the report to.
         :param schedule: The schedule type of the report.
 
         :return: The StreamingResponse or None.
         """
-        entity_data: list[dict] = await self.manager.export(query_filter, user)
+        entity_data: list[dict] | Page[BaseSchema] = await self.manager.export(
+            query_filter, user, raw_result=raw_result
+        )
+
+        if not raw_result:
+            return entity_data
 
         file_extension: str = DEFAULT_EXPORT_TYPES[export_type].get("file_extension")
         file_content_type: str = DEFAULT_EXPORT_TYPES[export_type].get("content_type")
