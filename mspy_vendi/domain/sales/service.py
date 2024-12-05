@@ -25,6 +25,7 @@ from mspy_vendi.domain.sales.schemas import (
     DecimalTimeFrameSalesSchema,
     GeographyDecimalQuantitySchema,
     ProductsCountGeographySchema,
+    ProductVenueSalesCountSchema,
     QuantityStatisticSchema,
     TimeFrameSalesSchema,
     TimePeriodSalesCountSchema,
@@ -128,3 +129,10 @@ class SaleService(CRUDService, ExportMixin):
         self, query_filter: SaleFilter, user: User
     ) -> Page[ProductsCountGeographySchema]:
         return await self.manager.get_average_products_count_per_geography(query_filter, user)
+
+    async def get_products_quantity_by_venue(
+        self,
+        query_filter: SaleFilter,
+        user: User,
+    ) -> Page[ProductVenueSalesCountSchema]:
+        return await self.manager.get_products_quantity_by_venue(query_filter, user)
