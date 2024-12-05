@@ -24,13 +24,22 @@ PageSchema = TypeVar("PageSchema", bound=BaseModel)
 FilterClass = TypeVar("FilterClass", bound=BaseModel)
 
 # Basic variables for CRUD operations
-basic_permissions = {
+basic_permissions: dict[CRUDEnum, Callable] = {
     CRUDEnum.CREATE: Depends(get_current_user(is_superuser=True)),
     CRUDEnum.UPDATE: Depends(get_current_user(is_superuser=True)),
     CRUDEnum.DELETE: Depends(get_current_user(is_superuser=True)),
     CRUDEnum.GET: Depends(get_current_user(permissions=[PermissionEnum.READ])),
     CRUDEnum.LIST: Depends(get_current_user(permissions=[PermissionEnum.READ])),
 }
+
+admin_permissions: dict[CRUDEnum, Callable] = {
+    CRUDEnum.CREATE: Depends(get_current_user(is_superuser=True)),
+    CRUDEnum.UPDATE: Depends(get_current_user(is_superuser=True)),
+    CRUDEnum.DELETE: Depends(get_current_user(is_superuser=True)),
+    CRUDEnum.GET: Depends(get_current_user(is_superuser=True)),
+    CRUDEnum.LIST: Depends(get_current_user(is_superuser=True)),
+}
+
 basic_endpoints = (CRUDEnum.CREATE, CRUDEnum.UPDATE, CRUDEnum.DELETE, CRUDEnum.GET, CRUDEnum.LIST)
 
 
