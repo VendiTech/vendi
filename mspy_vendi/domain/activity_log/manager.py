@@ -62,6 +62,6 @@ class ActivityLogManager(CRUDManager):
         stmt = query_filter.filter(stmt, autojoin=False)
 
         if not raw_result:
-            return await paginate(self.session, stmt)
+            return await paginate(self.session, stmt, unique=False)
 
         return (await self.session.execute(stmt)).mappings().all()  # type: ignore
