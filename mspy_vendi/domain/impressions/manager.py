@@ -492,7 +492,7 @@ class ImpressionManager(CRUDManager):
         result = await self.session.execute(stmt)
         row = result.one()
 
-        return AdvertPlayoutsStatisticsSchema(advert_playouts=getattr(row, "advert_playouts", 0))
+        return AdvertPlayoutsStatisticsSchema(advert_playouts=getattr(row, "advert_playouts", 0) or 0)
 
     async def get_advert_playouts_per_range(
         self,
@@ -578,11 +578,7 @@ class ImpressionManager(CRUDManager):
             .order_by(stmt_time_frame)
         )
 
-        if query_filter.geography_id__in:
-            stmt = stmt.join(Geography, Machine.geography_id == Geography.id).where(
-                Geography.id.in_(query_filter.geography_id__in)
-            )
-
+        stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
         stmt = self._generate_user_query(query_filter, user, stmt)
 
         setattr(query_filter, "geography_id__in", None)

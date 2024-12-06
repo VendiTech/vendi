@@ -23,13 +23,12 @@ async def post__export_sales(
     export_type: ExportTypeEnum,
     query_filter: Annotated[ActivityLogFilter, FilterDepends(ActivityLogFilter)],
     activity_log_service: Annotated[ActivityLogService, Depends()],
-    user: Annotated[User, Depends(get_current_user(is_superuser=True))],
+    _: Annotated[User, Depends(get_current_user(is_superuser=True))],
 ) -> StreamingResponse:
     return await activity_log_service.export(
         query_filter=query_filter,
         export_type=export_type,
         entity=ExportEntityTypeEnum.ACTIVITY_LOG,
-        user=user,
     )
 
 
@@ -37,9 +36,9 @@ async def post__export_sales(
 async def get__activity_log_export_raw_data(
     query_filter: Annotated[ActivityLogFilter, FilterDepends(ActivityLogFilter)],
     activity_log_service: Annotated[ActivityLogService, Depends()],
-    user: Annotated[User, Depends(get_current_user(is_superuser=True))],
+    _: Annotated[User, Depends(get_current_user(is_superuser=True))],
 ) -> Page[ExportActivityLogDetailSchema]:
-    return await activity_log_service.get_export_data(query_filter, user)
+    return await activity_log_service.get_export_data(query_filter)
 
 
 class ActivityLogAPI(CRUDApi):
