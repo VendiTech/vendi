@@ -3,8 +3,10 @@ from taskiq import TaskiqEvents, TaskiqScheduler, TaskiqState
 from taskiq_redis import ListQueueBroker, RedisScheduleSource
 
 from mspy_vendi.config import config
+from mspy_vendi.core.middlewares.sentry_middleware import SentryMiddleware
 
 broker = ListQueueBroker(config.redis.url, queue_name=config.redis.schedule_queue_name)
+broker.add_middlewares(SentryMiddleware(config.sentry.scheduler_dsn))
 
 
 @broker.on_event(TaskiqEvents.WORKER_STARTUP)

@@ -149,6 +149,8 @@ class SentrySettings(BaseSettings):
     datajam_cronjob_dsn: str = str()
     datajam_monitoring_slug: str = "datajam-monitoring-slug"
 
+    scheduler_dsn: str = str()
+
     traces_sample_rate: float = 1.0
     profiles_sample_rate: float = 1.0
     enable_tracing: bool = True
