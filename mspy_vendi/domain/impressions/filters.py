@@ -1,7 +1,7 @@
 from pydantic import NonNegativeInt, PositiveInt
 
 from mspy_vendi.core.filter import BaseFilter, DateRangeFilter
-from mspy_vendi.domain.impressions.models import Impression
+from mspy_vendi.db import Impression
 
 
 class StatisticDateRangeFilter(DateRangeFilter):
