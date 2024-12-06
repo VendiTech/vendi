@@ -8,7 +8,12 @@ from mspy_vendi.core.constants import DEFAULT_SOURCE_SYSTEM
 from mspy_vendi.core.schemas import BaseSchema
 from mspy_vendi.core.validators import DecimalFloat
 from mspy_vendi.domain.geographies.schemas import GeographyDetailSchema
-from mspy_vendi.domain.sales.schemas import BaseQuantitySchema, ConversionRateSchema, PreviousMonthEntityCountSchema
+from mspy_vendi.domain.sales.schemas import (
+    BaseQuantitySchema,
+    ConversionRateSchema,
+    PreviousMonthEntityCountSchema,
+    PreviousMonthEntityDecimalCountSchema,
+)
 
 
 class ImpressionBaseSchema(BaseSchema):
@@ -64,8 +69,14 @@ class AverageExposureSchema(BaseSchema):
     seconds_exposure: DecimalFloat
 
 
-class AdvertPlayoutsTimeFrameSchema(BaseSchema):
+class AdvertPlayoutsBaseSchema(BaseSchema):
     advert_playouts: NonNegativeInt
+
+
+class AdvertPlayoutsStatisticsSchema(AdvertPlayoutsBaseSchema, PreviousMonthEntityCountSchema): ...
+
+
+class AdvertPlayoutsTimeFrameSchema(AdvertPlayoutsBaseSchema):
     time_frame: datetime
 
 
@@ -73,7 +84,7 @@ class ExposurePerRangeSchema(ExposureBaseSchema):
     time_frame: datetime
 
 
-class AverageImpressionsSchema(ImpressionCountBaseSchema):
+class AverageImpressionsSchema(ImpressionCountBaseSchema, PreviousMonthEntityDecimalCountSchema):
     avg_impressions: DecimalFloat
     total_impressions: DecimalFloat
 

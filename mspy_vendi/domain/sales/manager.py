@@ -86,7 +86,7 @@ class SaleManager(CRUDManager):
         return stmt.join(MachineUser, MachineUser.machine_id == Machine.id).where(MachineUser.user_id == user.id)
 
     @staticmethod
-    def _generate_previous_month_filter(query_filter: SaleFilter) -> SaleFilter:
+    def generate_previous_month_filter(query_filter: SaleFilter) -> SaleFilter:
         """
         Create a new SaleFilter instance for the previous month's range
         based on query_filter.date_from.
@@ -212,7 +212,7 @@ class SaleManager(CRUDManager):
         stmt = query_filter.filter(stmt)
 
         stmt_previous_month_stat = select(func.sum(self.sql_model.quantity).label("previous_month_statistic"))
-        query_filter = self._generate_previous_month_filter(query_filter)
+        query_filter = self.generate_previous_month_filter(query_filter)
 
         stmt_previous_month_stat = self._generate_geography_query(query_filter, stmt_previous_month_stat)
         stmt_previous_month_stat = self._generate_user_query(query_filter, user, stmt_previous_month_stat)
@@ -288,7 +288,7 @@ class SaleManager(CRUDManager):
         stmt = query_filter.filter(stmt)
 
         stmt_previous_month_stat = select(func.avg(self.sql_model.quantity).label("previous_month_statistic"))
-        query_filter = self._generate_previous_month_filter(query_filter)
+        query_filter = self.generate_previous_month_filter(query_filter)
         stmt_previous_month_stat = self._generate_geography_query(query_filter, stmt_previous_month_stat)
 
         stmt_previous_month_stat = query_filter.filter(stmt_previous_month_stat)
@@ -569,7 +569,7 @@ class SaleManager(CRUDManager):
         stmt_previous_month_stat = select(stmt_previous_month_units).join(
             Product, Product.id == self.sql_model.product_id
         )
-        query_filter = self._generate_previous_month_filter(query_filter)
+        query_filter = self.generate_previous_month_filter(query_filter)
         stmt_previous_month_stat = self._generate_geography_query(
             query_filter, stmt_previous_month_stat, modify_filter=False
         )

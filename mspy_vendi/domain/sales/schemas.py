@@ -42,11 +42,11 @@ class ExportSaleDetailSchema(BaseSchema):
 
 
 class PreviousMonthEntityCountSchema(BaseSchema):
-    previous_month_statistic: NonNegativeInt
+    previous_month_statistic: NonNegativeInt | None = None
 
 
 class PreviousMonthEntityDecimalCountSchema(BaseSchema):
-    previous_month_statistic: DecimalFloat
+    previous_month_statistic: DecimalFloat | None = None
 
 
 class BaseQuantitySchema(BaseSchema):
