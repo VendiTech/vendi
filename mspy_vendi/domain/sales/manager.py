@@ -154,7 +154,7 @@ class SaleManager(CRUDManager):
         """
         stmt = self.get_query().where(self.sql_model.id == obj_id)
 
-        if not user.is_superuser:
+        if user and not user.is_superuser:
             stmt = (
                 stmt.join(Machine, Machine.id == self.sql_model.machine_id)
                 .join(MachineUser, MachineUser.machine_id == Machine.id)
