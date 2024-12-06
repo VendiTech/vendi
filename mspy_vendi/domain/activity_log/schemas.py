@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 
 from pydantic import Field, PositiveInt
 
@@ -48,4 +49,4 @@ class ExportActivityLogDetailSchema(BaseSchema):
     action: str = Field(..., alias="Action")
     name: str = Field(..., alias="Name")
     date: str = Field(..., alias="Date and time")
-    additional_context: str = Field(..., alias="Additional Context")
+    additional_context: dict[str, Any] = Field(..., alias="Additional Context")

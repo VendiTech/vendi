@@ -719,9 +719,10 @@ class SaleManager(CRUDManager):
         stmt_source_system = label("venue", self.sql_model.source_system)
         stmt_product_name = label("product_name", Product.name)
         stmt_sale_date = label("sale_date", func.max(self.sql_model.sale_date))
+        stmt_sale_time = label("sale_time", func.max(self.sql_model.sale_time))
 
         stmt = (
-            select(stmt_sum_quantity, stmt_source_system, stmt_product_name, stmt_sale_date)
+            select(stmt_sum_quantity, stmt_source_system, stmt_product_name, stmt_sale_date, stmt_sale_time)
             .join(Product, Product.id == self.sql_model.product_id)
             .group_by(Product.id, stmt_source_system)
             .order_by(stmt_source_system)
@@ -753,6 +754,7 @@ class SaleManager(CRUDManager):
         stmt_product_id = label("product_id", Product.id)
         stmt_product_name = label("product_name", Product.name)
         stmt_sale_date = label("sale_date", func.max(self.sql_model.sale_date))
+        stmt_sale_time = label("sale_time", func.max(self.sql_model.sale_time))
 
         stmt = (
             select(
@@ -762,6 +764,7 @@ class SaleManager(CRUDManager):
                 stmt_product_id,
                 stmt_product_name,
                 stmt_sale_date,
+                stmt_sale_time,
             )
             .join(Product, Product.id == self.sql_model.product_id)
             .join(ProductCategory, ProductCategory.id == Product.product_category_id)

@@ -21,9 +21,8 @@ class ActivityLogManager(CRUDManager):
     async def export(
         self,
         query_filter: ActivityLogFilter,
-        user: User,
-        raw_result: bool = True,
         *_: Any,
+        raw_result: bool = True,
     ) -> list[ActivityLog] | Page[ExportActivityLogDetailSchema]:
         """
         Export activity_log data.

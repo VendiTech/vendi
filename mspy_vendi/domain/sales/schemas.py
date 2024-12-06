@@ -114,10 +114,14 @@ class VenueSalesQuantitySchema(BaseQuantitySchema):
     venue: str
 
 
-class CategoryProductQuantityDateSchema(CategoryProductQuantitySchema):
+class SaleDateTimeBaseSchema(BaseSchema):
+    sale_date: date
+    sale_time: time
+
+
+class CategoryProductQuantityDateSchema(CategoryProductQuantitySchema, SaleDateTimeBaseSchema):
     product_name: str
     product_id: PositiveInt
-    sale_date: date
 
 
 class ProductsCountGeographySchema(BaseSchema):
@@ -125,6 +129,5 @@ class ProductsCountGeographySchema(BaseSchema):
     geography: GeographyDetailSchema
 
 
-class ProductVenueSalesCountSchema(VenueSalesQuantitySchema):
-    sale_date: datetime
+class ProductVenueSalesCountSchema(VenueSalesQuantitySchema, SaleDateTimeBaseSchema):
     product_name: str
