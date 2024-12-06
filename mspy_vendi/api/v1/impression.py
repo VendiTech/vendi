@@ -13,6 +13,7 @@ from mspy_vendi.deps import get_db_session
 from mspy_vendi.domain.auth import get_current_user
 from mspy_vendi.domain.impressions.filters import ExportImpressionFilter, GeographyFilter, ImpressionFilter
 from mspy_vendi.domain.impressions.schemas import (
+    AdvertPlayoutsStatisticsSchema,
     AdvertPlayoutsTimeFrameSchema,
     AverageExposureSchema,
     AverageImpressionsSchema,
@@ -96,6 +97,15 @@ async def get__advert_playouts_per_range(
     user: Annotated[User, Depends(get_current_user())],
 ) -> Page[AdvertPlayoutsTimeFrameSchema]:
     return await impression_service.get_advert_playouts_per_range(time_frame, query_filter, user)
+
+
+@router.get("/advert-playouts", response_model=AdvertPlayoutsStatisticsSchema)
+async def get__advert_playouts_statistic(
+    query_filter: Annotated[ImpressionFilter, FilterDepends(ImpressionFilter)],
+    impression_service: Annotated[ImpressionService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
+) -> AdvertPlayoutsStatisticsSchema:
+    return await impression_service.get_advert_playouts(query_filter, user)
 
 
 @router.get("/average-exposure", response_model=AverageExposureSchema)

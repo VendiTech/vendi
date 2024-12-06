@@ -14,6 +14,7 @@ from mspy_vendi.db import Impression
 from mspy_vendi.domain.geographies.models import Geography
 from mspy_vendi.domain.impressions.filters import ExportImpressionFilter, ImpressionFilter
 from mspy_vendi.domain.impressions.schemas import (
+    AdvertPlayoutsStatisticsSchema,
     AdvertPlayoutsTimeFrameSchema,
     AverageExposureSchema,
     AverageImpressionsSchema,
@@ -147,13 +148,13 @@ class ImpressionManager(CRUDManager):
         return stmt.join(MachineUser, MachineUser.machine_id == Machine.id).where(MachineUser.user_id == user.id)
 
     @staticmethod
-    def _generate_previous_month_filter(query_filter: ImpressionFilter) -> ImpressionFilter:
+    def generate_previous_month_filter(query_filter: ImpressionFilter) -> ImpressionFilter:
         """
-        Modify the given SaleFilter to focus only on the previous month
+        Create a new SaleFilter instance for the previous month's range
         based on query_filter.date_from.
 
         :param query_filter: The original SaleFilter instance.
-        :return: Modified SaleFilter with date_from and date_to set to the previous month's range.
+        :return: A new SaleFilter with date_from and date_to set to the previous month's range.
         """
         current_date = query_filter.date_from
         first_day_of_current_month = current_date.replace(day=1)
@@ -161,10 +162,11 @@ class ImpressionManager(CRUDManager):
         last_day_of_previous_month = first_day_of_current_month - timedelta(days=1)
         first_day_of_previous_month = last_day_of_previous_month.replace(day=1)
 
-        query_filter.date_from = first_day_of_previous_month
-        query_filter.date_to = last_day_of_previous_month
-
-        return query_filter
+        return ImpressionFilter(
+            date_from=first_day_of_previous_month,
+            date_to=last_day_of_previous_month,
+            **query_filter.model_dump(exclude={"date_from", "date_to"}),
+        )
 
     @staticmethod
     def _generate_date_range_cte(time_frame: DateRangeEnum, query_filter: ImpressionFilter) -> CTE:
@@ -365,7 +367,7 @@ class ImpressionManager(CRUDManager):
         stmt = query_filter.filter(stmt)
 
         stmt_previous_month_stat = select(func.sum(self.sql_model.seconds_exposure).label("previous_month_statistic"))
-        query_filter = self._generate_previous_month_filter(query_filter)
+        query_filter = self.generate_previous_month_filter(query_filter)
 
         stmt_previous_month_stat = self._generate_geography_query(
             query_filter, stmt_previous_month_stat, modify_filter=False
@@ -465,10 +467,32 @@ class ImpressionManager(CRUDManager):
         row: Row | None = result.one_or_none()
 
         return AverageImpressionsSchema(
-            avg_impressions=getattr(row, "avg_impressions", 0),
-            total_impressions=getattr(row, "total_impressions", 0),
-            impressions=getattr(row, "impressions", 0),
+            avg_impressions=getattr(row, "avg_impressions", 0) or 0,
+            total_impressions=getattr(row, "total_impressions", 0) or 0,
+            impressions=getattr(row, "impressions", 0) or 0,
         )
+
+    async def get_advert_playouts(self, query_filter: ImpressionFilter, user: User) -> AdvertPlayoutsStatisticsSchema:
+        """
+
+        :param query_filter:
+        :param user:
+        :return:
+        """
+        stmt_sum_advert_playouts = label("advert_playouts", func.sum(self.sql_model.advert_playouts))
+
+        stmt = select(stmt_sum_advert_playouts)
+
+        stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
+        stmt = self._generate_user_query(query_filter, user, stmt)
+
+        setattr(query_filter, "geography_id__in", None)
+        stmt = query_filter.filter(stmt)
+
+        result = await self.session.execute(stmt)
+        row = result.one()
+
+        return AdvertPlayoutsStatisticsSchema(advert_playouts=getattr(row, "advert_playouts", 0))
 
     async def get_advert_playouts_per_range(
         self,
