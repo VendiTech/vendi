@@ -41,7 +41,6 @@ async def export_impression_task(
     :param impression_service: ImpressionService
     """
     try:
-        raise Exception("This is a test exception")
         current_time: datetime = datetime.now()
 
         query_filter: ExportImpressionFilter = ExportImpressionFilter(

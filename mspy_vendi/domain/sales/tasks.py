@@ -41,7 +41,6 @@ async def export_sale_task(
     :param sale_service: SaleService
     """
     try:
-        raise Exception("This is a test exception")
         current_time: datetime = datetime.now()
 
         query_filter: ExportSaleFilter = ExportSaleFilter(
