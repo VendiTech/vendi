@@ -474,10 +474,16 @@ class ImpressionManager(CRUDManager):
 
     async def get_advert_playouts(self, query_filter: ImpressionFilter, user: User) -> AdvertPlayoutsStatisticsSchema:
         """
+        Calculate the total number of advert playouts for a given time range.
 
-        :param query_filter:
-        :param user:
-        :return:
+        This method performs the following:
+        - Calculates the sum of advert playouts (`advert_playouts`) within the specified time range.
+        - Applies filters for geography, user context, and other criteria defined in the `query_filter` object.
+
+        :param query_filter: Filter object containing criteria for impressions data.
+        :param user: Current user providing context for additional filtering.
+
+        :return: An instance of `AdvertPlayoutsStatisticsSchema` containing the total count of advert playouts.
         """
         stmt_sum_advert_playouts = label("advert_playouts", func.sum(self.sql_model.advert_playouts))
 
