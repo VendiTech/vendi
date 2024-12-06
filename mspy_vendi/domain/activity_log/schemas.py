@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import PositiveInt
+from pydantic import Field, PositiveInt
 
 from mspy_vendi.core.enums import ExportEntityTypeEnum, ExportTypeEnum, ScheduleEnum
 from mspy_vendi.core.schemas import BaseSchema
@@ -41,3 +41,11 @@ class ActivityLogBaseSchema(BaseSchema):
 class ActivityLogDetailSchema(ActivityLogBaseSchema):
     id: PositiveInt
     created_at: datetime
+
+
+class ExportActivityLogDetailSchema(BaseSchema):
+    id: str | PositiveInt = Field(..., alias="ID")
+    action: str = Field(..., alias="Action")
+    name: str = Field(..., alias="Name")
+    date: str = Field(..., alias="Date and time")
+    additional_context: str = Field(..., alias="Additional Context")
