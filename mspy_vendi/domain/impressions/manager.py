@@ -458,7 +458,7 @@ class ImpressionManager(CRUDManager):
 
         final_stmt = (
             select(stmt.c.avg_impressions, stmt.c.impressions, stmt_total_impressions)
-            .select_from(stmt)
+            .select_from(self.sql_model)
             .group_by(stmt.c.avg_impressions, stmt.c.impressions)
         )
         final_stmt = self._generate_user_query(query_filter, user, final_stmt)
@@ -593,7 +593,8 @@ class ImpressionManager(CRUDManager):
             )
             setattr(query_filter, "geography_id__in", None)
 
-        stmt = self._generate_user_query(query_filter, user, stmt)
+        if not user.is_superuser:
+            stmt = stmt.join(MachineUser, MachineUser.machine_id == Machine.id).where(MachineUser.user_id == user.id)
 
         stmt = query_filter.filter(stmt)
         stmt = stmt.subquery()
