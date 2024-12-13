@@ -682,7 +682,7 @@ class SaleManager(CRUDManager):
         self, query_filter: SaleFilter, user: User
     ) -> Page[VenueSalesQuantitySchema]:
         """
-        Get the sales quantity by venue (source system id) over time.
+        Get the sales quantity by venue (nachine id) over time.
 
         :param query_filter: Filter object.
         :param user: Current user.
@@ -690,14 +690,23 @@ class SaleManager(CRUDManager):
         :return: Paginated list of sales quantity across venue objects.
         """
         stmt_sum_quantity = label("quantity", func.sum(self.sql_model.quantity))
-        stmt_source_system = label("venue", self.sql_model.source_system)
+        stmt_venue_name = label("venue", Machine.name)
+        stmt_venue_id = label("venue_id", Machine.id)
 
-        stmt = select(stmt_sum_quantity, stmt_source_system).group_by(stmt_source_system).order_by(stmt_source_system)
+        stmt = (
+            select(stmt_sum_quantity, stmt_venue_name)
+            .join(Machine, Machine.id == self.sql_model.machine_id)
+            .group_by(stmt_venue_id)
+            .order_by(stmt_venue_id)
+        )
 
-        stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
+        if query_filter.geography_id__in:
+            stmt = stmt.join(Geography, Geography.id == Machine.geography_id).where(
+                Geography.id.in_(query_filter.geography_id__in)
+            )
+            setattr(query_filter, "geography_id__in", None)
+
         stmt = self._generate_user_query(query_filter, user, stmt)
-
-        setattr(query_filter, "geography_id__in", None)
 
         stmt = query_filter.filter(stmt)
 
@@ -709,29 +718,34 @@ class SaleManager(CRUDManager):
         user: User,
     ) -> Page[ProductVenueSalesCountSchema]:
         """
-        Get the products sales quantity by venue (source system id) and their last sale date.
+        Get the products sales quantity by venue (machine id) and their last sale date.
 
         :param query_filter: Filter object.
         :param user: Current user.
         :return: Paginated list with products sales quantity across venue objects and their last sale date.
         """
         stmt_sum_quantity = label("quantity", func.sum(self.sql_model.quantity))
-        stmt_source_system = label("venue", self.sql_model.source_system)
+        stmt_venue_name = label("venue", Machine.name)
+        stmt_venue_id = label("venue_id", Machine.id)
         stmt_product_name = label("product_name", Product.name)
         stmt_sale_date = label("sale_date", func.max(self.sql_model.sale_date))
         stmt_sale_time = label("sale_time", func.max(self.sql_model.sale_time))
 
         stmt = (
-            select(stmt_sum_quantity, stmt_source_system, stmt_product_name, stmt_sale_date, stmt_sale_time)
+            select(stmt_sum_quantity, stmt_venue_name, stmt_product_name, stmt_sale_date, stmt_sale_time)
+            .join(Machine, Machine.id == self.sql_model.machine_id)
             .join(Product, Product.id == self.sql_model.product_id)
-            .group_by(Product.id, stmt_source_system)
-            .order_by(stmt_source_system)
+            .group_by(Product.id, stmt_venue_id)
+            .order_by(stmt_venue_id)
         )
 
-        stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
-        stmt = self._generate_user_query(query_filter, user, stmt)
+        if query_filter.geography_id__in:
+            stmt = stmt.join(Geography, Geography.id == Machine.geography_id).where(
+                Geography.id.in_(query_filter.geography_id__in)
+            )
+            setattr(query_filter, "geography_id__in", None)
 
-        setattr(query_filter, "geography_id__in", None)
+        stmt = self._generate_user_query(query_filter, user, stmt)
 
         stmt = query_filter.filter(stmt)
 
