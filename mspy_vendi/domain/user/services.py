@@ -211,8 +211,6 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
         if config.debug:
             return None
 
-        sign_in_link: str = f"https://{config.frontend_domain}/{FrontendLinkEnum.LOG_IN}"
-
         html_content: str = f"""
             <!DOCTYPE html>
             <html>
@@ -222,11 +220,9 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
                     <p class="greeting">Hi {user.firstname.capitalize()},</p>
                     <p class="message">
                         Your email has been successfully verified.
-                        You can now log in to Vendi Platform using your created password.
+                        In order to start using Vendi Platform, you need reset your temporary password.
+                        We will send you a link to reset your password.
                     </p>
-                    <div class="container-link">
-                        <a class="link" href="{sign_in_link}">Login Link</a>
-                    </div>
                     {MESSAGE_FOOTER}
                 </div>
             </body>
@@ -239,6 +235,8 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
             html=html_content,
         )
         log.info("Sent verify email message", info=get_described_user_info(user, request=request))
+
+        await self.forgot_password(user, request)
 
     async def on_after_login(
         self,
