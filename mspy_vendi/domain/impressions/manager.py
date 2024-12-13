@@ -576,18 +576,25 @@ class ImpressionManager(CRUDManager):
         """
         stmt_time_frame = label("time_frame", func.date_trunc(time_frame.value, self.sql_model.date))
         stmt_sum_impressions = label("impressions", func.sum(self.sql_model.total_impressions))
-        stmt_venue = label("venue", self.sql_model.source_system)
+        stmt_venue_name = label("venue", Machine.name)
+        stmt_venue_id = label("venue_id", Machine.id)
 
         stmt = (
-            select(stmt_time_frame, stmt_sum_impressions, stmt_venue)
-            .group_by(stmt_time_frame, stmt_venue)
+            select(stmt_time_frame, stmt_sum_impressions, stmt_venue_name)
+            .join(MachineImpression, MachineImpression.impression_device_number == self.sql_model.device_number)
+            .join(Machine, Machine.id == MachineImpression.machine_id)
+            .group_by(stmt_time_frame, stmt_venue_id)
             .order_by(stmt_time_frame)
         )
 
-        stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
+        if query_filter.geography_id__in:
+            stmt = stmt.join(Geography, Geography.id == Machine.geography_id).where(
+                Geography.id.in_(query_filter.geography_id__in)
+            )
+            setattr(query_filter, "geography_id__in", None)
+
         stmt = self._generate_user_query(query_filter, user, stmt)
 
-        setattr(query_filter, "geography_id__in", None)
         stmt = query_filter.filter(stmt)
         stmt = stmt.subquery()
 
