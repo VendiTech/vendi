@@ -706,7 +706,8 @@ class SaleManager(CRUDManager):
             )
             setattr(query_filter, "geography_id__in", None)
 
-        stmt = self._generate_user_query(query_filter, user, stmt)
+        if not user.is_superuser:
+            stmt = stmt.join(MachineUser, MachineUser.machine_id == Machine.id).where(MachineUser.user_id == user.id)
 
         stmt = query_filter.filter(stmt)
 
@@ -745,7 +746,8 @@ class SaleManager(CRUDManager):
             )
             setattr(query_filter, "geography_id__in", None)
 
-        stmt = self._generate_user_query(query_filter, user, stmt)
+        if not user.is_superuser:
+            stmt = stmt.join(MachineUser, MachineUser.machine_id == Machine.id).where(MachineUser.user_id == user.id)
 
         stmt = query_filter.filter(stmt)
 
