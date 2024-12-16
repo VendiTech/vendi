@@ -319,7 +319,7 @@ class ImpressionManager(CRUDManager):
             select(
                 label("Impression ID", self.sql_model.id),
                 label("Device Number", self.sql_model.device_number),
-                label("Venue name", self.sql_model.source_system),
+                label("Source system name", self.sql_model.source_system),
                 label("Geography", Geography.name),
                 label("Total Impressions", self.sql_model.total_impressions),
                 label("Machine ID", Machine.id),

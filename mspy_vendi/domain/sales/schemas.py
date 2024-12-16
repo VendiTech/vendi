@@ -31,7 +31,7 @@ class SaleDetailSchema(SaleBaseSchema):
 
 class ExportSaleDetailSchema(BaseSchema):
     id: PositiveInt = Field(..., alias="Sale ID")
-    venue_name: str = Field(..., alias="Venue name")
+    source_system_name: str = Field(..., alias="Source system name")
     geography: str = Field(..., alias="Geography")
     product_sold: str = Field(..., alias="Product sold")
     product_id: PositiveInt = Field(..., alias="Product ID")

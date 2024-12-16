@@ -40,6 +40,7 @@ class SaleFilter(StatisticDateRangeFilter, GeographyFilter):
 
 class ExportSaleFilter(StatisticDateRangeFilter, GeographyFilter):
     machine_id__in: list[PositiveInt] | None = None
+    product: ProductCategoryFilter | None = FilterDepends(with_prefix("product", ProductCategoryFilter))
 
 
 class SaleGetAllFilter(SaleFilter):
