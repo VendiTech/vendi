@@ -36,7 +36,7 @@ class ImpressionDetailSchema(ImpressionBaseSchema):
 class ExportImpressionDetailSchema(BaseSchema):
     id: PositiveInt = Field(..., alias="Impression ID")
     device_number: str = Field(..., alias="Device Number")
-    venue_name: str = Field(..., alias="Venue name")
+    source_system_name: str = Field(..., alias="Source system name")
     geography: str = Field(..., alias="Geography")
     total_impressions: Decimal = Field(..., alias="Total Impressions")
     machine_id: PositiveInt = Field(..., alias="Machine ID")

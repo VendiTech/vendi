@@ -816,7 +816,7 @@ class SaleManager(CRUDManager):
         stmt = (
             select(
                 label("Sale ID", self.sql_model.id),
-                label("Venue name", self.sql_model.source_system),
+                label("Source system name", self.sql_model.source_system),
                 label("Geography", Geography.name),
                 label("Product sold", Product.name),
                 label("Product ID", self.sql_model.product_id),
