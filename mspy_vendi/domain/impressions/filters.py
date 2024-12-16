@@ -1,7 +1,9 @@
+from fastapi_filter import FilterDepends, with_prefix
 from pydantic import NonNegativeInt, PositiveInt
 
 from mspy_vendi.core.filter import BaseFilter, DateRangeFilter
 from mspy_vendi.db import Impression
+from mspy_vendi.domain.machine_impression.models import MachineImpression
 
 
 class StatisticDateRangeFilter(DateRangeFilter):
@@ -34,4 +36,12 @@ class ImpressionFilter(DateRangeFilter, GeographyFilter):
         default_date_range_db_field = "date"
 
 
-class ExportImpressionFilter(StatisticDateRangeFilter, GeographyFilter): ...
+class MachineImpressionFilter(BaseFilter):
+    machine_id__in: list[PositiveInt] | None = None
+
+    class Constants(BaseFilter.Constants):
+        model = MachineImpression
+
+
+class ExportImpressionFilter(StatisticDateRangeFilter, GeographyFilter):
+    machine: MachineImpressionFilter | None = FilterDepends(with_prefix("machine", MachineImpressionFilter))

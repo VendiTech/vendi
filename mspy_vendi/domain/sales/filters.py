@@ -38,7 +38,8 @@ class SaleFilter(StatisticDateRangeFilter, GeographyFilter):
         model = Sale
 
 
-class ExportSaleFilter(StatisticDateRangeFilter, GeographyFilter): ...
+class ExportSaleFilter(StatisticDateRangeFilter, GeographyFilter):
+    machine_id__in: list[PositiveInt] | None = None
 
 
 class SaleGetAllFilter(SaleFilter):
