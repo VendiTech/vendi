@@ -819,6 +819,7 @@ class SaleManager(CRUDManager):
         if not user.is_superuser:
             stmt = (
                 stmt.join(Product, Product.id == self.sql_model.id)
+                .join(ProductUser, ProductUser.user_id == user.id)
                 .join(MachineUser, MachineUser.machine_id == Machine.id)
                 .where(MachineUser.user_id == user.id)
             )
