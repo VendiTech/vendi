@@ -15,3 +15,4 @@ class ApiTagEnum(StrEnum):
     MACHINE_IMPRESSION = "Machine Impression"
     IMPRESSIONS = "Impressions"
     GEOGRAPHIES = "Geographies"
+    PRODUCTS = "Products"
