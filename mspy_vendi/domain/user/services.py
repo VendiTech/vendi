@@ -91,7 +91,7 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
             user_dict["hashed_password"] = self.password_helper.hash(password)
 
         else:
-            user_dict: dict[str, Any] = user_create.model_dump(exclude={"machines"})
+            user_dict: dict[str, Any] = user_create.model_dump(exclude={"machines", "products"})
             user_dict["hashed_password"] = self.password_helper.hash(generate_random_password())
 
         created_user = await UserManager(self.user_db.session).create(user_dict, is_unique=True)  # type: ignore
