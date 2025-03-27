@@ -14,6 +14,7 @@ class ProductUserManager(CRUDManager):
     This class provides methods to attach products to a user, disassociate products from a user,
     and retrieve the list of product IDs associated with a specific user.
     """
+
     sql_model = ProductUser
 
     async def attach_user_to_product(self, user_id: int, *product_ids: int) -> None:

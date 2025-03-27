@@ -73,7 +73,10 @@ class UserManager(CRUDManager):
 
         :returns: The updated object.
         """
-        if not (updated_model := obj.model_dump(exclude_defaults=True, exclude={"machines"})) and raise_error:
+        if (
+            not (updated_model := obj.model_dump(exclude_defaults=True, exclude={"machines", "products"}))
+            and raise_error
+        ):
             raise BadRequestError("No data provided for updating")
 
         stmt = (

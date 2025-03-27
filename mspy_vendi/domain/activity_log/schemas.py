@@ -24,6 +24,7 @@ class ActivityLogStateDetailSchema(ActivityLogBasicEventSchema):
     permissions: list[str]
     role: str
     machine_names: list[str]
+    product_names: list[str]
 
 
 class ActivityLogStateSchema(BaseSchema):
