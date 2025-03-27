@@ -20,6 +20,8 @@ from mspy_vendi.domain.user.enums import (
 
 if TYPE_CHECKING:
     from mspy_vendi.db import ActivityLog, Machine, MachineUser
+    from mspy_vendi.domain.product_user.models import ProductUser
+    from mspy_vendi.domain.products.models import Product
 
 
 class User(CommonMixin, SQLAlchemyBaseUserTable[int], Base):
@@ -54,3 +56,8 @@ class User(CommonMixin, SQLAlchemyBaseUserTable[int], Base):
     activity_logs: Mapped[list["ActivityLog"]] = relationship(
         back_populates="user", passive_deletes=ORMRelationshipCascadeTechniqueEnum.db_cascade
     )
+
+    product_users: Mapped[list["ProductUser"]] = relationship(
+        back_populates="user", passive_deletes=ORMRelationshipCascadeTechniqueEnum.db_cascade
+    )
+    products: AssociationProxy[list["Product"]] = association_proxy("product_users", "product")

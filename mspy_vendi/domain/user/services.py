@@ -19,6 +19,7 @@ from mspy_vendi.domain.activity_log.schemas import (
     ActivityLogExportSchema,
 )
 from mspy_vendi.domain.machine_user.service import MachineUserService
+from mspy_vendi.domain.product_user.service import ProductUserService
 
 from mspy_vendi.domain.sales.filters import GeographyFilter
 from taskiq import ScheduledTask
@@ -54,6 +55,7 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
     def __init__(self, user_db, email_service: MailGunService, password_helper=None):
         self.email_service = email_service
         self.machine_user_service = MachineUserService(user_db.session)  # type: ignore
+        self.product_user_service = ProductUserService(user_db.session)  # type: ignore
         self.activity_log_manager = ActivityLogManager(user_db.session)  # type: ignore
         self.user_service = UserService(user_db.session)  # type: ignore
         super().__init__(user_db, password_helper)
@@ -101,6 +103,7 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
     async def create_flow(self, user_obj: UserAdminCreateSchema) -> UserDetail:
         created_user = await self.create(user_obj)  # type: ignore
         await self.machine_user_service.update_user_machines(created_user.id, *user_obj.machines)
+        await self.product_user_service.update_user_products(created_user.id, *user_obj.products)
 
         user = await self.user_service.get(created_user.id)
 
@@ -116,6 +119,7 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
                         "permissions": user.permissions,
                         "role": user.role,
                         "machine_names": list(map(lambda item: item.name, user.machines)),
+                        "product_names": list(map(lambda item: item.name, user.products)),
                     }
                 ),
             )
@@ -133,6 +137,7 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
                 "permissions": previous_user_state.permissions,
                 "role": previous_user_state.role,
                 "machine_names": list(map(lambda item: item.name, previous_user_state.machines)),
+                "product_names": list(map(lambda item: item.name, previous_user_state.products)),
             }
         )
 
@@ -140,6 +145,8 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
 
         if user_obj.machines is not None:
             await self.machine_user_service.update_user_machines(user_id, *user_obj.machines)
+        if user_obj.products is not None:
+            await self.product_user_service.update_user_products(user_id, *user_obj.products)
 
         self.user_db.session.expire_all()  # type: ignore
         user = await self.user_service.get(user_id)
@@ -157,6 +164,7 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
                         "permissions": user.permissions,
                         "role": user.role,
                         "machine_names": list(map(lambda item: item.name, user.machines)),
+                        "product_names": list(map(lambda item: item.name, user.products)),
                     },
                 ),
             )
@@ -508,7 +516,7 @@ class UserService(CRUDService):
         :param schedule: The schedule type to use for the export.
         :param entity_type: The entity type to use for the export.
         """
-        user_event_type: str = f"user_{user.id}_{entity_type}_{export_type}_schedule_{schedule.value}_geography_{",".join(map(str, sorted(set(query_filter.geography_id__in or []))))}"
+        user_event_type: str = f"user_{user.id}_{entity_type}_{export_type}_schedule_{schedule.value}_geography_{','.join(map(str, sorted(set(query_filter.geography_id__in or []))))}"
 
         if not user.is_verified:
             raise BadRequestError("User didn't verify email yet.")

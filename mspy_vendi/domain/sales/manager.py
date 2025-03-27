@@ -14,6 +14,7 @@ from mspy_vendi.db import Sale
 from mspy_vendi.domain.geographies.models import Geography
 from mspy_vendi.domain.machines.models import Machine, MachineUser
 from mspy_vendi.domain.product_category.models import ProductCategory
+from mspy_vendi.domain.product_user.models import ProductUser
 from mspy_vendi.domain.products.models import Product
 from mspy_vendi.domain.sales.filters import ExportSaleFilter, SaleFilter, StatisticDateRangeFilter
 from mspy_vendi.domain.sales.schemas import (
@@ -65,10 +66,30 @@ class SaleManager(CRUDManager):
 
         return stmt
 
+    def _generate_product_query(self, query_filter: BaseFilter, stmt: Select, modify_filter: bool = True) -> Select:
+        """
+        Generate query to filter by product_id field.
+        It makes a join with Product table to filter by product_id field.
+
+        :param query_filter: Filter object.
+        :param stmt: Current statement.
+        :param modify_filter: Flag to modify the filter object.
+        :return: New statement with the filter applied.
+        """
+        if query_filter.product_id__in:
+            stmt = stmt.join(Product, Product.id == self.sql_model.product_id).where(
+                Product.id.in_(query_filter.product_id__in)
+            )
+            # We do it to ignore the field inside the filter block
+            if modify_filter:
+                setattr(query_filter, "product_id__in", None)
+
+        return stmt
+
     def _generate_user_query(self, query_filter: BaseFilter, user: User, stmt: Select) -> Select:
         """
-        Generate query to filter by assigned Machines.
-        It makes a join with User table to filter by assigned Machines.
+        Generate query to filter by assigned Machines and Products.
+        It makes a join with User table to filter by assigned Machines amd Products.
         If the user is a superuser, it returns the original statement.
 
         :param query_filter: Filter object.
@@ -83,7 +104,15 @@ class SaleManager(CRUDManager):
         if not query_filter.geography_id__in:
             stmt = stmt.join(Machine, Machine.id == self.sql_model.machine_id)
 
-        return stmt.join(MachineUser, MachineUser.machine_id == Machine.id).where(MachineUser.user_id == user.id)
+        if not query_filter.product_id__in:
+            stmt = stmt.join(Product, Product.id == self.sql_model.product_id)
+
+        return (
+            stmt.join(MachineUser, MachineUser.machine_id == Machine.id)
+            .join(ProductUser, ProductUser.product_id == Product.id)
+            .where(MachineUser.user_id == user.id)
+            .where(ProductUser.user_id == user.id)
+        )
 
     @staticmethod
     def generate_previous_month_filter(query_filter: SaleFilter) -> SaleFilter:
@@ -206,18 +235,22 @@ class SaleManager(CRUDManager):
         stmt = select(func.sum(self.sql_model.quantity).label("quantity"))
 
         stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
+        stmt = self._generate_product_query(query_filter, stmt, modify_filter=False)
         stmt = self._generate_user_query(query_filter, user, stmt)
 
         setattr(query_filter, "geography_id__in", None)
+        setattr(query_filter, "product_id__in", None)
         stmt = query_filter.filter(stmt)
 
         stmt_previous_month_stat = select(func.sum(self.sql_model.quantity).label("previous_month_statistic"))
         query_filter = self.generate_previous_month_filter(query_filter)
 
         stmt_previous_month_stat = self._generate_geography_query(query_filter, stmt_previous_month_stat)
+        stmt_previous_month_stat = self._generate_product_query(query_filter, stmt_previous_month_stat)
         stmt_previous_month_stat = self._generate_user_query(query_filter, user, stmt_previous_month_stat)
 
         setattr(query_filter, "geography_id__in", None)
+        setattr(query_filter, "product_id__in", None)
         stmt_previous_month_stat = query_filter.filter(stmt_previous_month_stat)
 
         current_month_result = await self.session.scalar(stmt) or 0
@@ -251,9 +284,12 @@ class SaleManager(CRUDManager):
         stmt = select(stmt_time_frame, stmt_sum_quantity).group_by(stmt_time_frame).order_by(stmt_time_frame)
 
         stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
+        stmt = self._generate_product_query(query_filter, stmt, modify_filter=False)
         stmt = self._generate_user_query(query_filter, user, stmt)
 
         setattr(query_filter, "geography_id__in", None)
+        setattr(query_filter, "product_id__in", None)
+
         stmt = query_filter.filter(stmt)
         stmt = stmt.subquery()
 
@@ -282,9 +318,12 @@ class SaleManager(CRUDManager):
         stmt = select(func.avg(self.sql_model.quantity).label("quantity"))
 
         stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
+        stmt = self._generate_product_query(query_filter, stmt, modify_filter=False)
         stmt = self._generate_user_query(query_filter, user, stmt)
 
         setattr(query_filter, "geography_id__in", None)
+        setattr(query_filter, "product_id__in", None)
+
         stmt = query_filter.filter(stmt)
 
         stmt_previous_month_stat = select(func.avg(self.sql_model.quantity).label("previous_month_statistic"))
@@ -324,9 +363,12 @@ class SaleManager(CRUDManager):
         stmt = select(stmt_time_frame, stmt_avg_quantity).group_by(stmt_time_frame)
 
         stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
+        stmt = self._generate_product_query(query_filter, stmt, modify_filter=False)
         stmt = self._generate_user_query(query_filter, user, stmt)
 
         setattr(query_filter, "geography_id__in", None)
+        setattr(query_filter, "product_id__in", None)
+
         stmt = query_filter.filter(stmt)
         stmt = stmt.subquery()
 
@@ -364,10 +406,25 @@ class SaleManager(CRUDManager):
             .order_by(stmt_sum_category_quantity.desc())
         )
 
-        stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
-        stmt = self._generate_user_query(query_filter, user, stmt)
+        if query_filter.geography_id__in:
+            stmt = stmt.join(Geography, Geography.id == Machine.geography_id).where(
+                Geography.id.in_(query_filter.geography_id__in)
+            )
+            setattr(query_filter, "geography_id__in", None)
 
-        setattr(query_filter, "geography_id__in", None)
+        if query_filter.product_id__in:
+            stmt = stmt.where(Product.id.in_(query_filter.product_id__in))
+            setattr(query_filter, "product_id__in", None)
+
+        if not user.is_superuser:
+            stmt = (
+                stmt.join(Machine, Machine.id == self.sql_model.machine_id)
+                .join(MachineUser, MachineUser.machine_id == Machine.id)
+                .join(ProductUser, ProductUser.product_id == Product.id)
+                .where(MachineUser.user_id == user.id)
+                .where(ProductUser.user_id == user.id)
+            )
+
         stmt = query_filter.filter(stmt)
 
         return await paginate(self.session, stmt)
@@ -398,10 +455,25 @@ class SaleManager(CRUDManager):
             .order_by(stmt_category_name, stmt_sale_date)
         )
 
-        subquery = self._generate_geography_query(query_filter, subquery, modify_filter=False)
-        subquery = self._generate_user_query(query_filter, user, subquery)
+        if query_filter.geography_id__in:
+            subquery = subquery.join(Geography, Geography.id == Machine.geography_id).where(
+                Geography.id.in_(query_filter.geography_id__in)
+            )
+            setattr(query_filter, "geography_id__in", None)
 
-        setattr(query_filter, "geography_id__in", None)
+        if query_filter.product_id__in:
+            subquery = subquery.where(Product.id.in_(query_filter.product_id__in))
+            setattr(query_filter, "product_id__in", None)
+
+        if not user.is_superuser:
+            subquery = (
+                subquery.join(Machine, Machine.id == self.sql_model.machine_id)
+                .join(MachineUser, MachineUser.machine_id == Machine.id)
+                .join(ProductUser, ProductUser.product_id == Product.id)
+                .where(MachineUser.user_id == user.id)
+                .where(ProductUser.user_id == user.id)
+            )
+
         subquery = query_filter.filter(subquery).subquery()
 
         stmt = (
@@ -444,9 +516,12 @@ class SaleManager(CRUDManager):
         stmt = select(self.sql_model.sale_time)
 
         stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
+        stmt = self._generate_product_query(query_filter, stmt, modify_filter=False)
         stmt = self._generate_user_query(query_filter, user, stmt)
 
         setattr(query_filter, "geography_id__in", None)
+        setattr(query_filter, "product_id__in", None)
+
         stmt = query_filter.filter(stmt)
 
         result = await self.session.execute(stmt)
@@ -479,14 +554,18 @@ class SaleManager(CRUDManager):
         """
         time_periods = self._get_time_periods(time_period)
 
-        stmt = select(self.sql_model.sale_time, (self.sql_model.quantity * Product.price).label("revenue")).join(
-            Product, Product.id == self.sql_model.product_id
-        )
+        stmt = select(self.sql_model.sale_time, (self.sql_model.quantity * Product.price).label("revenue"))
 
         stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
+        stmt = self._generate_product_query(query_filter, stmt, modify_filter=False)
         stmt = self._generate_user_query(query_filter, user, stmt)
 
         setattr(query_filter, "geography_id__in", None)
+        setattr(query_filter, "product_id__in", None)
+
+        if user.is_superuser:
+            stmt = stmt.join(Product, Product.id == self.sql_model.product_id)
+
         stmt = query_filter.filter(stmt)
 
         result = await self.session.execute(stmt)
@@ -521,16 +600,18 @@ class SaleManager(CRUDManager):
         stmt_time_frame = label("time_frame", func.date_trunc(time_frame.value, self.sql_model.sale_date))
         stmt_units = label("units", func.sum(self.sql_model.quantity * Product.price))
 
-        sales_subquery = (
-            select(stmt_time_frame, stmt_units)
-            .join(Product, Product.id == self.sql_model.product_id)
-            .group_by(stmt_time_frame)
-        )
+        sales_subquery = select(stmt_time_frame, stmt_units).group_by(stmt_time_frame)
 
         sales_subquery = self._generate_geography_query(query_filter, sales_subquery, modify_filter=False)
+        sales_subquery = self._generate_product_query(query_filter, sales_subquery, modify_filter=False)
         sales_subquery = self._generate_user_query(query_filter, user, sales_subquery)
 
         setattr(query_filter, "geography_id__in", None)
+        setattr(query_filter, "product_id__in", None)
+
+        if user.is_superuser:
+            sales_subquery = sales_subquery.join(Product, Product.id == self.sql_model.product_id)
+
         sales_subquery = query_filter.filter(sales_subquery).subquery()
 
         date_range_cte = self._generate_date_range_cte(time_frame, query_filter)
@@ -558,24 +639,40 @@ class SaleManager(CRUDManager):
         stmt_units = label("units", func.sum(self.sql_model.quantity * Product.price))
         stmt_previous_month_units = label("previous_month_stat", func.sum(self.sql_model.quantity * Product.price))
 
-        stmt = select(stmt_units).join(Product, Product.id == self.sql_model.product_id)
+        stmt = select(stmt_units)
+
         stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
+        stmt = self._generate_product_query(query_filter, stmt, modify_filter=False)
         stmt = self._generate_user_query(query_filter, user, stmt)
 
         setattr(query_filter, "geography_id__in", None)
+        setattr(query_filter, "product_id__in", None)
+
+        if user.is_superuser:
+            stmt = stmt.join(Product, Product.id == self.sql_model.product_id)
 
         stmt = query_filter.filter(stmt)
 
-        stmt_previous_month_stat = select(stmt_previous_month_units).join(
-            Product, Product.id == self.sql_model.product_id
-        )
+        stmt_previous_month_stat = select(stmt_previous_month_units)
+
         query_filter = self.generate_previous_month_filter(query_filter)
         stmt_previous_month_stat = self._generate_geography_query(
-            query_filter, stmt_previous_month_stat, modify_filter=False
+            query_filter,
+            stmt_previous_month_stat,
+            modify_filter=False,
+        )
+        stmt_previous_month_stat = self._generate_product_query(
+            query_filter,
+            stmt_previous_month_stat,
+            modify_filter=False,
         )
         stmt_previous_month_stat = self._generate_user_query(query_filter, user, stmt_previous_month_stat)
 
         setattr(query_filter, "geography_id__in", None)
+        setattr(query_filter, "product_id__in", None)
+
+        if user.is_superuser:
+            stmt_previous_month_stat = stmt_previous_month_stat.join(Product, Product.id == self.sql_model.product_id)
 
         stmt_previous_month_stat = query_filter.filter(stmt_previous_month_stat)
 
@@ -627,8 +724,17 @@ class SaleManager(CRUDManager):
             stmt = stmt.where(Geography.id.in_(query_filter.geography_id__in))
             setattr(query_filter, "geography_id__in", None)
 
+        if query_filter.product_id__in:
+            stmt = stmt.where(Product.id.in_(query_filter.product_id__in))
+            setattr(query_filter, "product_id__in", None)
+
         if not user.is_superuser:
-            stmt = stmt.join(MachineUser, MachineUser.machine_id == Machine.id).where(MachineUser.user_id == user.id)
+            stmt = (
+                stmt.join(Product, Product.id == self.sql_model.id)
+                .join(MachineUser, MachineUser.machine_id == Machine.id)
+                .join(ProductUser, ProductUser.product_id == Product.id)
+                .where(MachineUser.user_id == user.id)
+            )
 
         stmt = query_filter.filter(stmt)
 
@@ -706,8 +812,16 @@ class SaleManager(CRUDManager):
             )
             setattr(query_filter, "geography_id__in", None)
 
+        if query_filter.product_id__in:
+            stmt = stmt.where(Product.id.in_(query_filter.product_id__in))
+            setattr(query_filter, "product_id__in", None)
+
         if not user.is_superuser:
-            stmt = stmt.join(MachineUser, MachineUser.machine_id == Machine.id).where(MachineUser.user_id == user.id)
+            stmt = (
+                stmt.join(Product, Product.id == self.sql_model.id)
+                .join(MachineUser, MachineUser.machine_id == Machine.id)
+                .where(MachineUser.user_id == user.id)
+            )
 
         stmt = query_filter.filter(stmt)
 
@@ -746,8 +860,17 @@ class SaleManager(CRUDManager):
             )
             setattr(query_filter, "geography_id__in", None)
 
+        if query_filter.product_id__in:
+            stmt = stmt.where(Product.id.in_(query_filter.product_id__in))
+            setattr(query_filter, "product_id__in", None)
+
         if not user.is_superuser:
-            stmt = stmt.join(MachineUser, MachineUser.machine_id == Machine.id).where(MachineUser.user_id == user.id)
+            stmt = (
+                stmt.join(MachineUser, MachineUser.machine_id == Machine.id)
+                .join(ProductUser, ProductUser.product_id == Product.id)
+                .where(MachineUser.user_id == user.id)
+                .where(ProductUser.id == user.id)
+            )
 
         stmt = query_filter.filter(stmt)
 
@@ -788,10 +911,24 @@ class SaleManager(CRUDManager):
             .order_by(desc(stmt_sale_date))
         )
 
-        stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
-        stmt = self._generate_user_query(query_filter, user, stmt)
+        if query_filter.geography_id__in:
+            stmt = stmt.join(Geography, Geography.id == Machine.geography_id).where(
+                Geography.id.in_(query_filter.geography_id__in)
+            )
+            setattr(query_filter, "geography_id__in", None)
 
-        setattr(query_filter, "geography_id__in", None)
+        if query_filter.product_id__in:
+            stmt = stmt.where(Product.id.in_(query_filter.product_id__in))
+            setattr(query_filter, "product_id__in", None)
+
+        if not user.is_superuser:
+            stmt = (
+                stmt.join(Machine, Machine.id == self.sql_model.machine_id)
+                .join(MachineUser, MachineUser.machine_id == Machine.id)
+                .join(ProductUser, ProductUser.product_id == Product.id)
+                .where(MachineUser.user_id == user.id)
+                .where(ProductUser.user_id == user.id)
+            )
 
         stmt = query_filter.filter(stmt)
 
@@ -832,11 +969,20 @@ class SaleManager(CRUDManager):
         )
 
         if not user.is_superuser:
-            stmt = stmt.join(MachineUser, MachineUser.machine_id == Machine.id).where(MachineUser.user_id == user.id)
+            stmt = (
+                stmt.join(MachineUser, MachineUser.machine_id == Machine.id)
+                .join(ProductUser, ProductUser.product_id == Product.id)
+                .where(MachineUser.user_id == user.id)
+                .where(ProductUser.user_id == user.id)
+            )
 
         if query_filter.geography_id__in:
             stmt = stmt.where(Geography.id.in_(query_filter.geography_id__in or []))
             setattr(query_filter, "geography_id__in", None)
+
+        if query_filter.product_id__in:
+            stmt = stmt.where(Product.id.in_(query_filter.product_id__in))
+            setattr(query_filter, "product_id__in", None)
 
         stmt = query_filter.filter(stmt)
 
@@ -880,8 +1026,17 @@ class SaleManager(CRUDManager):
             stmt = stmt.where(Geography.id.in_(query_filter.geography_id__in))
             setattr(query_filter, "geography_id__in", None)
 
+        if query_filter.product_id__in:
+            stmt = stmt.where(Product.id.in_(query_filter.product_id__in))
+            setattr(query_filter, "product_id__in", None)
+
         if not user.is_superuser:
-            stmt = stmt.join(MachineUser, MachineUser.machine_id == Machine.id).where(MachineUser.user_id == user.id)
+            stmt = (
+                stmt.join(MachineUser, MachineUser.machine_id == Machine.id)
+                .join(ProductUser, ProductUser.product_id == Product.id)
+                .where(MachineUser.user_id == user.id)
+                .where(ProductUser.user_id == user.id)
+            )
 
         stmt = stmt.subquery()
 

@@ -6,6 +6,7 @@ from sqlalchemy.orm import joinedload
 from mspy_vendi.core.exceptions.base_exception import BadRequestError
 from mspy_vendi.core.manager import CRUDManager, UpdateSchema
 from mspy_vendi.domain.machines.models import MachineUser
+from mspy_vendi.domain.product_user.models import ProductUser
 from mspy_vendi.domain.user.enums import PermissionEnum
 from mspy_vendi.domain.user.models import User
 
@@ -82,4 +83,9 @@ class UserManager(CRUDManager):
         return await self._apply_changes(stmt=stmt, obj_id=obj_id, autocommit=autocommit, is_unique=is_unique)
 
     def get_query(self) -> Select:
-        return super().get_query().options(joinedload(self.sql_model.machine_users).joinedload(MachineUser.machine))
+        return (
+            super()
+            .get_query()
+            .options(joinedload(self.sql_model.machine_users).joinedload(MachineUser.machine))
+            .options(joinedload(self.sql_model.product_users).joinedload(ProductUser.product))
+        )

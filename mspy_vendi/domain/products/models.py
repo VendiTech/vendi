@@ -9,6 +9,7 @@ from mspy_vendi.db.base import Base, CommonMixin
 
 if TYPE_CHECKING:
     from mspy_vendi.domain.product_category.models import ProductCategory
+    from mspy_vendi.domain.product_user.models import ProductUser
     from mspy_vendi.domain.sales.models import Sale
 
 
@@ -29,4 +30,9 @@ class Product(CommonMixin, Base):
     sales: Mapped[list["Sale"]] = relationship(
         back_populates="product",
         passive_deletes=ORMRelationshipCascadeTechniqueEnum.all.value,
+    )
+
+    product_users: Mapped[list["ProductUser"]] = relationship(
+        back_populates="product",
+        passive_deletes=ORMRelationshipCascadeTechniqueEnum.db_cascade,
     )

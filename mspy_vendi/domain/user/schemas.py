@@ -12,6 +12,7 @@ from mspy_vendi.core.schemas import BaseSchema
 from mspy_vendi.core.schemas.base import AlphaString, ConstraintString
 from mspy_vendi.core.validators import validate_password
 from mspy_vendi.domain.machines.schemas import MachineDetailSchema
+from mspy_vendi.domain.products.schemas import ProductDetailSchema
 from mspy_vendi.domain.user.enums import PermissionEnum, RoleEnum, StatusEnum
 
 
@@ -34,6 +35,7 @@ class UserBaseDetail(UserBase):
 
 class UserDetail(UserBaseDetail):
     machines: list[MachineDetailSchema]
+    products: list[ProductDetailSchema]
     last_logged_in: datetime | None
 
 
@@ -90,6 +92,7 @@ class UserAdminCreateSchema(BaseSchema):
     lastname: AlphaString
     permissions: list[PermissionEnum]
     machines: list[PositiveInt]
+    products: list[PositiveInt]
 
 
 class UserAdminEditSchema(BaseSchema):
@@ -97,6 +100,7 @@ class UserAdminEditSchema(BaseSchema):
     lastname: AlphaString | None = None
     permissions: list[PermissionEnum] | None = None
     machines: list[PositiveInt] | None = None
+    products: list[PositiveInt] | None = None
 
 
 class UserScheduleSchema(BaseSchema):
