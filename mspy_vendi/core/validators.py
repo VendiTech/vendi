@@ -1,12 +1,17 @@
+import base64
 from datetime import datetime
 from decimal import Decimal
 from typing import Annotated, Any
 
+from fastapi import HTTPException, UploadFile
 from pydantic import HttpUrl, field_validator
 from pydantic.functional_serializers import PlainSerializer
 from pydantic_core.core_schema import ValidationInfo
 
 StrLink = Annotated[HttpUrl, PlainSerializer(str, return_type=str)]
+
+MAX_IMAGE_SIZE_MB = 5  # 5MB
+ALLOWED_IMAGE_FORMATS = ["image/jpeg", "image/png"]
 
 
 def format_decimal(initial_value: Decimal) -> float:
@@ -103,3 +108,27 @@ def convert_to_str_date(date: Any) -> str:
         return datetime.fromisoformat(str(date)).strftime("%Y-%m-%d")
     except ValueError:
         raise ValueError("Invalid Str date format")
+
+
+async def validate_image_file(image: UploadFile) -> str:
+    """
+    Validates the image file for:
+    - MIME type (PNG or JPEG)
+    - File size limit (5MB)
+
+    :param image: The uploaded image file.
+    :return: The binary content of the file if valid.
+    :raises HTTPException: If validation fails.
+    """
+    # Validate MIME type
+    if image.content_type not in ALLOWED_IMAGE_FORMATS:
+        raise HTTPException(
+            status_code=400, detail=f"Invalid file type: {image.content_type}. Allowed: {ALLOWED_IMAGE_FORMATS}."
+        )
+
+    image_bytes = await image.read()
+
+    if len(image_bytes) > MAX_IMAGE_SIZE_MB * 1024 * 1024:
+        raise HTTPException(status_code=400, detail=f"File size exceeds {MAX_IMAGE_SIZE_MB}MB limit.")
+
+    return base64.b64encode(image_bytes).decode("utf-8")

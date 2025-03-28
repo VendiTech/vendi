@@ -64,6 +64,7 @@ class UserUpdate(BaseSchema):
     company_name: ConstraintString(MAX_NUMBER_OF_CHARACTERS)
     job_title: ConstraintString(MAX_NUMBER_OF_CHARACTERS)
     phone_number: PhoneNumber | None = None
+    company_logo_image: bytes | None = None
 
 
 class UserPasswordChange(BaseSchema):

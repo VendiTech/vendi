@@ -1,8 +1,9 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile, status
 from fastapi.responses import ORJSONResponse
 from pydantic import PositiveInt
+from typing_extensions import Optional
 
 from mspy_vendi.core.api import CRUDApi
 from mspy_vendi.core.enums import ApiTagEnum, CRUDEnum
@@ -37,14 +38,36 @@ async def get__show_me(
 
 @router.patch("/edit", tags=[ApiTagEnum.USER])
 async def update__user(
-    updated_obj: UserUpdate,
     user: Annotated[User, Depends(get_current_user())],
     service: Annotated[UserService, Depends()],
+    firstname: Annotated[Optional[str], Form()] = None,
+    lastname: Annotated[Optional[str], Form()] = None,
+    company_name: Annotated[Optional[str], Form()] = None,
+    job_title: Annotated[Optional[str], Form()] = None,
+    phone_number: Annotated[Optional[str], Form()] = None,
+    company_logo_image: Annotated[UploadFile, File()] = None,
 ) -> UserDetail:
     """
     Update the User by Provided `UserUpdate` object.
     """
-    return await service.update(obj_id=user.id, obj=updated_obj)
+    updated_obj: UserUpdate = UserUpdate(
+        firstname=firstname,
+        lastname=lastname,
+        company_name=company_name,
+        job_title=job_title,
+        phone_number=phone_number,
+    )
+    return await service.update(obj_id=user.id, obj=updated_obj, company_logo_image=company_logo_image)
+
+
+@router.get("/company-logo-image", tags=[ApiTagEnum.USER])
+async def get__company_logo_image(
+    user: Annotated[User, Depends(get_current_user())],
+    service: Annotated[UserService, Depends()],
+) -> bytes | None:
+    user = await service.get(obj_id=user.id)
+
+    return user.company_logo_image
 
 
 @router.patch("/permission/add/{user_id}", tags=[ApiTagEnum.ADMIN_USER])
