@@ -1,3 +1,5 @@
+import base64
+import io
 from datetime import datetime
 from importlib import import_module
 from typing import LiteralString, cast, Optional, Any
@@ -5,10 +7,12 @@ from typing import LiteralString, cast, Optional, Any
 from fastapi import Request, Response
 from fastapi_users import BaseUserManager, IntegerIDMixin, schemas, models
 from fastapi_users.schemas import BaseUserCreate
+from pydantic import conbytes
 
 from mspy_vendi.core.constants import DEFAULT_SCHEDULE_MAPPING, MESSAGE_FOOTER, CSS_STYLE
 from mspy_vendi.core.enums.date_range import ScheduleEnum
 from mspy_vendi.core.enums.export import ExportEntityTypeEnum
+from mspy_vendi.core.validators import validate_image_file
 from mspy_vendi.domain.activity_log.enums import EventTypeEnum
 from mspy_vendi.domain.activity_log.manager import ActivityLogManager
 from mspy_vendi.domain.activity_log.schemas import (
@@ -406,6 +410,10 @@ class UserService(CRUDService):
     async def update(
         self, obj_id: int, obj: UpdateSchema, *, autocommit: bool = True, raise_error: bool = True, **kwargs: Any
     ) -> UserDetail:
+        if company_logo_image := kwargs.get("company_logo_image", None):
+            company_logo_image_bytes = await validate_image_file(company_logo_image)  # type: ignore
+            obj.company_logo_image = company_logo_image_bytes
+
         await self.manager.update(obj_id=obj_id, obj=obj, autocommit=autocommit, raise_error=raise_error, **kwargs)
 
         return await self.manager.get(obj_id=obj_id)

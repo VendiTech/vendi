@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTable
-from sqlalchemy import Computed, DateTime, Enum, String
+from sqlalchemy import Computed, DateTime, Enum, LargeBinary, String
 from sqlalchemy.dialects.postgresql import ARRAY as PGARRAY
 from sqlalchemy.ext.associationproxy import AssociationProxy, association_proxy
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -47,6 +47,8 @@ class User(CommonMixin, SQLAlchemyBaseUserTable[int], Base):
             persisted=True,
         )
     )
+
+    company_logo_image: Mapped[bytes | None] = mapped_column(LargeBinary)
 
     machine_users: Mapped[list["MachineUser"]] = relationship(
         back_populates="user", passive_deletes=ORMRelationshipCascadeTechniqueEnum.db_cascade
