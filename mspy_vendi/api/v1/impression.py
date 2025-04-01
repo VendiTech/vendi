@@ -174,7 +174,7 @@ async def post__schedule_impressions(
         raise ValueError("Minutely schedule is not allowed")
 
     await user_service.schedule_export(
-        user=user,
+        user=user,,
         export_type=export_type,
         query_filter=query_filter,
         schedule=schedule,
