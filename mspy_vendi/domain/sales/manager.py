@@ -407,8 +407,10 @@ class SaleManager(CRUDManager):
         )
 
         if query_filter.geography_id__in:
-            stmt = stmt.join(Geography, Geography.id == Machine.geography_id).where(
-                Geography.id.in_(query_filter.geography_id__in)
+            stmt = (
+                stmt.join(Machine, Machine.id == self.sql_model.machine_id)
+                .join(Geography, Geography.id == Machine.geography_id)
+                .where(Geography.id.in_(query_filter.geography_id__in))
             )
             setattr(query_filter, "geography_id__in", None)
 
@@ -456,8 +458,10 @@ class SaleManager(CRUDManager):
         )
 
         if query_filter.geography_id__in:
-            subquery = subquery.join(Geography, Geography.id == Machine.geography_id).where(
-                Geography.id.in_(query_filter.geography_id__in)
+            subquery = (
+                subquery.join(Machine, Machine.id == self.sql_model.machine_id)
+                .join(Geography, Geography.id == Machine.geography_id)
+                .where(Geography.id.in_(query_filter.geography_id__in))
             )
             setattr(query_filter, "geography_id__in", None)
 
@@ -913,8 +917,10 @@ class SaleManager(CRUDManager):
         )
 
         if query_filter.geography_id__in:
-            stmt = stmt.join(Geography, Geography.id == Machine.geography_id).where(
-                Geography.id.in_(query_filter.geography_id__in)
+            stmt = (
+                stmt.join(Machine, Machine.id == self.sql_model.machine_id)
+                .join(Geography, Geography.id == Machine.geography_id)
+                .where(Geography.id.in_(query_filter.geography_id__in))
             )
             setattr(query_filter, "geography_id__in", None)
 
