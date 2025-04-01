@@ -22,6 +22,7 @@ DEFAULT_AGE_RANGE_DB_FIELD: str = "birthdate"
 DEFAULT_AGE_RANGE_FIELDS: list[str] = ["age_from", "age_to"]
 
 DEFAULT_SCHEDULE_MAPPING: dict[ScheduleEnum, str] = {
+    ScheduleEnum.MINUTELY: "* * * * *",  # Every minute
     ScheduleEnum.MONTHLY: "0 0 1 * *",  # Every month at 00:00
     ScheduleEnum.QUARTERLY: "0 0 1 1,4,7,10 *",  # Every quarter at 00:00
     ScheduleEnum.BI_ANNUALLY: "0 0 1 1,7 *",  # Every 6 months at 00:00
@@ -30,6 +31,7 @@ DEFAULT_SCHEDULE_MAPPING: dict[ScheduleEnum, str] = {
 
 # Timedelta values for schedules
 DEFAULT_SCHEDULE_TIMEDELTA: dict[ScheduleEnum, timedelta] = {
+    ScheduleEnum.MINUTELY: timedelta(days=365),  # Cover the year range. For testing purposes
     ScheduleEnum.MONTHLY: timedelta(days=30),  # Approximate average for a month
     ScheduleEnum.QUARTERLY: timedelta(days=91),  # Approximate (3 months, considering leap years)
     ScheduleEnum.BI_ANNUALLY: timedelta(days=182),  # Approximate (6 months)

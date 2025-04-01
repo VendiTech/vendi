@@ -19,6 +19,7 @@ class DateRangeEnum(StrEnum):
 
 
 class ScheduleEnum(StrEnum):
+    MINUTELY = "Minutely"
     MONTHLY = "Monthly"
     QUARTERLY = "Quarterly"
     BI_ANNUALLY = "Bi-Annually"

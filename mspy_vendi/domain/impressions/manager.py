@@ -336,7 +336,7 @@ class ImpressionManager(CRUDManager):
         if not user.is_superuser:
             stmt = stmt.join(MachineUser, MachineUser.machine_id == Machine.id).where(MachineUser.user_id == user.id)
 
-        if query_filter.geography_id__in:
+        if getattr(query_filter, "geography_id__in", None):
             stmt = stmt.where(Geography.id.in_(query_filter.geography_id__in or []))
             setattr(query_filter, "geography_id__in", None)
 
