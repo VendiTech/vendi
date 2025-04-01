@@ -20,6 +20,10 @@ class GeographyFilter(BaseFilter):
         model = Sale
 
 
+class ScheduleGeographyFilter(StatisticDateRangeFilter, GeographyFilter):
+    pass
+
+
 class ProductCategoryFilter(BaseFilter):
     product_category_id__in: list[PositiveInt] | None = None
 

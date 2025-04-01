@@ -20,6 +20,10 @@ class GeographyFilter(BaseFilter):
         model = Impression
 
 
+class ScheduleGeographyFilter(StatisticDateRangeFilter, GeographyFilter):
+    pass
+
+
 class ImpressionFilter(DateRangeFilter, GeographyFilter):
     id__in: list[PositiveInt] | None = None
 

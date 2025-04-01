@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, status
 from fastapi.responses import ORJSONResponse, Response, StreamingResponse
 from fastapi_filter import FilterDepends
 
+from mspy_vendi.config import config
 from mspy_vendi.core.api import CRUDApi, basic_endpoints, basic_permissions
 from mspy_vendi.core.enums import ApiTagEnum, ExportTypeEnum
 from mspy_vendi.core.enums.date_range import DateRangeEnum, ScheduleEnum
@@ -169,6 +170,9 @@ async def post__schedule_impressions(
     user_service: Annotated[UserService, Depends()],
     user: Annotated[User, Depends(get_current_user())],
 ) -> Response:
+    if schedule.MINUTELY and config.is_production:
+        raise ValueError("Minutely schedule is not allowed")
+
     await user_service.schedule_export(
         user=user,
         export_type=export_type,

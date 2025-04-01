@@ -203,6 +203,10 @@ class Settings(BaseSettings):
         return AppEnvEnum.from_env()
 
     @property
+    def is_production(self) -> bool:
+        return self.environment == AppEnvEnum.PRD
+
+    @property
     def debug(self) -> bool:
         return self.environment in [AppEnvEnum.LOCAL, AppEnvEnum.TEST]
 
