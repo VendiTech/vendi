@@ -69,7 +69,7 @@ async def export_sale_task(
         )
 
         log.info(
-            "Export task was finished",
+            "Sale export task was finished",
             schedule=schedule.value,
             email=user.email,
             user_id=user.id,
@@ -77,7 +77,7 @@ async def export_sale_task(
 
     except Exception as err:
         log.error(
-            "Export task failed",
+            "Sale export task failed",
             schedule=schedule.value,
             email=user.email,
             user_id=user.id,

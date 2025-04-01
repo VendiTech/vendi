@@ -69,7 +69,7 @@ async def export_impression_task(
         )
 
         log.info(
-            "Export task was finished",
+            "Impression export task was finished",
             schedule=schedule.value,
             email=user.email,
             user_id=user.id,
