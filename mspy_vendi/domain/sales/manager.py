@@ -977,11 +977,11 @@ class SaleManager(CRUDManager):
                 .where(ProductUser.user_id == user.id)
             )
 
-        if query_filter.geography_id__in:
+        if getattr(query_filter, "geography_id__in", None):
             stmt = stmt.where(Geography.id.in_(query_filter.geography_id__in or []))
             setattr(query_filter, "geography_id__in", None)
 
-        if query_filter.product_id__in:
+        if getattr(query_filter, "product_id__in", None):
             stmt = stmt.where(Product.id.in_(query_filter.product_id__in))
             setattr(query_filter, "product_id__in", None)
 

@@ -11,7 +11,7 @@ from mspy_vendi.core.constants import DEFAULT_SCHEDULE_TIMEDELTA
 from mspy_vendi.core.enums import ExportTypeEnum
 from mspy_vendi.core.enums.date_range import ScheduleEnum
 from mspy_vendi.core.enums.export import ExportEntityTypeEnum
-from mspy_vendi.domain.sales.filters import ExportSaleFilter, GeographyFilter
+from mspy_vendi.domain.sales.filters import GeographyFilter, ScheduleGeographyFilter
 from mspy_vendi.domain.sales.service import SaleService
 from mspy_vendi.domain.user.schemas import UserScheduleSchema
 
@@ -43,7 +43,7 @@ async def export_sale_task(
     try:
         current_time: datetime = datetime.now()
 
-        query_filter: ExportSaleFilter = ExportSaleFilter(
+        query_filter: ScheduleGeographyFilter = ScheduleGeographyFilter(
             geography_id__in=query_filter.geography_id__in,
             date_from=current_time - DEFAULT_SCHEDULE_TIMEDELTA[schedule],
             date_to=current_time,
