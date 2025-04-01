@@ -10,6 +10,7 @@ from mspy_vendi.core.enums import ApiTagEnum, CRUDEnum
 from mspy_vendi.core.pagination import Page
 from mspy_vendi.deps import get_db_session
 from mspy_vendi.domain.auth import get_auth_user_service, get_current_user
+from mspy_vendi.domain.user.enums import PermissionEnum
 from mspy_vendi.domain.user.models import User
 from mspy_vendi.domain.user.schemas import (
     UserAdminCreateSchema,
@@ -38,26 +39,14 @@ async def get__show_me(
 
 @router.patch("/edit", tags=[ApiTagEnum.USER])
 async def update__user(
+    updated_obj: UserUpdate,
     user: Annotated[User, Depends(get_current_user())],
     service: Annotated[UserService, Depends()],
-    firstname: Annotated[Optional[str], Form()] = None,
-    lastname: Annotated[Optional[str], Form()] = None,
-    company_name: Annotated[Optional[str], Form()] = None,
-    job_title: Annotated[Optional[str], Form()] = None,
-    phone_number: Annotated[Optional[str], Form()] = None,
-    company_logo_image: Annotated[UploadFile, File()] = None,
 ) -> UserDetail:
     """
     Update the User by Provided `UserUpdate` object.
     """
-    updated_obj: UserUpdate = UserUpdate(
-        firstname=firstname,
-        lastname=lastname,
-        company_name=company_name,
-        job_title=job_title,
-        phone_number=phone_number,
-    )
-    return await service.update(obj_id=user.id, obj=updated_obj, company_logo_image=company_logo_image)
+    return await service.update(obj_id=user.id, obj=updated_obj)
 
 
 @router.get("/company-logo-image", tags=[ApiTagEnum.USER])
@@ -134,11 +123,23 @@ async def post__create_user(
 @router.patch("/admin/edit/{user_id}", response_model=UserDetail, tags=[ApiTagEnum.ADMIN_USER])
 async def patch__edit_user(
     user_id: PositiveInt,
-    user_obj: UserAdminEditSchema,
     auth_service: Annotated[AuthUserService, Depends(get_auth_user_service)],
     _: Annotated[User, Depends(get_current_user(is_superuser=True))],
+    firstname: Annotated[Optional[str], Form()] = None,
+    lastname: Annotated[Optional[str], Form()] = None,
+    permissions: Annotated[Optional[PermissionEnum], Form()] = None,
+    machines: Annotated[Optional[list[PositiveInt]], Form()] = None,
+    products: Annotated[Optional[list[PositiveInt]], Form()] = None,
+    company_logo_image: Annotated[UploadFile, File()] = None,
 ) -> UserDetail:
-    return await auth_service.edit_flow(user_id, user_obj=user_obj)
+    user_obj = UserAdminEditSchema(
+        firstname=firstname,
+        lastname=lastname,
+        permissions=permissions,
+        machines=machines,
+        products=products,
+    )
+    return await auth_service.edit_flow(user_id, user_obj=user_obj, company_logo_image=company_logo_image)
 
 
 class UserAPI(CRUDApi):

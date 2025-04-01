@@ -11,7 +11,7 @@ from pydantic_core.core_schema import ValidationInfo
 StrLink = Annotated[HttpUrl, PlainSerializer(str, return_type=str)]
 
 MAX_IMAGE_SIZE_MB = 5  # 5MB
-ALLOWED_IMAGE_FORMATS = ["image/jpeg", "image/png"]
+ALLOWED_IMAGE_FORMATS = ["image/jpeg", "image/png", "image/svg+xml"]
 
 
 def format_decimal(initial_value: Decimal) -> float:
@@ -110,7 +110,7 @@ def convert_to_str_date(date: Any) -> str:
         raise ValueError("Invalid Str date format")
 
 
-async def validate_image_file(image: UploadFile) -> str:
+async def validate_image_file(image: UploadFile) -> str | bytes:
     """
     Validates the image file for:
     - MIME type (PNG or JPEG)
@@ -130,5 +130,8 @@ async def validate_image_file(image: UploadFile) -> str:
 
     if len(image_bytes) > MAX_IMAGE_SIZE_MB * 1024 * 1024:
         raise HTTPException(status_code=400, detail=f"File size exceeds {MAX_IMAGE_SIZE_MB}MB limit.")
+
+    if image.content_type == "image/svg+xml":
+        return image_bytes
 
     return base64.b64encode(image_bytes).decode("utf-8")

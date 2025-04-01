@@ -25,6 +25,7 @@ class ActivityLogStateDetailSchema(ActivityLogBasicEventSchema):
     role: str
     machine_names: list[str]
     product_names: list[str]
+    company_logo_image: str
 
 
 class ActivityLogStateSchema(BaseSchema):
