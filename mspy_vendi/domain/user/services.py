@@ -9,6 +9,7 @@ from fastapi_users.schemas import BaseUserCreate
 from mspy_vendi.core.constants import DEFAULT_SCHEDULE_MAPPING, MESSAGE_FOOTER, CSS_STYLE
 from mspy_vendi.core.enums.date_range import ScheduleEnum
 from mspy_vendi.core.enums.export import ExportEntityTypeEnum
+from mspy_vendi.core.pagination import Page
 from mspy_vendi.core.validators import validate_image_file
 from mspy_vendi.domain.activity_log.enums import EventTypeEnum
 from mspy_vendi.domain.activity_log.manager import ActivityLogManager
@@ -29,7 +30,7 @@ from mspy_vendi.broker import redis_source
 from mspy_vendi.config import config, log
 from mspy_vendi.core.email import MailGunService
 from mspy_vendi.core.enums import ExportTypeEnum
-from mspy_vendi.core.exceptions.base_exception import PydanticLikeError, BadRequestError
+from mspy_vendi.core.exceptions.base_exception import PydanticLikeError, BadRequestError, ForbiddenError
 from mspy_vendi.core.helpers import get_described_user_info, generate_random_password
 from mspy_vendi.core.service import CRUDService, UpdateSchema
 from mspy_vendi.domain.user.enums.enum import FrontendLinkEnum
@@ -44,6 +45,7 @@ from mspy_vendi.domain.user.schemas import (
     UserAdminCreateSchema,
     UserAdminEditSchema,
     UserUpdatePerSignIn,
+    UserCompanyLogoImageSchema,
 )
 from mspy_vendi.domain.sales.tasks import export_sale_task
 
@@ -569,3 +571,6 @@ class UserService(CRUDService):
                 query_filter=query_filter,
             )
         )
+
+    async def get_users_images(self) -> Page[UserCompanyLogoImageSchema]:
+        return await self.manager.get_users_images()

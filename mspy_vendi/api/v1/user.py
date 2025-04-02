@@ -15,6 +15,7 @@ from mspy_vendi.domain.user.models import User
 from mspy_vendi.domain.user.schemas import (
     UserAdminCreateSchema,
     UserAdminEditSchema,
+    UserCompanyLogoImageSchema,
     UserDetail,
     UserPermissionsModifySchema,
     UserUpdate,
@@ -50,7 +51,7 @@ async def update__user(
 
 
 @router.get("/company-logo-image", tags=[ApiTagEnum.USER])
-async def get__company_logo_image(
+async def company_logo_image(
     user: Annotated[User, Depends(get_current_user())],
     service: Annotated[UserService, Depends()],
 ) -> bytes | None:
@@ -140,6 +141,24 @@ async def patch__edit_user(
         products=products,
     )
     return await auth_service.edit_flow(user_id, user_obj=user_obj, company_logo_image=company_logo_image)
+
+
+@router.get("/admin/company-logo-image/{user_id}", tags=[ApiTagEnum.ADMIN_USER])
+async def get__company_logo_image(
+    user_id: PositiveInt,
+    user_service: Annotated[UserService, Depends()],
+    _: Annotated[User, Depends(get_current_user(is_superuser=True))],
+) -> bytes | None:
+    user = await user_service.get(obj_id=user_id)
+    return user.company_logo_image
+
+
+@router.get("/admin/company-logo-images/", tags=[ApiTagEnum.ADMIN_USER])
+async def get__company_logo_images(
+    user_service: Annotated[UserService, Depends()],
+    _: Annotated[User, Depends(get_current_user(is_superuser=True))],
+) -> Page[UserCompanyLogoImageSchema]:
+    return await user_service.get_users_images()
 
 
 class UserAPI(CRUDApi):

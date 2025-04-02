@@ -117,3 +117,8 @@ class UserScheduleSchema(BaseSchema):
     firstname: AlphaString | None = None
     lastname: AlphaString | None = None
     is_superuser: bool | None = None
+
+
+class UserCompanyLogoImageSchema(BaseSchema):
+    user_id: PositiveInt
+    company_logo_image: bytes | None = None
