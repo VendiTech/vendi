@@ -10,7 +10,12 @@ from mspy_vendi.core.pagination import Page
 from mspy_vendi.deps import get_db_session
 from mspy_vendi.domain.auth import get_current_user
 from mspy_vendi.domain.machines.filters import MachineFilter
-from mspy_vendi.domain.machines.schemas import MachineCreateSchema, MachineDetailSchema, MachinesCountGeographySchema
+from mspy_vendi.domain.machines.schemas import (
+    MachineCreateSchema,
+    MachineDetailSchema,
+    MachinesCountGeographySchema,
+    MachinesPerGeographySchema,
+)
 from mspy_vendi.domain.machines.service import MachineService
 from mspy_vendi.domain.user.models import User
 
@@ -24,6 +29,15 @@ async def get__machines_count_per_geography(
     user: Annotated[User, Depends(get_current_user())],
 ) -> Page[MachinesCountGeographySchema]:
     return await machine_service.get_machines_count_per_geography(query_filter, user)
+
+
+@router.get("/machines-by-geography", response_model=Page[MachinesPerGeographySchema])
+async def get__machines_by_geography(
+    query_filter: Annotated[MachineFilter, FilterDepends(MachineFilter)],
+    machine_service: Annotated[MachineService, Depends()],
+    user: Annotated[User, Depends(get_current_user())],
+) -> Page[MachinesPerGeographySchema]:
+    return await machine_service.get_machines_by_geography(query_filter, user)
 
 
 class MachineAPI(CRUDApi):
