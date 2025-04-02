@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, Request, UploadFile, status
 from fastapi.responses import ORJSONResponse
-from pydantic import PositiveInt
+from pydantic import Json, PositiveInt
 from typing_extensions import Optional
 
 from mspy_vendi.core.api import CRUDApi
@@ -128,10 +128,10 @@ async def patch__edit_user(
     _: Annotated[User, Depends(get_current_user(is_superuser=True))],
     firstname: Annotated[Optional[str], Form()] = None,
     lastname: Annotated[Optional[str], Form()] = None,
-    permissions: Annotated[Optional[PermissionEnum], Form()] = None,
-    machines: Annotated[Optional[list[PositiveInt]], Form()] = None,
-    products: Annotated[Optional[list[PositiveInt]], Form()] = None,
-    company_logo_image: Annotated[UploadFile, File()] = None,
+    permissions: Annotated[Optional[Json[list[PermissionEnum]]], Form()] = None,
+    machines: Annotated[Optional[Json[list[PositiveInt]]], Form()] = None,
+    products: Annotated[Optional[Json[list[PositiveInt]]], Form()] = None,
+    company_logo_image: Annotated[Optional[UploadFile], File()] = None,
 ) -> UserDetail:
     user_obj = UserAdminEditSchema(
         firstname=firstname,
