@@ -22,3 +22,8 @@ class MachinesCountBaseSchema(BaseSchema):
 
 class MachinesCountGeographySchema(MachinesCountBaseSchema):
     geography: GeographyDetailSchema
+
+
+class MachinesPerGeographySchema(BaseSchema):
+    geography: GeographyDetailSchema
+    machines: list[MachineDetailSchema]
