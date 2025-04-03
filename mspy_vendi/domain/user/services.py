@@ -1,17 +1,15 @@
-import base64
-import io
 from datetime import datetime
 from importlib import import_module
 from typing import LiteralString, cast, Optional, Any
 
-from fastapi import Request, Response
+from fastapi import Request, Response, UploadFile
 from fastapi_users import BaseUserManager, IntegerIDMixin, schemas, models
 from fastapi_users.schemas import BaseUserCreate
-from pydantic import conbytes
 
 from mspy_vendi.core.constants import DEFAULT_SCHEDULE_MAPPING, MESSAGE_FOOTER, CSS_STYLE
 from mspy_vendi.core.enums.date_range import ScheduleEnum
 from mspy_vendi.core.enums.export import ExportEntityTypeEnum
+from mspy_vendi.core.pagination import Page
 from mspy_vendi.core.validators import validate_image_file
 from mspy_vendi.domain.activity_log.enums import EventTypeEnum
 from mspy_vendi.domain.activity_log.manager import ActivityLogManager
@@ -32,7 +30,7 @@ from mspy_vendi.broker import redis_source
 from mspy_vendi.config import config, log
 from mspy_vendi.core.email import MailGunService
 from mspy_vendi.core.enums import ExportTypeEnum
-from mspy_vendi.core.exceptions.base_exception import PydanticLikeError, BadRequestError
+from mspy_vendi.core.exceptions.base_exception import PydanticLikeError, BadRequestError, ForbiddenError
 from mspy_vendi.core.helpers import get_described_user_info, generate_random_password
 from mspy_vendi.core.service import CRUDService, UpdateSchema
 from mspy_vendi.domain.user.enums.enum import FrontendLinkEnum
@@ -47,6 +45,7 @@ from mspy_vendi.domain.user.schemas import (
     UserAdminCreateSchema,
     UserAdminEditSchema,
     UserUpdatePerSignIn,
+    UserCompanyLogoImageSchema,
 )
 from mspy_vendi.domain.sales.tasks import export_sale_task
 
@@ -131,13 +130,16 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
 
         return user
 
-    async def edit_flow(self, user_id: int, user_obj: UserAdminEditSchema) -> UserDetail:
+    async def edit_flow(
+        self, user_id: int, user_obj: UserAdminEditSchema, company_logo_image: UploadFile | None = None
+    ) -> UserDetail:
         previous_user_state: User = await self.user_service.get(user_id)
         previous_user_state_dict: ActivityLogStateDetailSchema = ActivityLogStateDetailSchema.model_validate(
             {
                 "firstname": previous_user_state.firstname,
                 "lastname": previous_user_state.lastname,
                 "email": previous_user_state.email,
+                "company_logo_image": previous_user_state.company_logo_image,
                 "permissions": previous_user_state.permissions,
                 "role": previous_user_state.role,
                 "machine_names": list(map(lambda item: item.name, previous_user_state.machines)),
@@ -145,7 +147,7 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
             }
         )
 
-        await self.user_service.update(user_id, user_obj, raise_error=False)  # type: ignore
+        await self.user_service.update(user_id, user_obj, raise_error=False, company_logo_image=company_logo_image)  # type: ignore
 
         if user_obj.machines is not None:
             await self.machine_user_service.update_user_machines(user_id, *user_obj.machines)
@@ -167,6 +169,7 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
                         "email": user.email,
                         "permissions": user.permissions,
                         "role": user.role,
+                        "company_logo_image": user.company_logo_image,
                         "machine_names": list(map(lambda item: item.name, user.machines)),
                         "product_names": list(map(lambda item: item.name, user.products)),
                     },
@@ -568,3 +571,6 @@ class UserService(CRUDService):
                 query_filter=query_filter,
             )
         )
+
+    async def get_users_images(self) -> Page[UserCompanyLogoImageSchema]:
+        return await self.manager.get_users_images()
