@@ -561,14 +561,15 @@ class SaleManager(CRUDManager):
         stmt = select(self.sql_model.sale_time, (self.sql_model.quantity * Product.price).label("revenue"))
 
         stmt = self._generate_geography_query(query_filter, stmt, modify_filter=False)
-        stmt = self._generate_product_query(query_filter, stmt, modify_filter=False)
-        stmt = self._generate_user_query(query_filter, user, stmt)
-
-        setattr(query_filter, "geography_id__in", None)
-        setattr(query_filter, "product_id__in", None)
 
         if user.is_superuser:
             stmt = stmt.join(Product, Product.id == self.sql_model.product_id)
+        else:
+            stmt = self._generate_product_query(query_filter, stmt, modify_filter=False)
+            stmt = self._generate_user_query(query_filter, user, stmt)
+
+        setattr(query_filter, "geography_id__in", None)
+        setattr(query_filter, "product_id__in", None)
 
         stmt = query_filter.filter(stmt)
 
