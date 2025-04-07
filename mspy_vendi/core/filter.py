@@ -1,9 +1,10 @@
 from datetime import date, datetime, timedelta
 from typing import Any, cast
 
+from fastapi import Query as QueryParameter
 from fastapi_filter.contrib.sqlalchemy import Filter
 from fastapi_filter.contrib.sqlalchemy.filter import _orm_operator_transformer
-from pydantic import field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 from sqlalchemy import BinaryExpression, Column, Select, func, or_
 from sqlalchemy.orm import DeclarativeBase, Query
 
@@ -273,7 +274,7 @@ class DateRangeFilter(BaseFilter):
     Child class of the BaseFilter for proper validation of the date_range_fields attribute.
     """
 
-    date_from: datetime | None = None
+    date_from: datetime | None = Field(QueryParameter(None, description="Default value: `current date - 30 days`"))
     date_to: datetime | None = None
 
     @model_validator(mode="after")
