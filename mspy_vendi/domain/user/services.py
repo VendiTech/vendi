@@ -134,12 +134,11 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
         self, user_id: int, user_obj: UserAdminEditSchema, company_logo_image: UploadFile | None = None
     ) -> UserDetail:
         previous_user_state: User = await self.user_service.get(user_id)
-        previous_user_state_dict: ActivityLogStateDetailSchema = ActivityLogStateDetailSchema.model_validate(
+        previous_user_state_schema: ActivityLogStateDetailSchema = ActivityLogStateDetailSchema.model_validate(
             {
                 "firstname": previous_user_state.firstname,
                 "lastname": previous_user_state.lastname,
                 "email": previous_user_state.email,
-                "company_logo_image": previous_user_state.company_logo_image,
                 "permissions": previous_user_state.permissions,
                 "role": previous_user_state.role,
                 "machine_names": list(map(lambda item: item.name, previous_user_state.machines)),
@@ -162,14 +161,13 @@ class AuthUserService(IntegerIDMixin, BaseUserManager[User, int]):
                 user_id=user_id,
                 event_type=EventTypeEnum.USER_EDITED,
                 event_context=ActivityLogStateSchema(
-                    previous_state=previous_user_state_dict,
+                    previous_state=previous_user_state_schema,
                     current_state={
                         "firstname": user.firstname,
                         "lastname": user.lastname,
                         "email": user.email,
                         "permissions": user.permissions,
                         "role": user.role,
-                        "company_logo_image": user.company_logo_image,
                         "machine_names": list(map(lambda item: item.name, user.machines)),
                         "product_names": list(map(lambda item: item.name, user.products)),
                     },
