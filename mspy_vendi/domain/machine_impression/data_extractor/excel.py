@@ -1,18 +1,34 @@
 import re
+from abc import ABC
 from io import BytesIO
+from typing import Generic, TypeVar
 
 import pandas as pd
-from pandas.core.interchange.dataframe_protocol import DataFrame
+from pandas import DataFrame
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from mspy_vendi.domain.data_extractor.base import BaseDataExtractorClient
-from mspy_vendi.domain.machine_impression.manager import MachineImpressionManager
-from mspy_vendi.domain.machine_impression.schemas import (
-    MachineImpressionBulkCreateResponseSchema,
-    MachineImpressionCreateSchema,
-)
+
+CreateSchema = TypeVar("CreateSchema")
+ResponseSchema = TypeVar("ResponseSchema")
+ManagerClass = TypeVar("ManagerClass")
 
 
-class ExcelDataExtractor(BaseDataExtractorClient[bytes, MachineImpressionBulkCreateResponseSchema]):
+class ExcelDataExtractor(
+    ABC,
+    BaseDataExtractorClient[bytes, ResponseSchema],
+    Generic[CreateSchema, ResponseSchema, ManagerClass],
+):
+    def __init__(
+        self,
+        session: AsyncSession,
+        create_schema: type[CreateSchema],
+        manager_class: type[ManagerClass],
+    ):
+        super().__init__(session)
+        self.create_schema = create_schema
+        self.manager_class = manager_class
+
     @staticmethod
     def validate_machine_number(v: int | float | str) -> int | None:
         """
@@ -61,14 +77,15 @@ class ExcelDataExtractor(BaseDataExtractorClient[bytes, MachineImpressionBulkCre
         data_frame.drop(0).reset_index(drop=True)
 
         for column in data_frame.columns:
-            if column not in [field.alias for field in MachineImpressionCreateSchema.model_fields.values()]:
+            if column not in [field.alias for field in self.create_schema.model_fields.values()]:
                 # Drop the column if it's not in the MachineImpressionCreateSchema.model_fields.values()
                 data_frame.drop(columns=[column], inplace=True)
 
         # Validate the Nayax Code column. Apply the validate_machine_number method to the column.
-        data_frame.loc[1:, "Nayax Code"] = data_frame.loc[1:, "Nayax Code"].apply(self.validate_machine_number)
+        if "Nayax Code" in data_frame.columns:
+            data_frame["Nayax Code"] = data_frame["Nayax Code"].apply(self.validate_machine_number)
 
-    async def extract(self, data: bytes) -> MachineImpressionBulkCreateResponseSchema:
+    async def extract(self, data: bytes) -> ResponseSchema:
         """
         Extract data from the Excel file and save it to the database.
 
@@ -76,13 +93,8 @@ class ExcelDataExtractor(BaseDataExtractorClient[bytes, MachineImpressionBulkCre
 
         :return: MachineImpressionBulkCreateResponseSchema
         """
-        machine_impression_manager: MachineImpressionManager = MachineImpressionManager(self.session)
-        data_frame: DataFrame = pd.read_excel(BytesIO(data))
-
+        data_frame = pd.read_excel(BytesIO(data))
         self._transfrom_data_frame(data_frame)
 
-        machine_impression_entities: list[MachineImpressionCreateSchema] = [
-            MachineImpressionCreateSchema.model_validate(row.to_dict()) for _, row in data_frame.loc[1:].iterrows()
-        ]
-
-        return await machine_impression_manager.create_batch(machine_impression_entities)
+        entities = [self.create_schema.model_validate(row.to_dict()) for _, row in data_frame.iterrows()]
+        return await self.manager_class.create_batch(entities)

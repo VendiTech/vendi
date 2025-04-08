@@ -26,6 +26,7 @@ from mspy_vendi.domain.sales.schemas import (
     DecimalTimeFrameSalesSchema,
     ExportSaleDetailSchema,
     GeographyDecimalQuantitySchema,
+    ProductSalesBulkCreateResponseSchema,
     ProductsCountGeographySchema,
     ProductVenueSalesCountSchema,
     QuantityStatisticSchema,
@@ -1057,3 +1058,11 @@ class SaleManager(CRUDManager):
         final_stmt = query_filter.filter(final_stmt, autojoin=False)
 
         return await paginate(self.session, final_stmt, unique=False)
+
+    async def extract_from_excel(self, data: bytes) -> ProductSalesBulkCreateResponseSchema:
+        """
+        Extract data from the Excel file and save it to the database.
+
+        :param data: Excel file in bytes.
+        :return: ProductSalesBulkCreateResponseSchema
+        """

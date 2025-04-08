@@ -1,6 +1,6 @@
 from datetime import date, datetime, time
 
-from pydantic import Field, NonNegativeInt, PositiveInt
+from pydantic import Field, NonNegativeInt, PositiveInt, computed_field
 
 from mspy_vendi.core.constants import DEFAULT_SOURCE_SYSTEM
 from mspy_vendi.core.schemas import BaseSchema
@@ -131,3 +131,12 @@ class ProductsCountGeographySchema(BaseSchema):
 
 class ProductVenueSalesCountSchema(VenueSalesQuantitySchema, SaleDateTimeBaseSchema):
     product_name: str
+
+
+class ProductSalesBulkCreateResponseSchema(BaseSchema):
+    initial_records: NonNegativeInt
+    final_records: NonNegativeInt
+
+    @computed_field
+    def created_records(self) -> int:
+        return self.final_records - self.initial_records
