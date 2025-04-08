@@ -64,7 +64,6 @@ class UserUpdate(BaseSchema):
     company_name: ConstraintString(MAX_NUMBER_OF_CHARACTERS)
     job_title: ConstraintString(MAX_NUMBER_OF_CHARACTERS)
     phone_number: PhoneNumber | None = None
-    company_logo_image: bytes | None = None
 
 
 class UserPasswordChange(BaseSchema):
@@ -102,6 +101,7 @@ class UserAdminEditSchema(BaseSchema):
     permissions: list[PermissionEnum] | None = None
     machines: list[PositiveInt] | None = None
     products: list[PositiveInt] | None = None
+    company_logo_image: bytes | None = None
 
 
 class UserScheduleSchema(BaseSchema):
@@ -117,3 +117,8 @@ class UserScheduleSchema(BaseSchema):
     firstname: AlphaString | None = None
     lastname: AlphaString | None = None
     is_superuser: bool | None = None
+
+
+class UserCompanyLogoImageSchema(BaseSchema):
+    user_id: PositiveInt
+    company_logo_image: bytes | None = None

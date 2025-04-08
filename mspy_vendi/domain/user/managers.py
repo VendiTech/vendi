@@ -1,14 +1,17 @@
 from typing import Any
 
-from sqlalchemy import Select, update
+from fastapi_pagination.ext.sqlalchemy import paginate
+from sqlalchemy import Select, label, select, update
 from sqlalchemy.orm import joinedload
 
 from mspy_vendi.core.exceptions.base_exception import BadRequestError
 from mspy_vendi.core.manager import CRUDManager, UpdateSchema
+from mspy_vendi.core.pagination import Page
 from mspy_vendi.domain.machines.models import MachineUser
 from mspy_vendi.domain.product_user.models import ProductUser
 from mspy_vendi.domain.user.enums import PermissionEnum
 from mspy_vendi.domain.user.models import User
+from mspy_vendi.domain.user.schemas import UserCompanyLogoImageSchema
 
 
 class UserManager(CRUDManager):
@@ -84,6 +87,19 @@ class UserManager(CRUDManager):
         )
 
         return await self._apply_changes(stmt=stmt, obj_id=obj_id, autocommit=autocommit, is_unique=is_unique)
+
+    async def get_users_images(self) -> Page[UserCompanyLogoImageSchema]:
+        """
+        Helper method for Admin user to receive company-logo images for all users
+
+        :return: Paginated list of company-logo images.
+        """
+        stmt_user_id = label("user_id", self.sql_model.id)
+        stmt_user_company_logo_image = label("company_logo_image", self.sql_model.company_logo_image)
+
+        stmt = select(stmt_user_id, stmt_user_company_logo_image)
+
+        return await paginate(self.session, stmt)
 
     def get_query(self) -> Select:
         return (
