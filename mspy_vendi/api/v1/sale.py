@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, UploadFile, status
 from fastapi.responses import ORJSONResponse, Response, StreamingResponse
 from fastapi_filter import FilterDepends
 
@@ -27,6 +27,7 @@ from mspy_vendi.domain.sales.schemas import (
     QuantityStatisticSchema,
     SaleCreateSchema,
     SaleDetailSchema,
+    SalesBulkCreateResponseSchema,
     TimeFrameSalesSchema,
     TimePeriodSalesCountSchema,
     TimePeriodSalesRevenueSchema,
@@ -254,6 +255,15 @@ async def delete__existing_schedule(
         schedule_id=schedule_id,
         entity_type=ExportEntityTypeEnum.SALE,
     )
+
+
+@router.post("/import", response_model=SalesBulkCreateResponseSchema)
+async def import_sales(
+    provided_file: UploadFile,
+    service: Annotated[SaleService, Depends()],
+    _: Annotated[User, Depends(get_current_user(is_superuser=True))],
+) -> SalesBulkCreateResponseSchema:
+    return await service.upload(provided_file)
 
 
 class SaleAPI(CRUDApi):
