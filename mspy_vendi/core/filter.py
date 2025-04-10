@@ -70,6 +70,7 @@ class BaseFilter(Filter, extra="allow"):  # type: ignore
 
     @model_validator(mode="before")
     def check_multi_search_fields_existence(cls, values: dict) -> dict:
+        error_message: str = "You can't use values which are not presented in DB Model!"
         multi_search_fields: list[str] = getattr(cls.Constants, "multi_search_fields", []) or []
 
         if not multi_search_fields and COMPOUND_SEARCH_FIELD_NAME not in cls.model_fields:
@@ -89,8 +90,29 @@ class BaseFilter(Filter, extra="allow"):  # type: ignore
         db_model: type[DeclarativeBase] = cast(type[DeclarativeBase], cls.Constants.model)
 
         for field in multi_search_fields:
-            if field not in get_columns_for_model(db_model):
-                raise ValueError("You can't use values which are not presented in DB Model!")
+            if "__" in field:
+                db_table, _, nested_field = field.partition("__")
+                if db_table not in cls.model_fields:
+                    raise ValueError(f"You can't use '{field}' field without the corresponding model in the filter.")
+
+                # Check if field uses FilterDepends
+                field_annotation = cls.model_fields[db_table].annotation
+
+                if (arguments := getattr(field_annotation, "__args__")) and len(arguments) > 1:
+                    # It means that we've got: UNION, OPTIONAL or other complex constructions
+                    arguments = [item for item in arguments if item is not type(None)]
+
+                if not arguments:
+                    raise ValueError("You can't use nested filter without the corresponding model in the filter.")
+
+                # Here in arguments we have only one type: NestedFilter. We will retrieve the model from it.
+                db_model = cast(type[DeclarativeBase], arguments[0].Constants.model)
+
+                if nested_field not in get_columns_for_model(db_model):
+                    raise ValueError(error_message)
+
+            elif field not in get_columns_for_model(db_model):
+                raise ValueError(error_message)
 
         return values
 
@@ -207,10 +229,19 @@ class BaseFilter(Filter, extra="allow"):  # type: ignore
 
             elif field_name == COMPOUND_SEARCH_FIELD_NAME:
                 # If the field is a compound search field, we need to apply the filter to all the fields.
-                search_filters: list[BinaryExpression] = [
-                    getattr(self.Constants.model, field).ilike(f"%{value}%")
-                    for field in self.Constants.multi_search_fields or []
-                ]
+                search_filters: list[BinaryExpression] = []
+
+                for field in self.Constants.multi_search_fields or []:
+                    if "__" in field:
+                        table_name, _, nested_field = field.partition("__")
+
+                        nested_filter: BaseFilter = getattr(self, table_name)
+                        db_model = cast(type[DeclarativeBase], nested_filter.Constants.model)
+
+                        search_filters.append(getattr(db_model, nested_field).ilike(f"%{value}%"))
+
+                    else:
+                        search_filters.append(getattr(self.Constants.model, field).ilike(f"%{value}%"))
 
                 query: Select = query.filter(or_(*search_filters))
 
@@ -225,15 +256,8 @@ class BaseFilter(Filter, extra="allow"):  # type: ignore
                 else:
                     operator: str = "__eq__"
 
-                if field_name == self.Constants.search_field_name and hasattr(self.Constants, "search_model_fields"):
-                    search_filters: list[BinaryExpression] = [
-                        getattr(self.Constants.model, field).ilike(f"%{value}%")
-                        for field in self.Constants.search_model_fields
-                    ]
-                    query: Select = query.filter(or_(*search_filters))
-                else:
-                    model_field: Column = getattr(self.Constants.model, field_name)
-                    query: Select = query.filter(getattr(model_field, operator)(value))
+                model_field: Column = getattr(self.Constants.model, field_name)
+                query: Select = query.filter(getattr(model_field, operator)(value))
 
         return query
 
