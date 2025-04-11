@@ -3,6 +3,8 @@ from typing import Any
 
 from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import CTE, Date, Row, Select, cast, desc, func, label, select, text
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import contains_eager, joinedload
 
 from mspy_vendi.core.enums.date_range import DailyTimePeriodEnum, DateRangeEnum, TimePeriodEnum
@@ -12,9 +14,11 @@ from mspy_vendi.core.manager import CRUDManager, Model, Schema
 from mspy_vendi.core.pagination import Page
 from mspy_vendi.db import Sale
 from mspy_vendi.domain.geographies.models import Geography
+from mspy_vendi.domain.machines.manager import MachineManager
 from mspy_vendi.domain.machines.models import Machine, MachineUser
 from mspy_vendi.domain.product_category.models import ProductCategory
 from mspy_vendi.domain.product_user.models import ProductUser
+from mspy_vendi.domain.products.manager import ProductManager
 from mspy_vendi.domain.products.models import Product
 from mspy_vendi.domain.sales.filters import ExportSaleFilter, SaleFilter, StatisticDateRangeFilter
 from mspy_vendi.domain.sales.schemas import (
@@ -24,11 +28,13 @@ from mspy_vendi.domain.sales.schemas import (
     ConversionRateSchema,
     DecimalQuantityStatisticSchema,
     DecimalTimeFrameSalesSchema,
+    ExcelSaleCreateSchema,
     ExportSaleDetailSchema,
     GeographyDecimalQuantitySchema,
     ProductsCountGeographySchema,
     ProductVenueSalesCountSchema,
     QuantityStatisticSchema,
+    SalesBulkCreateResponseSchema,
     TimeFrameSalesSchema,
     TimePeriodSalesCountSchema,
     TimePeriodSalesRevenueSchema,
@@ -1057,3 +1063,58 @@ class SaleManager(CRUDManager):
         final_stmt = query_filter.filter(final_stmt, autojoin=False)
 
         return await paginate(self.session, final_stmt, unique=False)
+
+    async def create_batch(self, obj: list[ExcelSaleCreateSchema]) -> SalesBulkCreateResponseSchema:
+        """
+        Create a batch of sales records in the database.
+
+        - Each Excel row is converted to a sale entry with resolved `product_id` and `machine_id`
+          (based on their names).
+        - Rows with missing or unresolvable references are skipped.
+        - Duplicate entries (based on unique constraints) are ignored using `ON CONFLICT DO NOTHING`.
+        - Invalid rows (with empty required fields) are skipped.
+
+        :param obj: List of validated sales data parsed from Excel.
+        :return: SalesBulkCreateResponseSchema.
+        """
+        count_stmt: Select = select(func.count()).select_from(self.sql_model)
+        existing_records: list[int] = await self.session.scalar(count_stmt)
+
+        for item in obj:
+            dict_item: dict = item.model_dump()
+
+            if not all(item.model_dump(exclude_defaults=True).values()):
+                continue
+
+            try:
+                machine: Machine = await MachineManager(self.session).get_by_name(name=dict_item.pop("machine_name"))
+                product: Product = await ProductManager(self.session).get_by_name(name=dict_item.pop("product_name"))
+
+                dict_item.pop("sale_date_and_time")
+                dict_item.update(
+                    {
+                        "machine_id": machine.id,
+                        "product_id": product.id,
+                    }
+                )
+
+            except AttributeError:
+                continue
+
+            try:
+                stmt = insert(self.sql_model).values(**dict_item).on_conflict_do_nothing()
+
+                await self.session.execute(stmt)
+                await self.session.commit()
+
+            except IntegrityError:
+                await self.session.rollback()
+                continue
+
+            except Exception as ex:
+                await self.session.rollback()
+                raise ex
+
+        updated_records: list[int] = await self.session.scalar(count_stmt)
+
+        return SalesBulkCreateResponseSchema(initial_records=existing_records, final_records=updated_records)

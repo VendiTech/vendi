@@ -1,6 +1,7 @@
 from datetime import date, datetime, time
+from typing import Any
 
-from pydantic import Field, NonNegativeInt, PositiveInt
+from pydantic import Field, NonNegativeInt, PositiveInt, computed_field, model_validator
 
 from mspy_vendi.core.constants import DEFAULT_SOURCE_SYSTEM
 from mspy_vendi.core.schemas import BaseSchema
@@ -131,3 +132,45 @@ class ProductsCountGeographySchema(BaseSchema):
 
 class ProductVenueSalesCountSchema(VenueSalesQuantitySchema, SaleDateTimeBaseSchema):
     product_name: str
+
+
+class ExcelSaleCreateSchema(BaseSchema):
+    id: int = Field(..., alias="Transaction ID")
+    sale_date_and_time: str = Field(..., alias="Settlement Date and Time (GMT)")
+    sale_date: date
+    sale_time: time
+    quantity: PositiveInt = 1
+    source_system: str = "Excel"
+    source_system_id: int = Field(..., alias="Transaction ID")
+    product_name: str = Field(..., alias="Product Name")
+    machine_name: str = Field(..., alias="Machine Name")
+
+    @model_validator(mode="before")
+    @classmethod
+    def split_settlement_datetime(cls, data: Any) -> Any:
+        """
+        Split the raw datetime string from Excel into separate `sale_date` and `sale_time` fields.
+
+        If parsing fails, both fields will be set to None.
+        """
+        raw_value = data.get("Settlement Date and Time (GMT)")
+
+        if raw_value:
+            try:
+                dt = datetime.strptime(str(raw_value), "%d/%m/%Y %H:%M:%S")
+                data["sale_date"] = dt.date()
+                data["sale_time"] = dt.time()
+            except ValueError:
+                data["sale_date"] = None
+                data["sale_time"] = None
+
+        return data
+
+
+class SalesBulkCreateResponseSchema(BaseSchema):
+    initial_records: NonNegativeInt
+    final_records: NonNegativeInt
+
+    @computed_field
+    def created_records(self) -> int:
+        return self.final_records - self.initial_records
