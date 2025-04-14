@@ -35,7 +35,7 @@ class ExcelDataExtractor(BaseDataExtractorClient[bytes, MachineImpressionBulkCre
 
         return int(v)
 
-    def _transfrom_data_frame(self, data_frame: DataFrame):
+    def _transform_data_frame(self, data_frame: DataFrame):
         """
         Transform and clean the DataFrame for sales import.
 
@@ -70,7 +70,7 @@ class ExcelDataExtractor(BaseDataExtractorClient[bytes, MachineImpressionBulkCre
         sale_manager: SaleManager = SaleManager(self.session)
         data_frame: DataFrame = pd.read_excel(BytesIO(data))
 
-        self._transfrom_data_frame(data_frame)
+        self._transform_data_frame(data_frame)
 
         required_columns: list = ["Transaction ID", "Product Name", "Machine Name", "Settlement Date and Time (GMT)"]
         filtered_df: DataFrame = data_frame.iloc[1:].dropna(subset=required_columns)

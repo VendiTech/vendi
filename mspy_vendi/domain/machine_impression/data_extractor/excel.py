@@ -39,7 +39,7 @@ class ExcelDataExtractor(BaseDataExtractorClient[bytes, MachineImpressionBulkCre
 
         return int(v)
 
-    def _transfrom_data_frame(self, data_frame: DataFrame):
+    def _transform_data_frame(self, data_frame: DataFrame):
         """
         Perform data transformation on the DataFrame.
 
@@ -79,7 +79,7 @@ class ExcelDataExtractor(BaseDataExtractorClient[bytes, MachineImpressionBulkCre
         machine_impression_manager: MachineImpressionManager = MachineImpressionManager(self.session)
         data_frame: DataFrame = pd.read_excel(BytesIO(data))
 
-        self._transfrom_data_frame(data_frame)
+        self._transform_data_frame(data_frame)
 
         machine_impression_entities: list[MachineImpressionCreateSchema] = [
             MachineImpressionCreateSchema.model_validate(row.to_dict()) for _, row in data_frame.loc[1:].iterrows()

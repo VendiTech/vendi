@@ -23,6 +23,7 @@ from mspy_vendi.domain.impressions.schemas import (
     ExposureStatisticSchema,
     GeographyImpressionsCountSchema,
     ImpressionCreateSchema,
+    ImpressionsBulkCreateResponseSchema,
     ImpressionsSalesPlayoutsConvertions,
     TimeFrameImpressionsByVenueSchema,
     TimeFrameImpressionsSchema,
@@ -84,14 +85,17 @@ class ImpressionManager(CRUDManager):
 
         return await self.session.scalar(stmt)
 
-    async def create_batch(self, obj: list[ImpressionCreateSchema]) -> None:
+    async def create_batch(self, obj: list[ImpressionCreateSchema]) -> ImpressionsBulkCreateResponseSchema:
         """
         Create a batch of impressions in the database.
 
         :param obj: A list of impressions to create.
+        :return: ImpressionsBulkCreateResponseSchema
         """
+        count_stmt: Select = select(func.count()).select_from(self.sql_model)
+        existing_records: list[int] = await self.session.scalar(count_stmt)
         try:
-            stmt = insert(self.sql_model).on_conflict_do_nothing(index_elements=[self.sql_model.source_system_id])
+            stmt = insert(self.sql_model).on_conflict_do_nothing(constraint="uq_impression_source_system_id_type")
 
             await self.session.execute(stmt, [item.model_dump() for item in obj])
             await self.session.commit()
@@ -99,6 +103,9 @@ class ImpressionManager(CRUDManager):
         except Exception as ex:
             await self.session.rollback()
             raise ex
+
+        updated_records: list[int] = await self.session.scalar(count_stmt)
+        return ImpressionsBulkCreateResponseSchema(initial_records=existing_records, final_records=updated_records)
 
     def _generate_geography_query(
         self, query_filter: BaseFilter, stmt: Select, *, modify_filter: bool = True

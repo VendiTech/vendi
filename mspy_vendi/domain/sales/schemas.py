@@ -1,12 +1,13 @@
 from datetime import date, datetime, time
 from typing import Any
 
-from pydantic import Field, NonNegativeInt, PositiveInt, computed_field, model_validator
+from pydantic import Field, NonNegativeInt, PositiveInt, model_validator
 
 from mspy_vendi.core.constants import DEFAULT_SOURCE_SYSTEM
 from mspy_vendi.core.schemas import BaseSchema
 from mspy_vendi.core.validators import DecimalFloat
 from mspy_vendi.domain.geographies.schemas import GeographyDetailSchema
+from mspy_vendi.domain.machine_impression.schemas import MachineImpressionBulkCreateResponseSchema
 from mspy_vendi.domain.machines.schemas import MachineDetailSchema
 from mspy_vendi.domain.products.schemas import ProductDetailSchema
 
@@ -167,10 +168,4 @@ class ExcelSaleCreateSchema(BaseSchema):
         return data
 
 
-class SalesBulkCreateResponseSchema(BaseSchema):
-    initial_records: NonNegativeInt
-    final_records: NonNegativeInt
-
-    @computed_field
-    def created_records(self) -> int:
-        return self.final_records - self.initial_records
+class SalesBulkCreateResponseSchema(MachineImpressionBulkCreateResponseSchema): ...

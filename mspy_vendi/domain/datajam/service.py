@@ -165,6 +165,7 @@ class DataJamService:
                         ImpressionCreateSchema(
                             device_number=impression.device,
                             date=(full_date := self.get_full_date_in_range(start_date, end_date, impression.date)),
+                            type=impression.type,
                             total_impressions=impression.total_impressions,
                             seconds_exposure=impression.seconds_exposure,
                             advert_playouts=impression.advert_playouts,

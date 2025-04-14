@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, UploadFile, status
 from fastapi.responses import ORJSONResponse, Response, StreamingResponse
 from fastapi_filter import FilterDepends
 
@@ -24,6 +24,7 @@ from mspy_vendi.domain.impressions.schemas import (
     GeographyImpressionsCountSchema,
     ImpressionCreateSchema,
     ImpressionDetailSchema,
+    ImpressionsBulkCreateResponseSchema,
     ImpressionsSalesPlayoutsConvertions,
     TimeFrameImpressionsByVenueSchema,
     TimeFrameImpressionsSchema,
@@ -203,6 +204,15 @@ async def delete__existing_schedule(
         schedule_id=schedule_id,
         entity_type=ExportEntityTypeEnum.IMPRESSION,
     )
+
+
+@router.post("/import", response_model=ImpressionsBulkCreateResponseSchema)
+async def import_impressions(
+    provided_file: UploadFile,
+    service: Annotated[ImpressionService, Depends()],
+    _: Annotated[User, Depends(get_current_user(is_superuser=True))],
+) -> ImpressionsBulkCreateResponseSchema:
+    return await service.upload(provided_file)
 
 
 class ImpressionAPI(CRUDApi):
