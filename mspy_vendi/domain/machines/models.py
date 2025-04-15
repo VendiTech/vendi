@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 class Machine(CommonMixin, Base):
     name: Mapped[str] = mapped_column(String(255), comment="Name of the machine")
-    display_name: Mapped[str] = mapped_column(String(255), comment="Name of the machine to display", nullable=True)
+    display_name: Mapped[str | None] = mapped_column(String(255), comment="Name of the machine to display")
     geography_id: Mapped[int] = mapped_column(
         BigInteger,
         ForeignKey(
@@ -33,6 +33,13 @@ class Machine(CommonMixin, Base):
     machine_users: Mapped[list["MachineUser"]] = relationship(
         back_populates="machine", passive_deletes=ORMRelationshipCascadeTechniqueEnum.db_cascade
     )
+
+    @property
+    def machine_name(self) -> str:
+        """
+        Return the display name of the machine if available, otherwise return the name.
+        """
+        return self.display_name or self.name
 
 
 class MachineUser(CommonMixin, Base):
