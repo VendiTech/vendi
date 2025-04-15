@@ -17,6 +17,7 @@ from mspy_vendi.domain.user.models import User
 from mspy_vendi.domain.user.schemas import (
     UserAdminCreateSchema,
     UserAdminEditSchema,
+    UserBaseDetail,
     UserCompanyLogoImageSchema,
     UserDetail,
     UserPermissionsModifySchema,
@@ -187,7 +188,8 @@ async def get__company_logo_images(
 
 class UserAPI(CRUDApi):
     service = UserService
-    schema = UserDetail
+    schema = UserBaseDetail
+    detailed_schema = UserDetail
     get_db_session = Depends(get_db_session)
     current_user_mapping = {
         CRUDEnum.GET: Depends(get_current_user(is_superuser=True)),

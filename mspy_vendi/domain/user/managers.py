@@ -1,10 +1,10 @@
 from typing import Any
 
 from fastapi_pagination.ext.sqlalchemy import paginate
-from sqlalchemy import Select, label, select, update
+from sqlalchemy import label, select, update
 from sqlalchemy.orm import joinedload
 
-from mspy_vendi.core.exceptions.base_exception import BadRequestError
+from mspy_vendi.core.exceptions.base_exception import BadRequestError, NotFoundError
 from mspy_vendi.core.manager import CRUDManager, UpdateSchema
 from mspy_vendi.core.pagination import Page
 from mspy_vendi.domain.machines.models import MachineUser
@@ -101,10 +101,23 @@ class UserManager(CRUDManager):
 
         return await paginate(self.session, stmt)
 
-    def get_query(self) -> Select:
-        return (
-            super()
-            .get_query()
+    async def get(self, obj_id: int, *, raise_error: bool = True, **_: Any) -> User | None:
+        """
+        Get a user by ID.
+
+        :param obj_id: The ID of the user to retrieve.
+        :param raise_error: If True, raise an error if the user is not found, otherwise return None.
+
+        :return: The user object if found, otherwise None.
+        """
+        stmt = (
+            self.get_query()
+            .where(self.sql_model.id == obj_id)
             .options(joinedload(self.sql_model.machine_users).joinedload(MachineUser.machine))
             .options(joinedload(self.sql_model.product_users).joinedload(ProductUser.product))
         )
+
+        if not (result := await self.session.scalar(stmt)) and raise_error:
+            raise NotFoundError(detail=f"{self.sql_model.__name__} object with {obj_id=} not found")
+
+        return result
