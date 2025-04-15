@@ -97,3 +97,8 @@ class MachineManager(CRUDManager):
         stmt = query_filter.filter(stmt)
 
         return await paginate(self.session, stmt, unique=False)
+
+    async def get_by_name(self, name: str) -> Machine | None:
+        stmt = select(self.sql_model).where(self.sql_model.name == name)
+
+        return await self.session.scalar(stmt)

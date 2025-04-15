@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
 class Machine(CommonMixin, Base):
     name: Mapped[str] = mapped_column(String(255), comment="Name of the machine")
+    display_name: Mapped[str] = mapped_column(String(255), comment="Name of the machine to display", nullable=True)
     geography_id: Mapped[int] = mapped_column(
         BigInteger,
         ForeignKey(

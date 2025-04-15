@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import Depends
+from fastapi import Depends, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mspy_vendi.core.email import MailGunService
@@ -10,6 +10,8 @@ from mspy_vendi.core.mixins.export import ExportMixin
 from mspy_vendi.core.pagination import Page
 from mspy_vendi.core.service import CRUDService
 from mspy_vendi.deps import get_db_session, get_email_service
+from mspy_vendi.domain.data_extractor import BaseDataExtractorClient
+from mspy_vendi.domain.impressions.factory import DataTransformFactory
 from mspy_vendi.domain.impressions.filters import ExportImpressionFilter, ImpressionFilter
 from mspy_vendi.domain.impressions.manager import ImpressionManager
 from mspy_vendi.domain.impressions.schemas import (
@@ -21,6 +23,7 @@ from mspy_vendi.domain.impressions.schemas import (
     ExposurePerRangeSchema,
     ExposureStatisticSchema,
     GeographyImpressionsCountSchema,
+    ImpressionsBulkCreateResponseSchema,
     ImpressionsSalesPlayoutsConvertions,
     TimeFrameImpressionsByVenueSchema,
     TimeFrameImpressionsSchema,
@@ -121,3 +124,12 @@ class ImpressionService(CRUDService, ExportMixin):
         user: User,
     ) -> Page[ExportImpressionDetailSchema]:
         return await self.export(query_filter, entity=ExportEntityTypeEnum.IMPRESSION, raw_result=False, user=user)
+
+    async def upload(self, file: UploadFile) -> ImpressionsBulkCreateResponseSchema:
+        *_, file_type = file.filename.partition(".")
+        binary_data: bytes = await file.read()
+
+        data_extractor: BaseDataExtractorClient = DataTransformFactory.transform(
+            session=self.db_session, file_type=file_type
+        )
+        return await data_extractor.extract(binary_data)
