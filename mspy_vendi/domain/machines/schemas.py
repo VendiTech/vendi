@@ -12,6 +12,10 @@ class MachineBaseSchema(BaseSchema):
 class MachineCreateSchema(MachineBaseSchema): ...
 
 
+class MachineUpdateSchema(BaseSchema):
+    display_name: str | None = None
+
+
 class MachineDetailSchema(MachineBaseSchema):
     id: PositiveInt
 
