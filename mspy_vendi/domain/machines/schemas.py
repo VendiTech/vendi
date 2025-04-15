@@ -5,7 +5,7 @@ from mspy_vendi.domain.geographies.schemas import GeographyDetailSchema
 
 
 class MachineBaseSchema(BaseSchema):
-    name: str = Field(..., alias="machine_name")
+    name: str = Field(..., validation_alias="machine_name")
     geography_id: PositiveInt
 
 
