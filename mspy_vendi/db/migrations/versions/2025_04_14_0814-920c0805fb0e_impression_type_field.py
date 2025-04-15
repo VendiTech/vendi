@@ -53,6 +53,12 @@ def upgrade() -> None:
     if not constraint_exists("uq_impression_source_system_id_type"):
         op.create_unique_constraint("uq_impression_source_system_id_type", "impression", ["source_system_id", "type"])
 
+    if not table_has_column("machine", "display_name"):
+        op.add_column(
+            "machine",
+            sa.Column("display_name", sa.String(length=255), nullable=True, comment="Name of the machine to display"),
+        )
+
 
 def downgrade() -> None:
     if constraint_exists("uq_impression_source_system_id_type"):
@@ -66,3 +72,6 @@ def downgrade() -> None:
 
     if enum_exists("impression_entity_type_enum"):
         op.execute("DROP TYPE impression_entity_type_enum")
+
+    if table_has_column("machine", "display_name"):
+        op.drop_column("machine", "display_name")
