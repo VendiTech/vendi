@@ -75,7 +75,7 @@ class MachineManager(CRUDManager):
                 "id",
                 self.sql_model.id,
                 "name",
-                self.sql_model.name,
+                self.sql_model.machine_name,
                 "geography_id",
                 self.sql_model.geography_id,
             )

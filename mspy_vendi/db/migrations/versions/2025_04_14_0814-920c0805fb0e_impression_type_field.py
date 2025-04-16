@@ -62,7 +62,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     if constraint_exists("uq_impression_source_system_id_type"):
-        op.drop_constraint("uq_impression_source_system_id", "impression", type_="unique")
+        op.drop_constraint("uq_impression_source_system_id_type", "impression", type_="unique")
 
     if not constraint_exists("uq_impression_source_system_id"):
         op.create_unique_constraint("uq_impression_source_system_id", "impression", ["source_system_id"])
