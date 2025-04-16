@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 
-from sqlalchemy import BigInteger, ForeignKey, String, UniqueConstraint
+from sqlalchemy import BigInteger, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from mspy_vendi.core.enums.db import CascadesEnum, ORMRelationshipCascadeTechniqueEnum
@@ -14,7 +15,7 @@ if TYPE_CHECKING:
 
 class Machine(CommonMixin, Base):
     name: Mapped[str] = mapped_column(String(255), comment="Name of the machine")
-    display_name: Mapped[str] = mapped_column(String(255), comment="Name of the machine to display", nullable=True)
+    display_name: Mapped[str | None] = mapped_column(String(255), comment="Name of the machine to display")
     geography_id: Mapped[int] = mapped_column(
         BigInteger,
         ForeignKey(
@@ -33,6 +34,20 @@ class Machine(CommonMixin, Base):
     machine_users: Mapped[list["MachineUser"]] = relationship(
         back_populates="machine", passive_deletes=ORMRelationshipCascadeTechniqueEnum.db_cascade
     )
+
+    @hybrid_property
+    def machine_name(self) -> str:
+        """
+        Return the display name of the machine if available, otherwise return the name.
+        """
+        return self.display_name or self.name
+
+    @machine_name.expression
+    def machine_name(cls) -> str:
+        """
+        SQL expression for the hybrid property.
+        """
+        return func.coalesce(cls.display_name, cls.name)
 
 
 class MachineUser(CommonMixin, Base):

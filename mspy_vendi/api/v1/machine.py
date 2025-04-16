@@ -15,6 +15,7 @@ from mspy_vendi.domain.machines.schemas import (
     MachineDetailSchema,
     MachinesCountGeographySchema,
     MachinesPerGeographySchema,
+    MachineUpdateSchema,
 )
 from mspy_vendi.domain.machines.service import MachineService
 from mspy_vendi.domain.user.models import User
@@ -44,6 +45,7 @@ class MachineAPI(CRUDApi):
     service = MachineService
     schema = MachineDetailSchema
     create_schema = MachineCreateSchema
+    update_schema = MachineUpdateSchema
     current_user_mapping = admin_permissions
     endpoints = basic_endpoints
     get_db_session = Depends(get_db_session)

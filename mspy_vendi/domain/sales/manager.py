@@ -807,7 +807,7 @@ class SaleManager(CRUDManager):
         :return: Paginated list of sales quantity across venue objects.
         """
         stmt_sum_quantity = label("quantity", func.sum(self.sql_model.quantity))
-        stmt_venue_name = label("venue", Machine.name)
+        stmt_venue_name = label("venue", Machine.machine_name)
         stmt_venue_id = label("venue_id", Machine.id)
 
         stmt = (
@@ -852,7 +852,7 @@ class SaleManager(CRUDManager):
         :return: Paginated list with products sales quantity across venue objects and their last sale date.
         """
         stmt_sum_quantity = label("quantity", func.sum(self.sql_model.quantity))
-        stmt_venue_name = label("venue", Machine.name)
+        stmt_venue_name = label("venue", Machine.machine_name)
         stmt_venue_id = label("venue_id", Machine.id)
         stmt_product_name = label("product_name", Product.name)
         stmt_sale_date = label("sale_date", func.max(self.sql_model.sale_date))
@@ -972,7 +972,7 @@ class SaleManager(CRUDManager):
                 label("Product sold", Product.name),
                 label("Product ID", self.sql_model.product_id),
                 label("Machine ID", self.sql_model.machine_id),
-                label("Machine Name", Machine.name),
+                label("Machine Name", Machine.machine_name),
                 label("Date", self.sql_model.sale_date),
                 label("Time", self.sql_model.sale_time),
             )
