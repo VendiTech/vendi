@@ -9,26 +9,26 @@ from mspy_vendi.domain.activity_log.enums import EventTypeEnum
 
 
 class ActivityLogBasicEventSchema(BaseSchema):
-    firstname: str
-    lastname: str
-    email: str
+    firstname: str | None = None
+    lastname: str | None = None
+    email: str | None = None
 
 
 class ActivityLogExportSchema(ActivityLogBasicEventSchema):
-    entity_type: ExportEntityTypeEnum
-    schedule: ScheduleEnum
-    export_type: ExportTypeEnum
+    entity_type: ExportEntityTypeEnum | None = None
+    schedule: ScheduleEnum | None = None
+    export_type: ExportTypeEnum | None = None
 
 
 class ActivityLogStateDetailSchema(ActivityLogBasicEventSchema):
-    permissions: list[str]
-    role: str
-    machine_names: list[str]
-    product_names: list[str]
+    permissions: list[str] | None = None
+    role: str | None = None
+    machine_names: list[str] | None = None
+    product_names: list[str] | None = None
 
 
 class ActivityLogStateSchema(BaseSchema):
-    previous_state: ActivityLogStateDetailSchema
+    previous_state: ActivityLogStateDetailSchema | None = None
     current_state: ActivityLogStateDetailSchema
 
 
