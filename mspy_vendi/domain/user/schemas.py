@@ -34,6 +34,11 @@ class UserBaseDetail(UserBase):
     last_logged_in: datetime | None
 
 
+class UserAllSchema(UserBaseDetail):
+    number_of_machines: int
+    number_of_products: int
+
+
 class UserDetail(UserBaseDetail):
     machines: list[MachineDetailSchema]
     products: list[ProductDetailSchema]

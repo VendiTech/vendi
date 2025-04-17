@@ -16,6 +16,14 @@ class UserFilter(BaseFilter):
     phone_number: str | None = None
     role: RoleEnum | None = None
 
+    #### Internal filters (JOIN on manager side ) ########
+    machine_id__in: list[PositiveInt] | None = None
+    geography_id__in: list[PositiveInt] | None = None
+
+    product_id__in: list[PositiveInt] | None = None
+    product_category_id__in: list[PositiveInt] | None = None
+    #######################################################
+
     # Multi-field search
     search: str | None = None
 
@@ -25,3 +33,4 @@ class UserFilter(BaseFilter):
         model = User
         fields_for_insensitive_search = ["firstname", "lastname", "email", "company_name", "job_title"]
         multi_search_fields = ["firstname", "lastname", "email"]
+        extra_order_by_fields = ["number_of_machines", "number_of_products"]
