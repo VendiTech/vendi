@@ -178,7 +178,9 @@ class BaseFilter(Filter, extra="allow"):  # type: ignore
         for field_name_with_direction in value:
             field_name = field_name_with_direction.replace("-", "").replace("+", "")
 
-            if field_name not in cls.Constants.extra_order_by_fields and not hasattr(cls.Constants.model, field_name):
+            if field_name not in (cls.Constants.extra_order_by_fields or []) and not hasattr(
+                cls.Constants.model, field_name
+            ):
                 raise ValueError(f"{field_name} is not a valid ordering field.")
 
             field_name_usages[field_name].append(field_name_with_direction)
