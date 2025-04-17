@@ -1,7 +1,7 @@
 from typing import Any
 
 from fastapi_pagination.ext.sqlalchemy import paginate
-from sqlalchemy import CTE, ColumnClause, Select, asc, desc, func, label, select, update
+from sqlalchemy import CTE, ColumnClause, Select, asc, desc, func, label, or_, select, update
 from sqlalchemy.orm import joinedload
 
 from mspy_vendi.core.exceptions.base_exception import BadRequestError, NotFoundError
@@ -152,7 +152,7 @@ class UserManager(CRUDManager):
             setattr(query_filter, "geography_id__in", None)
 
         if filters:
-            cte = cte.where(*filters)
+            cte = cte.where(or_(*filters))
 
         return cte.cte("machine_counts_cte")
 
@@ -184,7 +184,7 @@ class UserManager(CRUDManager):
             setattr(query_filter, "product_category_id__in", None)
 
         if filters:
-            cte = cte.where(*filters)
+            cte = cte.where(or_(*filters))
 
         return cte.cte("product_counts_cte")
 
