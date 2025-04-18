@@ -2,7 +2,7 @@ from datetime import date, timedelta
 from typing import Any
 
 from fastapi_pagination.ext.sqlalchemy import paginate
-from sqlalchemy import CTE, Date, Row, Select, cast, func, label, select, text
+from sqlalchemy import CTE, ColumnClause, Date, Label, Row, Select, asc, cast, desc, func, label, select, text
 from sqlalchemy.dialects.postgresql import insert
 
 from mspy_vendi.core.enums.date_range import DateRangeEnum
@@ -194,6 +194,37 @@ class ImpressionManager(CRUDManager):
             ).label("time_frame")
         ).cte()
 
+    @staticmethod
+    def sort_additional_fields(
+        column_mapping: dict[str, ColumnClause | Label],
+        query_filter: ImpressionFilter,
+        stmt: Select,
+    ) -> Select:
+        """
+        Sort additional fields based on the order_by parameter in the query filter.
+
+        :param column_mapping: The mapping of field names to their corresponding SQLAlchemy columns.
+        :param query_filter: The filter to apply to the query.
+        :param stmt: The SQLAlchemy statement to modify.
+
+        :return: The modified SQLAlchemy statement.
+        """
+        for field_name_with_direction in query_filter.order_by:
+            field_name: str = field_name_with_direction.replace("-", "").replace("+", "")
+
+            if field_name not in query_filter.Constants.extra_order_by_fields:
+                continue
+
+            if field_name_with_direction.startswith("-"):
+                stmt = stmt.order_by(desc(column_mapping[field_name]).nullslast())
+            else:
+                stmt = stmt.order_by(asc(column_mapping[field_name]).nullsfirst())
+
+            # Remove the field from the `order_by` list.
+            query_filter.order_by.remove(field_name_with_direction)
+
+        return stmt
+
     async def get_all(
         self,
         query_filter: BaseFilter | None = None,
@@ -322,6 +353,12 @@ class ImpressionManager(CRUDManager):
 
         :return: List of sales objects.
         """
+        venue_order_field: str = "venue"
+        geography_order_field: str = "geography"
+        impressions_order_field: str = "impressions"
+        device_number_order_field: str = "device_number"
+        date_order_field: str = "date"
+
         stmt = (
             select(
                 label("Impression ID", self.sql_model.id),
@@ -337,7 +374,6 @@ class ImpressionManager(CRUDManager):
             .join(MachineImpression, MachineImpression.impression_device_number == self.sql_model.device_number)
             .join(Machine, Machine.id == MachineImpression.machine_id)
             .join(Geography, Geography.id == Machine.geography_id)
-            .order_by(self.sql_model.date)
         )
 
         if not user.is_superuser:
@@ -348,6 +384,16 @@ class ImpressionManager(CRUDManager):
             setattr(query_filter, "geography_id__in", None)
 
         stmt = query_filter.filter(stmt)
+
+        column_mapping = {
+            venue_order_field: label("Machine Name", Machine.machine_name),
+            geography_order_field: label("Geography", Geography.name),
+            impressions_order_field: label("Impressions", self.sql_model.total_impressions),
+            device_number_order_field: label("Device Number", self.sql_model.device_number),
+            date_order_field: label("Date", self.sql_model.date),
+        }
+
+        stmt = self.sort_additional_fields(column_mapping, query_filter, stmt)
 
         if not raw_result:
             return await paginate(self.session, stmt)
@@ -581,6 +627,10 @@ class ImpressionManager(CRUDManager):
 
         :return: Paginated list of items with total impressions per venue grouped by time frame.
         """
+        impressions_order_field: str = "impressions"
+        time_frame_order_field: str = "time_frame"
+        venue_order_field: str = "venue"
+
         stmt_time_frame = label("time_frame", func.date_trunc(time_frame.value, self.sql_model.date))
         stmt_sum_impressions = label("impressions", func.sum(self.sql_model.total_impressions))
         stmt_venue_name = label("venue", Machine.machine_name)
@@ -613,8 +663,15 @@ class ImpressionManager(CRUDManager):
             .select_from(date_range_cte)
             .outerjoin(stmt, stmt.c.time_frame == date_range_cte.c.time_frame)
             .where(stmt.c.venue.isnot(None))
-            .order_by(date_range_cte.c.time_frame)
         )
+
+        column_mapping = {
+            impressions_order_field: stmt.c.impressions,
+            time_frame_order_field: date_range_cte.c.time_frame,
+            venue_order_field: stmt.c.venue,
+        }
+
+        final_stmt = self.sort_additional_fields(column_mapping, query_filter, final_stmt)
 
         return await paginate(self.session, final_stmt)
 

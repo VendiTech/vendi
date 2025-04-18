@@ -38,14 +38,23 @@ class SaleFilter(StatisticDateRangeFilter, GeographyFilter):
     machine_id__in: list[PositiveInt] | None = None
     product: ProductCategoryFilter | None = FilterDepends(with_prefix("product", ProductCategoryFilter))
 
+    order_by: list[str] | None = ["-id"]
+
     class Constants(StatisticDateRangeFilter.Constants):
         model = Sale
+        extra_order_by_fields = ["product", "product_category", "amount", "date", "venue"]
 
 
 class ExportSaleFilter(StatisticDateRangeFilter, GeographyFilter):
     machine_id__in: list[PositiveInt] | None = None
     product_id__in: list[PositiveInt] | None = None
     product: ProductCategoryFilter | None = FilterDepends(with_prefix("product", ProductCategoryFilter))
+
+    order_by: list[str] | None = ["-id"]
+
+    class Constants(StatisticDateRangeFilter.Constants):
+        model = Sale
+        extra_order_by_fields = ["product", "date", "venue", "geography", "product_id"]
 
 
 class SaleGetAllFilter(SaleFilter):
