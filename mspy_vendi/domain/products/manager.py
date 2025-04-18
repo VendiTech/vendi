@@ -11,3 +11,8 @@ class ProductManager(CRUDManager):
         stmt = select(self.sql_model).where(self.sql_model.name == name)
 
         return await self.session.scalar(stmt)
+
+    async def get_all_product_ids(self) -> list[int]:
+        stmt = select(self.sql_model.id)
+
+        return (await self.session.scalars(stmt)).all()  # type: ignore

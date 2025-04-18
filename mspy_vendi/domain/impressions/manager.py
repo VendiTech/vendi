@@ -330,7 +330,7 @@ class ImpressionManager(CRUDManager):
                 label("Geography", Geography.name),
                 label("Total Impressions", self.sql_model.total_impressions),
                 label("Machine ID", Machine.id),
-                label("Machine Name", Machine.name),
+                label("Machine Name", Machine.machine_name),
                 label("Date", self.sql_model.date),
             )
             .select_from(self.sql_model)
@@ -583,7 +583,7 @@ class ImpressionManager(CRUDManager):
         """
         stmt_time_frame = label("time_frame", func.date_trunc(time_frame.value, self.sql_model.date))
         stmt_sum_impressions = label("impressions", func.sum(self.sql_model.total_impressions))
-        stmt_venue_name = label("venue", Machine.name)
+        stmt_venue_name = label("venue", Machine.machine_name)
         stmt_venue_id = label("venue_id", Machine.id)
 
         stmt = (

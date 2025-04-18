@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import date, datetime, timedelta
 from typing import Any, cast
 
@@ -5,6 +6,7 @@ from fastapi import Query as QueryParameter
 from fastapi_filter.contrib.sqlalchemy import Filter
 from fastapi_filter.contrib.sqlalchemy.filter import _orm_operator_transformer
 from pydantic import Field, field_validator, model_validator
+from pydantic_core.core_schema import ValidationInfo
 from sqlalchemy import BinaryExpression, Column, Select, func, or_
 from sqlalchemy.orm import DeclarativeBase, Query
 
@@ -36,6 +38,7 @@ class BaseFilter(Filter, extra="allow"):  # type: ignore
         fields_for_insensitive_search: list[str] | None = None
         allowed_order_by_fields: list[str] | None = None
         disallowed_order_by_fields: list[str] | None = None
+        extra_order_by_fields: list[str] | None = None
         multi_search_fields: list[str] | None = None
         date_range_fields: list[str] | None = None
         default_date_range_db_field: str = "created_at"
@@ -160,6 +163,44 @@ class BaseFilter(Filter, extra="allow"):  # type: ignore
             values["order_by"] = order_by_field.strip()
 
         return values
+
+    @field_validator("*", mode="before", check_fields=False)
+    def validate_order_by(cls, value, field: ValidationInfo):
+        if field.field_name != cls.Constants.ordering_field_name:
+            return value
+
+        if not value:
+            return None
+
+        field_name_usages = defaultdict(list)
+        duplicated_field_names = set()
+
+        for field_name_with_direction in value:
+            field_name = field_name_with_direction.replace("-", "").replace("+", "")
+
+            if field_name not in (cls.Constants.extra_order_by_fields or []) and not hasattr(
+                cls.Constants.model, field_name
+            ):
+                raise ValueError(f"{field_name} is not a valid ordering field.")
+
+            field_name_usages[field_name].append(field_name_with_direction)
+            if len(field_name_usages[field_name]) > 1:
+                duplicated_field_names.add(field_name)
+
+        if duplicated_field_names:
+            ambiguous_field_names = ", ".join(
+                [
+                    field_name_with_direction
+                    for field_name in sorted(duplicated_field_names)
+                    for field_name_with_direction in field_name_usages[field_name]
+                ]
+            )
+            raise ValueError(
+                f"Field names can appear at most once for {cls.Constants.ordering_field_name}. "
+                f"The following was ambiguous: {ambiguous_field_names}."
+            )
+
+        return value
 
     @field_validator("order_by", check_fields=False)
     def restrict_sortable_fields(cls, field_names: list[str] | None):

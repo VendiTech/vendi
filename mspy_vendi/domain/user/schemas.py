@@ -31,12 +31,17 @@ class UserBaseDetail(UserBase):
     role: RoleEnum
     permissions: list[PermissionEnum]
     is_verified: bool
+    last_logged_in: datetime | None
+
+
+class UserAllSchema(UserBaseDetail):
+    number_of_machines: int
+    number_of_products: int
 
 
 class UserDetail(UserBaseDetail):
     machines: list[MachineDetailSchema]
     products: list[ProductDetailSchema]
-    last_logged_in: datetime | None
 
 
 class UserUpdatePerSignIn(BaseSchema):

@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, Request, Response, UploadFile, status
 from fastapi.responses import ORJSONResponse
 from pydantic import Json, PositiveInt
 from typing_extensions import Optional
@@ -10,11 +10,14 @@ from mspy_vendi.core.enums import ApiTagEnum, CRUDEnum
 from mspy_vendi.core.pagination import Page
 from mspy_vendi.deps import get_db_session
 from mspy_vendi.domain.auth import get_auth_user_service, get_current_user
+from mspy_vendi.domain.machine_user.service import MachineUserService
+from mspy_vendi.domain.product_user.service import ProductUserService
 from mspy_vendi.domain.user.enums import PermissionEnum
 from mspy_vendi.domain.user.models import User
 from mspy_vendi.domain.user.schemas import (
     UserAdminCreateSchema,
     UserAdminEditSchema,
+    UserAllSchema,
     UserCompanyLogoImageSchema,
     UserDetail,
     UserPermissionsModifySchema,
@@ -143,6 +146,28 @@ async def patch__edit_user(
     return await auth_service.edit_flow(user_id, user_obj=user_obj, company_logo_image=company_logo_image)
 
 
+@router.post("/admin/attach-all-machines/{user_id}", tags=[ApiTagEnum.ADMIN_USER])
+async def attach_all_machines(
+    user_id: PositiveInt,
+    _: Annotated[User, Depends(get_current_user(is_superuser=True))],
+    service: Annotated[MachineUserService, Depends()],
+):
+    await service.attach_all_machines(user_id=user_id)
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/admin/attach-all-products/{user_id}", tags=[ApiTagEnum.ADMIN_USER])
+async def attach_all_products(
+    user_id: PositiveInt,
+    _: Annotated[User, Depends(get_current_user(is_superuser=True))],
+    service: Annotated[ProductUserService, Depends()],
+):
+    await service.attach_all_products(user_id=user_id)
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.get("/admin/company-logo-image/{user_id}", tags=[ApiTagEnum.ADMIN_USER])
 async def get__company_logo_image(
     user_id: PositiveInt,
@@ -163,7 +188,8 @@ async def get__company_logo_images(
 
 class UserAPI(CRUDApi):
     service = UserService
-    schema = UserDetail
+    schema = UserAllSchema
+    detailed_schema = UserDetail
     get_db_session = Depends(get_db_session)
     current_user_mapping = {
         CRUDEnum.GET: Depends(get_current_user(is_superuser=True)),
