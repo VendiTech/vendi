@@ -2,7 +2,7 @@ from datetime import time, timedelta
 from typing import Any
 
 from fastapi_pagination.ext.sqlalchemy import paginate
-from sqlalchemy import CTE, Date, Row, Select, cast, desc, func, label, select, text
+from sqlalchemy import CTE, ColumnClause, Date, Label, Row, Select, asc, cast, desc, func, label, select, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import contains_eager, joinedload
@@ -171,6 +171,37 @@ class SaleManager(CRUDManager):
         :return: A dictionary where keys are period names and values are tuples of (start_time, end_time).
         """
         return {period.name: (period.start, period.end) for period in time_period}
+
+    @staticmethod
+    def sort_additional_fields(
+        column_mapping: dict[str, ColumnClause | Label],
+        query_filter: SaleFilter,
+        stmt: Select,
+    ) -> Select:
+        """
+        Sort additional fields based on the order_by parameter in the query filter.
+
+        :param column_mapping: The mapping of field names to their corresponding SQLAlchemy columns.
+        :param query_filter: The filter to apply to the query.
+        :param stmt: The SQLAlchemy statement to modify.
+
+        :return: The modified SQLAlchemy statement.
+        """
+        for field_name_with_direction in query_filter.order_by:
+            field_name: str = field_name_with_direction.replace("-", "").replace("+", "")
+
+            if field_name not in query_filter.Constants.extra_order_by_fields:
+                continue
+
+            if field_name_with_direction.startswith("-"):
+                stmt = stmt.order_by(desc(column_mapping[field_name]).nullslast())
+            else:
+                stmt = stmt.order_by(asc(column_mapping[field_name]).nullsfirst())
+
+            # Remove the field from the `order_by` list.
+            query_filter.order_by.remove(field_name_with_direction)
+
+        return stmt
 
     async def get(self, obj_id: int, *, raise_error: bool = True, user: User | None = None, **_: Any) -> Sale | None:
         """
@@ -851,6 +882,11 @@ class SaleManager(CRUDManager):
         :param user: Current user.
         :return: Paginated list with products sales quantity across venue objects and their last sale date.
         """
+        venue_order_field: str = "venue"
+        product_order_field: str = "product"
+        total_amount_order_field: str = "amount"
+        date_order_field: str = "date"
+
         stmt_sum_quantity = label("quantity", func.sum(self.sql_model.quantity))
         stmt_venue_name = label("venue", Machine.machine_name)
         stmt_venue_id = label("venue_id", Machine.id)
@@ -863,7 +899,6 @@ class SaleManager(CRUDManager):
             .join(Machine, Machine.id == self.sql_model.machine_id)
             .join(Product, Product.id == self.sql_model.product_id)
             .group_by(Product.id, stmt_venue_id)
-            .order_by(stmt_venue_id)
         )
 
         if query_filter.geography_id__in:
@@ -886,6 +921,15 @@ class SaleManager(CRUDManager):
 
         stmt = query_filter.filter(stmt)
 
+        column_mapping = {
+            venue_order_field: stmt_venue_name,
+            product_order_field: stmt_product_name,
+            total_amount_order_field: stmt_sum_quantity,
+            date_order_field: stmt_sale_date,
+        }
+
+        stmt = self.sort_additional_fields(column_mapping, query_filter, stmt)
+
         return await paginate(self.session, stmt)
 
     async def get_sales_quantity_by_category(
@@ -899,6 +943,11 @@ class SaleManager(CRUDManager):
 
         :return: Paginated list of sales quantity across category objects.
         """
+        product_order_field: str = "product"
+        product_category_order_field: str = "product_category"
+        total_amount_order_field: str = "amount"
+        date_order_field: str = "date"
+
         stmt_sum_quantity = label("quantity", func.sum(self.sql_model.quantity))
         stmt_category_id = label("category_id", ProductCategory.id)
         stmt_category_name = label("category_name", ProductCategory.name)
@@ -920,7 +969,6 @@ class SaleManager(CRUDManager):
             .join(Product, Product.id == self.sql_model.product_id)
             .join(ProductCategory, ProductCategory.id == Product.product_category_id)
             .group_by(stmt_category_id, stmt_category_name, stmt_product_id, stmt_product_name)
-            .order_by(desc(stmt_sale_date))
         )
 
         if query_filter.geography_id__in:
@@ -946,6 +994,15 @@ class SaleManager(CRUDManager):
 
         stmt = query_filter.filter(stmt)
 
+        column_mapping = {
+            product_order_field: stmt_product_name,
+            product_category_order_field: stmt_category_name,
+            total_amount_order_field: stmt_sum_quantity,
+            date_order_field: stmt_sale_date,
+        }
+
+        stmt = self.sort_additional_fields(column_mapping, query_filter, stmt)
+
         return await paginate(self.session, stmt)
 
     async def export(
@@ -964,6 +1021,12 @@ class SaleManager(CRUDManager):
 
         :return: List of sales objects.
         """
+        venue_order_field: str = "venue"
+        geography_order_field: str = "geography"
+        product_order_field: str = "product"
+        product_id_order_field: str = "product_id"
+        date_order_field: str = "date"
+
         stmt = (
             select(
                 label("Sale ID", self.sql_model.id),
@@ -979,7 +1042,6 @@ class SaleManager(CRUDManager):
             .join(Product, Product.id == self.sql_model.product_id)
             .join(Machine, Machine.id == self.sql_model.machine_id)
             .join(Geography, Geography.id == Machine.geography_id)
-            .order_by(self.sql_model.sale_date)
         )
 
         if not user.is_superuser:
@@ -999,6 +1061,16 @@ class SaleManager(CRUDManager):
             setattr(query_filter, "product_id__in", None)
 
         stmt = query_filter.filter(stmt)
+
+        column_mapping = {
+            venue_order_field: label("Machine Name", Machine.machine_name),
+            geography_order_field: label("Geography", Geography.name),
+            product_order_field: label("Product sold", Product.name),
+            product_id_order_field: label("Product ID", self.sql_model.product_id),
+            date_order_field: label("Date", self.sql_model.sale_date),
+        }
+
+        stmt = self.sort_additional_fields(column_mapping, query_filter, stmt)
 
         if not raw_result:
             return await paginate(self.session, stmt)

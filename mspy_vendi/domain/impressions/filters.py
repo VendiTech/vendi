@@ -38,6 +38,7 @@ class ImpressionFilter(DateRangeFilter, GeographyFilter):
         model = Impression
         date_range_fields = ["date_from", "date_to"]
         default_date_range_db_field = "date"
+        extra_order_by_fields = ["venue", "impressions", "time_frame"]
 
 
 class MachineImpressionFilter(BaseFilter):
@@ -49,3 +50,9 @@ class MachineImpressionFilter(BaseFilter):
 
 class ExportImpressionFilter(StatisticDateRangeFilter, GeographyFilter):
     machine: MachineImpressionFilter | None = FilterDepends(with_prefix("machine", MachineImpressionFilter))
+
+    order_by: list[str] | None = ["-id"]
+
+    class Constants(StatisticDateRangeFilter.Constants):
+        model = Impression
+        extra_order_by_fields = ["impressions", "device_number", "date", "venue", "geography"]
