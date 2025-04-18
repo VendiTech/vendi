@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "vendi"
-version = "0.1.0"
+version = "0.2.0"
 description = "Vendi REST API"
 authors = ["Vendi developers <unknown@venditech.com"]
 

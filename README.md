@@ -1,4 +1,4 @@
-# Vendi 🚀
+# Vendi 0.2.0🚀
 
 **MSPY-Vendi** is a Python-based service that leverages RESTAPI communication (via FastAPI) to manage the vending machine settings and conduct real-time transactions among customers.
 
