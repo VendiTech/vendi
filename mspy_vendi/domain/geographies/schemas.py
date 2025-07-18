@@ -14,6 +14,7 @@ class GeographyCreateSchema(GeographyBaseSchema): ...
 
 class GeographyDetailSchema(GeographyBaseSchema):
     id: PositiveInt
+    map_location: str | None = None
 
 
 class GeographyUpdateSchema(BaseSchema):
