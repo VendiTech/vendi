@@ -1,3 +1,5 @@
+from typing import Optional
+
 from sqlalchemy import select
 
 from mspy_vendi.core.manager import CRUDManager
@@ -26,3 +28,20 @@ class GeographyManager(CRUDManager):
             return result, False
 
         return await self.create(obj), True
+
+    async def update_or_create(
+        self, obj: GeographyCreateSchema, name: str | None = None
+    ) -> tuple[Geography, Optional[Geography], bool]:
+        """
+        Update or create an entity in the database, and returns the DB object.
+
+        :param obj: Pydantic `CreateSchema` model.
+        :param name: Object Name.
+
+        :return: tuple of boolean and created entity.
+        """
+        if geography := await self.get_by_name(name=name):
+            result = await self.update(geography.id, obj=obj)
+            return geography, result, True
+
+        return await self.create(obj), None, False

@@ -1,4 +1,6 @@
+import json
 import re
+from datetime import datetime
 
 from sqlalchemy import Join, Select, Table
 from sqlalchemy.orm import DeclarativeBase
@@ -75,3 +77,12 @@ def get_columns_for_model(model: type[DeclarativeBase]) -> list[str]:
     :return: A list of column names for the specified model.
     """
     return model.__table__.columns.keys()
+
+
+def serialize_for_json(data: dict) -> dict:
+    def default_converter(o):
+        if isinstance(o, datetime):
+            return o.isoformat()
+        return str(o)
+
+    return json.loads(json.dumps(data, default=default_converter))

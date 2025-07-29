@@ -1,4 +1,5 @@
 from mspy_vendi.domain.activity_log.models import ActivityLog
+from mspy_vendi.domain.entity_log.models import EntityLog
 from mspy_vendi.domain.geographies.models import Geography
 from mspy_vendi.domain.impressions.models import Impression
 from mspy_vendi.domain.machine_impression.models import MachineImpression
@@ -21,4 +22,5 @@ __all__ = (
     "Sale",
     "Impression",
     "MachineImpression",
+    "EntityLog",
 )

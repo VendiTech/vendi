@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Any, Generic, Sequence, TypeVar
+from typing import Any, Generic, Optional, Sequence, TypeVar
 
 from fastapi_filter.contrib.sqlalchemy import Filter
 from fastapi_pagination import Page
@@ -257,3 +257,22 @@ class CRUDManager(ABC, Generic[Model, Schema, CreateSchema, UpdateSchema, PageSc
             return result, False
 
         return await self.create(obj, obj_id=obj_id), True
+
+    async def update_or_create(
+        self,
+        obj: CreateSchema,
+        obj_id: int | None = None,
+    ) -> tuple[Schema, Optional[Schema], bool]:
+        """
+        Update or create an entity in the database, and returns the DB object.
+
+        :param obj: Pydantic `CreateSchema` model.
+        :param obj_id: Object ID.
+
+        :return: tuple of boolean, created entity and optional previous state of entity.
+        """
+        if result := await self.get(obj_id, raise_error=False):
+            updated_result = await self.update(obj_id, obj, autocommit=False)
+            return result, updated_result, True
+
+        return await self.create(obj, obj_id=obj_id), None, False
