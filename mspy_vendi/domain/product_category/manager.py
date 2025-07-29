@@ -1,3 +1,5 @@
+from typing import Optional
+
 from sqlalchemy import select
 
 from mspy_vendi.core.manager import CRUDManager
@@ -28,3 +30,22 @@ class ProductCategoryManager(CRUDManager):
             return result, False
 
         return await self.create(obj), True
+
+    async def update_or_create(
+        self,
+        obj: CreateProductCategorySchema,
+        name: str | None = None,
+    ) -> tuple[ProductCategory, Optional[ProductCategory], bool]:
+        """
+        Update or create an entity in the database, and returns the DB object.
+
+        :param obj: Pydantic `CreateSchema` model.
+        :param name: Object Name.
+
+        :return: tuple of boolean and created entity.
+        """
+        if product_category := await self.get_by_name(name=name):
+            result = await self.update(product_category.id, obj=obj)
+            return result, product_category, True
+
+        return await self.create(obj=obj), None, False
